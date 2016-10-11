@@ -1,0 +1,15 @@
+*admodel.*
+*.cor
+*.bar
+*.log
+*hybrid_seed
+*.ecm
+*.eva
+*.hst
+*.htp
+*.exe
+*.obj
+*.mc2
+*adaptation.csv
+*.psv
+*.par
