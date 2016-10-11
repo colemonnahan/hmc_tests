@@ -1,0 +1,1 @@
+  ./bb -hybrid -mcmc 2000  -hyeps 0.025  -hynstep 100 -mcsave 1 -nohess

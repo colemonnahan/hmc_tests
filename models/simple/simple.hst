@@ -1,0 +1,38 @@
+# samples sizes
+50
+# step size scaling factor
+1
+# step sizes
+ 0.0340396
+# means
+ 2.0333
+# standard devs
+ 0.272487
+# lower bounds
+ -8
+# upper bounds
+ 8
+#number of parameters
+2
+#current parameter values for mcmc restart
+ 2.00393 3.72852
+#random number seed
+-36519
+#aa
+1.76098 0
+1.79502 0.587551
+1.82906 0.587551
+1.8631 3.52531
+1.89714 4.11286
+1.93118 2.93776
+1.96522 0
+1.99926 2.93776
+2.0333 0
+2.06734 1.76265
+2.10138 5.28796
+2.13542 1.76265
+2.16946 0
+2.2035 2.93776
+2.23754 0
+2.27158 2.93776
+2.30562 0
