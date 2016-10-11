@@ -1,35 +1,31 @@
 library(R2admb)
 library(shinystan)
+library(rstan)
 
 N <- 2
 covar <- diag(N)
-covar <- matrix(rWishart(n=1, df=N, Sigma=diag(N)), nrow=N)
-write.table(x=c(N, covar), file='mvn.dat', , row.names=FALSE,
+covar <- matrix(c(1,-.95,-.95,1), nrow=2)
+## covar <- matrix(rWishart(n=1, df=N, Sigma=diag(N)), nrow=N)
+write.table(x=c(N, covar), file='mvnd.dat', , row.names=FALSE,
             col.names=FALSE)
 
-getADMBCovariance <- function(){
-    ## This function reads in all of the information contained in the
-    ## admodel.cov file. Some of this is needed for relaxing the
-    ## covariance matrix, and others just need to be recorded and
-    ## rewritten to file so ADMB "sees" what it's expecting.
-    filename <- file("admodel.cov", "rb")
-    on.exit(close(filename))
-    num.pars <- readBin(filename, "integer", 1)
-    cov.vec <- readBin(filename, "numeric", num.pars^2)
-    cov <- matrix(cov.vec, ncol=num.pars, nrow=num.pars)
-    hybrid_bounded_flag <- readBin(filename, "integer", 1)
-    scale <- readBin(filename, "numeric", num.pars)
-    result <- list(num.pars=num.pars, cov=cov,
-                   hybrid_bounded_flag=hybrid_bounded_flag, scale=scale)
-    return(result)
-}
+## Setup for Stan
+data <- list(covar=covar, Npar=N, x=rep(0, len=N))
+inits <- list(list(mu=as.vector(mvtnorm::rmvnorm(1,sigma=covar))))
+params.jags <- 'mu'
+fit <- stan(file='mvnd.stan', data=data, iter=100000, init=inits, chains=1)
+sims <- extract(fit, permuted=TRUE)$mu
+eps <- tail(get_sampler_params(fit)[[1]][,'stepsize__'],1)
+pairs(sims)
 
-getADMBCovariance()
+system('mvnd -mcmc 10000000 -mcsave 100')
+rwm <- read_psv('mvnd')
+system('mvnd -mcmc 100000 -hybrid -hynstep 100 -hyeps .5')
+hmc <- read_psv('mvnd')
 
-system('mvn -mcmc 1000000 -mcsave 100')
-rwm <- read_psv('mvn')
-system('mvn -mcmc 10000 -hybrid -hynstep 100 -hyeps .5')
-hmc <- read_psv('mvn')
+## Thin them
+rwm <- rwm[seq(1,nrow(rwm), len=10000),]
+hmc <- hmc[seq(1,nrow(hmc), len=10000),]
 
 pairs(rwm, pch='.')
 pairs(hmc, pch='.')
@@ -40,3 +36,12 @@ chains[,2,] <- as.matrix(hmc)
 
 launch_shinystan(as.shinystan(chains))
 launch_shinystan(as.shinystan(hmc2))
+
+ans <- R2admb:::read_admbbin(model)
+
+read.psv <- function(model){
+psv <- file(paste0(model,".psv"), "rb")
+nparams <- readBin(psv, "integer", n = 1)
+mcmc <- matrix(readBin(psv, "numeric", n = nparams * Nout), ncol = nparams,
+               byrow = TRUE)
+close(psv)

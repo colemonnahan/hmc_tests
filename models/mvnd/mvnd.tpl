@@ -7,7 +7,7 @@ DATA_SECTION
   init_matrix covar(1,dim,1,dim);
 
 PARAMETER_SECTION
-  init_bounded_vector mu(1,dim,-30,30);
+  init_bounded_vector mu(1,dim,-2,2);
   sdreport_number trash;
   objective_function_value jnll;
 
