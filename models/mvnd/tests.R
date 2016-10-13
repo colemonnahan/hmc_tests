@@ -6,7 +6,7 @@
 
 library(plyr)
 library(mvtnorm)
-source('mcmc.R')
+source('../../mcmc.R')
 col.label <- gray(.3)
 col.border <- gray(.5)
 col.tick <- gray(.4)
@@ -18,18 +18,18 @@ a <- -2
 b <- 2
 
 ## log density in parameter space
-fn <- function(x, covar) -t(x)%*%covar.inv%*%x
-gr <- function(x, covar) as.vector(-covar.inv%*%x)
-plot.gr <- function(x, covar){
-  g <- gr(x,covar)
-  points(t(x), pch=16)
-  arrows(x0=x[1], y0=x[2], x1=g[1], y1=g[2])
+fn <- function(y, covar) -t(y)%*%covar.inv%*%y
+gr <- function(y, covar) as.vector(-covar.inv%*%y)
+plot.gr <- function(y, covar){
+  g <- gr(y,covar)
+  points(t(y), pch=16)
+  arrows(x0=y[1], y0=y[2], x1=g[1], y1=g[2])
 }
-gr2 <- function(x, A) -t(solve(A)) %*% solve(A) %*% x
-plot.gr2 <- function(x, A){
-  g <- gr2(x, A)
-  points(t(x), pch=16)
-  arrows(x0=x[1], y0=x[2], x1=g[1], y1=g[2])
+gr2 <- function(y, A) -solve(t(A))%*% gr(y)
+plot.gr2 <- function(y, A){
+  g <- gr2(y, A)
+  points(t(y), pch=16)
+  arrows(x0=y[1], y0=y[2], x1=g[1], y1=g[2])
 }
 gr3 <- function(x, A){
   xbounded <- boundp(x=x, a,b,1)
@@ -77,17 +77,17 @@ z3.mvn <- matrix(exp(-mvn.grid3$NLL3), nrow=ngrid, ncol=ngrid, byrow=TRUE)
 nlevels <- 10
 
 
-pts2 <- matrix(rnorm(4, sd=1), ncol=2)
+xcpts2 <- matrix(rnorm(4, sd=1), ncol=2)
 pts <- t(solve(A) %*% t(pts2))
 par(mfrow=c(1,3))
-## Rotated space, calculated via linear transformation
-contour(x=x1.seq, y=x2.seq, z=z2.mvn, nlevels=nlevels, col=col.contour, lty=lty.contour,
-        drawlabels=FALSE)
-trash <- apply(pts2, 1, function(x) plot.gr2(x, A))
 ## Original space, unbounded
 contour(x=x1.seq, y=x2.seq, z=z.mvn, nlevels=nlevels, col=col.contour, lty=lty.contour,
         drawlabels=FALSE)
 trash <- apply(pts, 1, function(x) plot.gr(x, covar))
+## Rotated space, calculated via linear transformation
+contour(x=x1.seq, y=x2.seq, z=z2.mvn, nlevels=nlevels, col=col.contour, lty=lty.contour,
+        drawlabels=FALSE)
+trash <- apply(pts2, 1, function(x) plot.gr2(x, A))
 ## Original space, bounded
 contour(x=boundp(x1.seq,a,b,1), y=boundp(x2.seq,a,b,1), z=z3.mvn, nlevels=nlevels, col=col.contour, lty=lty.contour,
         drawlabels=FALSE)
