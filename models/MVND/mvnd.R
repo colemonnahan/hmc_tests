@@ -49,8 +49,9 @@ inits <- list(list(mu=as.vector(mvtnorm::rmvnorm(1,sigma=covar))))
 params.jags <- 'mu'
 fit <- stan(file='mvnd.stan', data=data, iter=100000, init=inits, chains=1)
 sims <- extract(fit, permuted=TRUE)$mu
+write.csv(file='stan.sims.csv', as.data.frame(sims), row.names=FALSE)
 eps <- tail(get_sampler_params(fit)[[1]][,'stepsize__'],1)
-pairs(sims)
+pairs(sims, pch='.')
 
 system('mvnd -mcmc 10000000 -mcsave 100')
 rwm <- read_psv('mvnd')

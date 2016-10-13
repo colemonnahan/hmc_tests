@@ -47,6 +47,15 @@ plot.gr3 <- function(x, A){
   arrows(x0=x[1], y0=x[2], x1=g[1], y1=g[2])
 }
 
+
+sims <- read.csv('stan.sims.csv')
+par(mfrow=c(1,3))
+plot(sims, pch='.')
+sims2 <- cbind(boundpin(sims[,1], a,b,1), boundpin(sims[,2], a,b,1))
+plot(sims2, pch='.')
+sims3 <- t(A %*% t(sims2))
+plot(sims3, pch='.')
+
 ## 2d parabola: y=x1^2+x2^2 with static HMC leapfrog trajectories, with and
 ## without mass matrix
 covar <- matrix(c(1,.99,.99,1), 2)
@@ -77,7 +86,7 @@ z3.mvn <- matrix(exp(-mvn.grid3$NLL3), nrow=ngrid, ncol=ngrid, byrow=TRUE)
 nlevels <- 10
 
 
-xcpts2 <- matrix(rnorm(4, sd=1), ncol=2)
+pts2 <- matrix(rnorm(4, sd=1), ncol=2)
 pts <- t(solve(A) %*% t(pts2))
 par(mfrow=c(1,3))
 ## Original space, unbounded
