@@ -7,12 +7,12 @@ Npar <- 5
 covar <- rWishart(n=1, df=Npar, Sigma=diag(Npar))[,,1]
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 inits <- list(list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar)))/2))
-params.jags <- 'mu'
+pars <- 'mu'
 
 ## Get independent samples from each model to make sure they are coded the
 ## same
 if(verify)
-    verify.models(model=m, params.jags=params.jags, inits=inits, data=data,
+    verify.models(model=m, pars=pars, inits=inits, data=data,
                   Nout=Nout.ind, Nthin=Nthin.ind)
 
 sims.ind <- readRDS(file='sims.ind.RDS')
@@ -20,7 +20,7 @@ sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
 inits <- lapply(1:length(seeds), function(i) list(mu=as.numeric(sims.ind[i,])))
 
 ## Fit empirical data with no thinning for efficiency tests
-fit.empirical(model=m, params.jag=params.jags, inits=inits, data=data,
+fit.empirical(model=m, pars=pars, inits=inits, data=data,
               lambda=lambda.vec, delta=delta, metric=metric, seeds=seeds,
               Nout=Nout)
 
@@ -36,7 +36,7 @@ for(i in seq_along(Npar.vec)){
         message(paste("======== Starting cor=", j))
         set.seed(115)
         source("generate_data.R")
-        temp <- run.chains(model=m, inits=inits, params.jags=params.jags, data=data,
+        temp <- run.chains(model=m, inits=inits, pars=pars, data=data,
                            seeds=seeds, Nout=Nout, Nthin=1, lambda=NULL, delta=delta)
         adapt.list[[k]] <- cbind(temp$adapt, cor=j)
         perf.list[[k]] <- cbind(temp$perf, cor=j)
