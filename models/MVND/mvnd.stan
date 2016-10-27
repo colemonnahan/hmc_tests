@@ -4,7 +4,7 @@ data {
   vector[Npar] x;
 }
 parameters {
-  vector<lower=-2, upper=2>[Npar] mu;
+  vector[Npar] mu;
 }
 
 model {

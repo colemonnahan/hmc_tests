@@ -5,15 +5,27 @@ setwd(paste0('models/',m))
 ## Load empirical data and inits
 Npar <- 5
 covar <- rWishart(n=1, df=Npar, Sigma=diag(Npar))[,,1]
+covar <- diag(Npar)
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 inits <- list(list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar)))/2))
 pars <- 'mu'
 
+## Precompile Stan model so it isn't done repeatedly and isn't in the
+## timings
+obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100, par=pars,
+                   warmup=50, chains=1, thin=1, algorithm='NUTS',
+                   init=list(inits[[1]]), seed=1, verbose=FALSE,
+                   control=list(adapt_engaged=FALSE))
+## Build TMB object
+compile(paste0(m, '_tmb.cpp'))
+dyn.load(paste0(m,"_tmb"))
+obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
+
 ## Get independent samples from each model to make sure they are coded the
 ## same
 if(verify)
-    verify.models(model=m, pars=pars, inits=inits, data=data,
-                  Nout=Nout.ind, Nthin=Nthin.ind)
+    verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars,
+                  inits=inits, data=data, Nout=Nout.ind, Nthin=Nthin.ind)
 
 sims.ind <- readRDS(file='sims.ind.RDS')
 sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]

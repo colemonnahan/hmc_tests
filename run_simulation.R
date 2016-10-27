@@ -18,7 +18,7 @@ seeds <- sample(1:1e5, size=Nreps)         #
 metric <- c('unit_e', 'diag_e', 'dense_e')[1]
 ## Suppress output to file via sink? Useful after debugging to clean up
 ## console and judge progress.
-sink <- TRUE
+sink <- FALSE
 ## The paper was run with these key software versions
 version$version.string                  # R version 3.2.3
 packageVersion('rstan')                 # 2.11.1
@@ -33,9 +33,9 @@ packageVersion('rjags')                 # 4.4
 m <- 'mvnd'                             # model name
 verify <- FALSE                         # whether to verify
 delta <- 0.8                            # adapt_delta for Stan
-Nout <- 20000                           # no. of samples out
+Nout <- 2000                            # no. of samples out
 Nthin <- 1                              # thin rate for emp/sim modes (leave at 1!)
-Nthin.ind <- 100                        # thin rate for verify mode
+Nthin.ind <- 1                          # thin rate for verify mode
 ## Settings for simulation mode. cor is a factor for independent (0) or
 ## from wishart (1) (see paper). Npar is how many parameters.
 cor.vec <- c(0,1)

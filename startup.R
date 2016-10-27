@@ -6,6 +6,7 @@ library(rstan)
 library(R2jags)
 library(reshape2)
 library(MASS)                           # has mvrnorm()
+library(TMB)
 ggwidth <- 8
 ggheight <- 5
 results.file <- function(file) paste0(main.dir,'results/', file)
@@ -30,12 +31,10 @@ results.file <- function(file) paste0(main.dir,'results/', file)
 #' be one of c("unit_e", "diag_e", "dense_e").
 #' @return A list of two data frames. adapt is the adaptive results from
 #' Stan, and perf is the performance metrics for each run.
-run.chains <- function(model, seeds, Nout, Nthin=1, lambda, delta=.8,
-                       metric='diag_e', data, inits, params.jags, max_treedepth=10,
+run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, delta=.8,
+                       metric='diag_e', data, inits, pars, max_treedepth=10,
                        sink.console=TRUE){
   if(Nthin!=1) stop('this probably breaks if Nthin!=1')
-  model.jags <- paste0(model, '.jags')
-  model.stan <- paste0(model, '.stan')
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
   ind.warmup <- 1:Nwarmup              # index of samples, excluding warmup
@@ -47,47 +46,20 @@ run.chains <- function(model, seeds, Nout, Nthin=1, lambda, delta=.8,
     sink(file='trash.txt', append=FALSE, type='output')
     on.exit(sink())
   }
-  ## Precompile Stan model so it isn't done repeatedly and isn't in the
-  ## timings
-  model.stan <- stan(file=model.stan, data=data, iter=100, par=params.jags,
-                     warmup=50, chains=1, thin=1, algorithm='NUTS',
-                     init=list(inits[[1]]), seed=1, verbose=FALSE,
-                     control=list(adapt_engaged=FALSE))
+
+  max_treedepth <- 12
   for(seed in seeds){
     message(paste('==== Starting seed',seed, 'at', Sys.time()))
     inits.seed <- list(inits[[which(seed==seeds)]])
     set.seed(seed)
-    ## Precompile JAGS model so not in timings
-    ## message('Starting JAGS model')
-    time.jags <- as.vector(system.time(fit.jags <-
-    jags(data=data, parameters.to.save=params.jags, inits=inits.seed,
-         model.file=model.jags, n.chains=1, DIC=FALSE,
-         n.iter=Niter, n.burnin=Nwarmup, n.thin=1)))[3]
-    saveRDS(fit.jags, file=paste('fits/jags', seed,'.RDS', sep='_'))
-    sims.jags <- fit.jags$BUGSoutput$sims.array
-    perf.jags <- data.frame(rstan::monitor(sims=sims.jags, warmup=0, print=FALSE, probs=.5))
-    Rhat.jags <- with(perf.jags, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
-    perf.list[[k]] <-
-      data.frame(platform='jags', seed=seed, Npar=dim(sims.jags)[3], delta.target=.5,
-                 time=time.jags,
-                 minESS=min(perf.jags$n_eff), medianESS=median(perf.jags$n_eff),
-                 Nsims=dim(sims.jags)[1],
-                 minESS.coda=min(coda::effectiveSize(x=sims.jags[,1,])),
-                 Rhat.jags)
-    k <- k+1
-    rm(sims.jags, perf.jags)
-    ## Use adaptation for eps and diagonal covariances, but remove those
-    ## samples and time it took
-    ## message('Starting stan.nuts models')
     for(idelta in delta){
       for(imetric in metric){
         time.stan <- as.vector(system.time(fit.stan.nuts <-
-          stan(fit=model.stan, data=data, iter=Niter,
+          stan(fit=obj.stan, data=data, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin, algorithm='NUTS',
-               init=inits.seed, seed=seed, par=params.jags,
+               init=inits.seed, seed=seed, par=pars,
                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
                  metric=imetric, max_treedepth=max_treedepth))))[3]
-        saveRDS(fit.stan.nuts, file=paste('fits/stan_nuts', metric, idelta, seed,'.RDS', sep='_'))
         sims.stan.nuts <- extract(fit.stan.nuts, permuted=FALSE)
         perf.stan.nuts <- data.frame(monitor(sims=sims.stan.nuts, warmup=0, print=FALSE, probs=.5))
         Rhat.stan.nuts <- with(perf.stan.nuts, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
@@ -117,50 +89,46 @@ run.chains <- function(model, seeds, Nout, Nthin=1, lambda, delta=.8,
                      minESS.coda=min(effectiveSize(as.data.frame(sims.stan.nuts[,1,]))),
                      Rhat.stan.nuts)
         k <- k+1
-      }}
+        ## Start of TMB run
+        time.tmb <- as.vector(system.time(fit.tmb.nuts <-
+          run_mcmc(obj=obj.tmb, nsim=Niter,
+               warmup=Nwarmup, chains=1, algorithm='NUTS',
+               params.init=inits.seed[[1]][[1]], covar=NULL, adapt_delta=idelta,
+               max_doubling=max_treedepth)))[3]
+        ## saveRDS(fit.tmb.nuts, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
+        sims.tmb.nuts <- fit.tmb.nuts$samples
+        perf.tmb.nuts <- data.frame(monitor(sims=sims.tmb.nuts, warmup=0, print=FALSE, probs=.5))
+        Rhat.tmb.nuts <- with(perf.tmb.nuts, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
+        adapt.nuts <- as.data.frame(fit.tmb.nuts$sampler_params[[1]])
+        adapt.list[[k]] <-
+          data.frame(platform='tmb.nuts', seed=seed,
+                     Npar=dim(sims.tmb.nuts)[3]-1,
+                     Nsims=dim(sims.tmb.nuts)[1],
+                     delta.mean=mean(adapt.nuts$accept_stat__),
+                     delta.target=idelta,
+                     eps.final=tail(adapt.nuts$stepsize__,1),
+                     max_treedepths=sum(adapt.nuts$treedepth__>max_treedepth),
+                     ndivergent=sum(adapt.nuts$divergent__),
+                     nsteps.mean=mean(adapt.nuts$n_leapfrog__),
+                     nsteps.median=median(adapt.nuts$n_leapfrog__),
+                     nsteps.sd=sd(adapt.nuts$n_leapfrog__),
+                     metric=imetric)
+        perf.list[[k]] <-
+          data.frame(platform='tmb.nuts',
+                     seed=seed, delta.target=idelta, metric=imetric,
+                     eps.final=tail(adapt.nuts$stepsize__,1),
+                     Npar=dim(sims.tmb.nuts)[3]-1,
+                     time=time.tmb,
+                     minESS=min(perf.tmb.nuts$n_eff),
+                     medianESS=median(perf.tmb.nuts$n_eff),
+                     Nsims=dim(sims.tmb.nuts)[1],
+                     minESS.coda=min(effectiveSize(as.data.frame(sims.tmb.nuts[,1,]))),
+                     Rhat.tmb.nuts)
+        k <- k+1
+      }
+    }
     rm(fit.stan.nuts, sims.stan.nuts, perf.stan.nuts, adapt.nuts)
-### Currently turned off: feature to explore static HMC.
-    ## if(!is.null(lambda)){
-    ##   for(ilambda in lambda){
-    ##     message(paste0('Starting stan.hmc',ilambda,' models'))
-    ##     for(idelta in delta){
-    ##       for(imetric in metric){
-    ##         fit.stan.hmc <-
-    ##           stan(fit=model.stan, data=data, iter=Niter,
-    ##                warmup=Nwarmup, chains=1, thin=Nthin, algorithm='HMC', seed=seed, init=inits.seed,
-    ##                par=params.jags, control=list(adapt_engaged=TRUE,
-    ##                                   adapt_delta=idelta, metric=imetric, int_time=ilambda))
-    ##         sims.stan.hmc <- extract(fit.stan.hmc, permuted=FALSE)
-    ##         perf.stan.hmc <- data.frame(rstan::monitor(sims=sims.stan.hmc, warmup=0, print=FALSE))
-    ##         Rhat.stan.hmc <- with(perf.stan.hmc, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
-    ##         adapt.hmc <- as.data.frame(get_sampler_params(fit.stan.hmc))
-    ##         adapt.list[[k]] <-
-    ##           data.frame(platform=paste0('HMC',ilambda), seed=seed,
-    ##                      Npar=dim(sims.stan.hmc)[3]-1,
-    ##                      Nsims=dim(sims.stan.hmc)[1],
-    ##                      delta.target=idelta,
-    ##                      delta.mean=mean(adapt.hmc$accept_stat__[ind.samples]),
-    ##                      eps.final=tail(adapt.hmc$stepsize__,1),
-    ##                      metric=imetric, lambda=ilambda,
-    ##                      L=tail(adapt.hmc$stepsize__,1)*ilambda,
-    ##                      nsteps.mean=tail(adapt.hmc$stepsize__,1)*ilambda)
-    ##         perf.list[[k]] <-
-    ##           data.frame(platform=paste0('stan.hmc',ilambda),
-    ##                      seed=seed, delta.target=idelta, metric=imetric,
-    ##                      Npar=dim(sims.stan.hmc)[3]-1,
-    ##                      time.sampling=get_elapsed_time(fit.stan.hmc)[2],
-    ##                      time.warmup=get_elapsed_time(fit.stan.hmc)[1],
-    ##                      minESS=min(perf.stan.hmc$n_eff),
-    ##                      medianESS=median(perf.stan.hmc$n_eff),
-    ##                      Nsims=dim(sims.stan.hmc)[1],
-    ##                      minESS.coda=min(effectiveSize(as.data.frame(sims.stan.hmc[,1,]))),
-    ##                      Rhat.stan.hmc)
-    ##         k <- k+1
-    ##         rm(fit.stan.hmc, sims.stan.hmc, perf.stan.hmc, adapt.hmc)
-    ##       }
-    ##     }
-    ##   }
-    ## }
+    rm(fit.tmb.nuts, sims.tmb.nuts, perf.tmb.nuts)
   }
   perf <- do.call(rbind.fill, perf.list)
   perf <- within(perf, {
@@ -173,15 +141,16 @@ run.chains <- function(model, seeds, Nout, Nthin=1, lambda, delta=.8,
 }
 
 #' Verify models and then run empirical tests across delta
-fit.empirical <- function(model, params.jags, model.jags, inits, data, seeds,
+fit.empirical <- function(obj.stan, obj.tmb, model, pars, model.jags, inits, data, seeds,
                           delta, lambda, model.stan, Nout,  metric,
                           Nthin=1, sink.console=TRUE, ...){
     ## Now rerun across gradient of acceptance rates and compare to JAGS
     message('Starting empirical runs')
     results.empirical <-
-      run.chains(model=model, seeds=seeds, Nout=Nout, lambda=lambda,
+      run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=model, seeds=seeds,
+                 Nout=Nout, lambda=lambda,
                  metric=metric, delta=delta, data=data,
-                 Nthin=Nthin, inits=inits, params.jags=params.jags,
+                 Nthin=Nthin, inits=inits, pars=pars,
                  sink.console=sink.console, ...)
     with(results.empirical, plot.empirical.results(perf, adapt))
     write.csv(file=results.file(paste0(m, '_adapt_empirical.csv')), results.empirical$adapt)
@@ -259,23 +228,23 @@ plot.empirical.results <- function(perf, adapt){
 #'
 #' @param sims.stan A data frame of MCMC samples from a single chain of
 #' a Stan run, using extract(fit.stan).
-#' @param sims.jags A data frame of MCMC samples from a single chain of a
-#' JAGS run.
+#' @param sims.tmb A data frame of MCMC samples from a single chain of a
+#' TMB run.
 #' @param perf.platforms A wide data frame with platform, variable and
 #' values for Rhat and n_eff, one for each variable of a chain for each
 #' platform. As created by verify.model.
 #' @return ggplot object invisibly. Also makes plot in folder 'plots' in
 #' current working directory.
-plot.model.comparisons <- function(sims.stan, sims.jags, perf.platforms=NULL){
+plot.model.comparisons <- function(sims.stan, sims.tmb, perf.platforms=NULL){
     ## Clean up names so they match exactly
     names(sims.stan) <- gsub('\\.', '', x=names(sims.stan))
-    names(sims.jags) <- gsub('\\.', '', x=names(sims.jags))
-    sims.stan$lp__ <- sims.jags$deviance <- NULL
-    par.names <- names(sims.jags)
-    sims.jags <- sims.jags[,par.names]
+    names(sims.tmb) <- gsub('\\.', '', x=names(sims.tmb))
+    sims.stan$lp__ <- sims.tmb$lp__ <- NULL
+    par.names <- names(sims.tmb)
+    sims.stan <- sims.stan[,par.names]
     ## Massage qqplot results into long format for ggplot
     qq <- ldply(par.names, function(i){
-        temp <- as.data.frame(qqplot(sims.jags[,i], sims.stan[,i], plot.it=FALSE))
+        temp <- as.data.frame(qqplot(sims.tmb[,i], sims.stan[,i], plot.it=FALSE))
         return(cbind(par=i,temp))
     })
     ## Since can be too many parameters, break them up into pages. Stolen
@@ -293,7 +262,7 @@ plot.model.comparisons <- function(sims.stan, sims.jags, perf.platforms=NULL){
         tmp <- subset(qq, par %in% par.names[start:end])
         g <- ggplot(tmp, aes(x,y))+ geom_point(alpha=.5) +
             geom_abline(slope=1, col='red') + facet_wrap('par',
-        scales='free', nrow=5) + xlab('jags')+ ylab('stan')
+        scales='free', nrow=5) + xlab('tmb')+ ylab('stan')
            ## theme(axis.text.x=element_blank(), axis.text.y=element_blank())
         g <- g+ theme(text=element_text(size=7))
         print(g)
@@ -312,7 +281,7 @@ plot.model.comparisons <- function(sims.stan, sims.jags, perf.platforms=NULL){
 #' to verify the posteriors are the same, effectively checking for bugs
 #' between models before doing performance comparisons
 #'
-verify.models <- function(model, params.jags, inits, data, Nout, Nthin,
+verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nthin,
                           sink.console=TRUE){
   message('Starting independent runs')
   if(sink.console){
@@ -321,25 +290,20 @@ verify.models <- function(model, params.jags, inits, data, Nout, Nthin,
   }
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
-  model.jags <- paste0(model, '.jags')
-  model.stan <- paste0(model, '.stan')
-  ## Save the algorithms used by jags
-  temp <- list.samplers(jags.model(file=model.jags, data=data, inits=inits, quiet=TRUE))
-  write.table(table(names(temp)), file='jags.samplers.csv', sep=',', row.names=FALSE)
-  fit.jags <- jags(data=data, inits=inits, param=params.jags,
-                   model.file=model.jags, n.chains=1, n.burnin=Nwarmup, n.iter=Niter,
-                   n.thin=Nthin)
-  sims.jags <- fit.jags$BUGSoutput$sims.array
-  perf.jags <- data.frame(rstan::monitor(sims=sims.jags, warmup=0, print=FALSE, probs=.5))
-  fit.stan <- stan(file=model.stan, data=data, iter=Niter, chains=1,
-                   warmup=Nwarmup, thin=Nthin, init=inits, pars=params.jags)
+  fit.stan <- stan(fit=obj.stan, data=data, iter=Niter, chains=1,
+                   warmup=Nwarmup, thin=Nthin, init=inits, pars=pars)
   sims.stan <- extract(fit.stan, permuted=FALSE)
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
-  perf.platforms <- rbind(cbind(platform='jags',perf.jags),
+  fit.tmb <- run_mcmc(obj=obj.tmb, nsim=Niter,
+               warmup=Nwarmup, chains=1, algorithm='NUTS',
+               params.init=inits[[1]][[1]])
+  sims.tmb <- fit.tmb$samples
+  perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
+  perf.platforms <- rbind(cbind(platform='tmb',perf.tmb),
                           cbind(platform='stan',perf.stan))
   perf.platforms <- melt(perf.platforms, c('Rhat', 'n_eff'), id.vars='platform')
   plot.model.comparisons(as.data.frame(sims.stan[,1,]),
-                         as.data.frame(sims.jags[,1,]), perf.platforms)
+                         as.data.frame(sims.tmb[,1,]), perf.platforms)
   ## Save independent samples for use in intial values later.
   sims.ind <- data.frame(sims.stan[,1,])
   sims.ind <- sims.ind[, names(sims.ind) != 'lp__']
