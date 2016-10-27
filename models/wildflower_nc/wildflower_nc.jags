@@ -1,0 +1,32 @@
+
+model {
+
+  ## Priors for random effects precisions
+  yearInterceptSD ~  dt(0,1/(5*5),1)I(0,) ## implies half-cauchy with scale of 5
+  plantInterceptSD ~ dt(0,1/(5*5),1)I(0,)
+  plantSlopeSD ~  dt(0,1/(5*5),1)I(0,)
+
+  for (i in 1:Nstage) {
+    intercept[i] ~ dnorm(0, 1/(10*10))
+  }
+  ## Prior for slope
+  slope ~ dnorm(0, 1/(10*10))
+
+  ## non centered random  effects; implies N(0,precision) below
+  for (i in 1:Nyear) {
+    yearInterceptEffect_raw[i] ~ dnorm(0, 1)
+  }
+  for (i in 1:Nplant) {
+    plantInterceptEffect_raw[i] ~ dnorm(0, 1)
+    plantSlopeEffect_raw[i] ~ dnorm(0, 1)
+  }
+  ## logit model and data:
+  for(i in 1:Ndata) {
+    logit(probF[i]) <- intercept[ stage[i] ] +
+      yearInterceptEffect_raw[ year[i]]*yearInterceptSD +
+      plantInterceptEffect_raw[plant[i]]*plantInterceptSD +
+      (plantSlopeEffect_raw[plant[i]]*plantSlopeSD)*Pods[i]+
+      slope * Pods[i]
+    toF[i] ~ dbern(probF[i])
+  }
+}
