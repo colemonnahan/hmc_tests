@@ -32,7 +32,7 @@ sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
 inits <- lapply(1:length(seeds), function(i) list(mu=as.numeric(sims.ind[i,])))
 
 ## Fit empirical data with no thinning for efficiency tests
-fit.empirical(model=m, pars=pars, inits=inits, data=data,
+fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
               lambda=lambda.vec, delta=delta, metric=metric, seeds=seeds,
               Nout=Nout)
 
@@ -41,26 +41,28 @@ fit.empirical(model=m, pars=pars, inits=inits, data=data,
 adapt.list <- perf.list <- list()
 k <- 1
 for(i in seq_along(Npar.vec)){
-    Npar <- Npar.vec[i]
-    message(paste("======== Starting Npar=", Npar))
-    for(j in cor.vec){
-        ## Reproducible data since seed set inside the function
-        message(paste("======== Starting cor=", j))
-        set.seed(115)
-        source("generate_data.R")
-        temp <- run.chains(model=m, inits=inits, pars=pars, data=data,
-                           seeds=seeds, Nout=Nout, Nthin=1, lambda=NULL, delta=delta)
-        adapt.list[[k]] <- cbind(temp$adapt, cor=j)
-        perf.list[[k]] <- cbind(temp$perf, cor=j)
-        ## Save them as we go in case it fails
-        perf <- do.call(rbind, perf.list)
-        adapt <- do.call(rbind, adapt.list)
-        plot.simulated.results(perf, adapt)
-        write.csv(x=perf, file=results.file(paste0(m,'_perf_simulated.csv')))
-        write.csv(x=adapt, file=results.file(paste0(m,'_adapt_simulated.csv')))
-        rm(temp)
-        k <- k+1
-    }
+  Npar <- Npar.vec[i]
+  message(paste("======== Starting Npar=", Npar))
+  for(j in cor.vec){
+    ## Reproducible data since seed set inside the function
+    message(paste("======== Starting cor=", j))
+    set.seed(115)
+    source("generate_data.R")
+    ## TMB obj has data fixed, so need to rebuild when Npar changes
+    obj.tmb <- MakeADFun(data=data, parameters=list(mu=rep(0,Npar)))
+    temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, inits=inits, pars=pars, data=data,
+                       seeds=seeds, Nout=Nout, Nthin=1, lambda=NULL, delta=delta)
+    adapt.list[[k]] <- cbind(temp$adapt, cor=j)
+    perf.list[[k]] <- cbind(temp$perf, cor=j)
+    ## Save them as we go in case it fails
+    perf <- do.call(rbind, perf.list)
+    adapt <- do.call(rbind, adapt.list)
+    plot.simulated.results(perf, adapt)
+    write.csv(x=perf, file=results.file(paste0(m,'_perf_simulated.csv')))
+    write.csv(x=adapt, file=results.file(paste0(m,'_adapt_simulated.csv')))
+    rm(temp)
+    k <- k+1
+  }
 }
 message(paste('Finished with model:', m))
 

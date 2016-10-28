@@ -96,7 +96,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
                params.init=inits.seed[[1]][[1]], covar=NULL, adapt_delta=idelta,
                max_doubling=max_treedepth)))[3]
         ## saveRDS(fit.tmb.nuts, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
-        sims.tmb.nuts <- fit.tmb.nuts$samples
+        sims.tmb.nuts <- fit.tmb.nuts$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.tmb.nuts <- data.frame(monitor(sims=sims.tmb.nuts, warmup=0, print=FALSE, probs=.5))
         Rhat.tmb.nuts <- with(perf.tmb.nuts, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
         adapt.nuts <- as.data.frame(fit.tmb.nuts$sampler_params[[1]])

@@ -33,13 +33,13 @@ packageVersion('rjags')                 # 4.4
 m <- 'mvnd'                             # model name
 verify <- FALSE                         # whether to verify
 delta <- 0.8                            # adapt_delta for Stan
-Nout <- 2000                            # no. of samples out
+Nout <- 1000                            # no. of samples out
 Nthin <- 1                              # thin rate for emp/sim modes (leave at 1!)
 Nthin.ind <- 1                          # thin rate for verify mode
 ## Settings for simulation mode. cor is a factor for independent (0) or
 ## from wishart (1) (see paper). Npar is how many parameters.
 cor.vec <- c(0,1)
-Npar.vec <- c(2, 5, 15, 25, 50)
+Npar.vec <- c(2, 5, 15, 25, 50,100,200)
 source(paste0('models/',m,'/run_model.R'))
 
 ## Run MVN with varying correlations and a fixed Npar
@@ -98,6 +98,7 @@ source(paste0('models/',m,'/run_model.R'))
 
 ### ------------------------------------------------------------
 ### Step 3: Load and prepare result data frames for plotting and tables
+setwd(main.dir)
 source('load_data.R')
 source('make_plots.R')
 ### End of Step 3.
