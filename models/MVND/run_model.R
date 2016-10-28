@@ -16,6 +16,7 @@ obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100, par=pars,
                    warmup=50, chains=1, thin=1, algorithm='NUTS',
                    init=list(inits[[1]]), seed=1, verbose=FALSE,
                    control=list(adapt_engaged=FALSE))
+xx <- get_adaptation_info(obj.stan)
 ## Build TMB object
 compile(paste0(m, '_tmb.cpp'))
 dyn.load(paste0(m,"_tmb"))
@@ -48,10 +49,15 @@ for(i in seq_along(Npar.vec)){
     message(paste("======== Starting cor=", j))
     set.seed(115)
     source("generate_data.R")
-    ## TMB obj has data fixed, so need to rebuild when Npar changes
+    ## Data changes so need to rebuild when Npar changes
+    obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100, par=pars,
+                   warmup=50, chains=1, thin=1, algorithm='NUTS',
+                   init=list(inits[[1]]), seed=1, verbose=FALSE,
+                   control=list(adapt_engaged=FALSE))
     obj.tmb <- MakeADFun(data=data, parameters=list(mu=rep(0,Npar)))
-    temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, inits=inits, pars=pars, data=data,
-                       seeds=seeds, Nout=Nout, Nthin=1, lambda=NULL, delta=delta)
+    temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
+                       inits=inits, pars=pars, data=data,
+                       seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
     adapt.list[[k]] <- cbind(temp$adapt, cor=j)
     perf.list[[k]] <- cbind(temp$perf, cor=j)
     ## Save them as we go in case it fails
