@@ -5,6 +5,18 @@ library(R2admb)
 library(rstan)
 main.dir <- file.path('C:/Users/Cole/Dropbox/Research/HMC_tests/')
 
+## Quick experiment for looking at typical set from iid Z as dimension
+## grows.
+n <- 5000
+xx <- ldply(2^(1:10), function(D){
+  x <- matrix(rnorm(D*n), ncol=D)
+  dist <- apply(x, 1, function(y) (sum(y^2)))
+  cbind(D=D, IQR=IQR(dist))
+}
+)
+plot(xx)
+
+
 m <- 'simple'
 m <- 'catage'
 setwd(main.dir)
