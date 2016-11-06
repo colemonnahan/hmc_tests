@@ -61,6 +61,16 @@ ggplot(perf, aes(Npar, minESS/Nsims, group=platform, color=platform)) +
 ggplot(perf, aes(Npar, time.total, group=platform, color=platform)) +
   geom_point() + facet_wrap('cor') + scale_y_log10()
 
+## Run multivariate normal, empirical and simulated
+m <- 'growth'
+verify <- FALSE
+delta <- 0.8
+Nout <- 500
+Nthin <- 1
+Nthin.ind <- 1
+Npar.vec <- c(5, 15, 25, 50, 100, 200)
+source(paste0('models/',m,'/run_model.R'))
+
 
 ### ------------------------------------------------------------
 ### Step 3: Load and prepare result data frames for plotting and tables

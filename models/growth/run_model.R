@@ -20,19 +20,32 @@ g <- ggplot(dat, aes(ages, loglengths, group=fish, color=fish)) +
     geom_point(alpha=.5) + geom_line()
 ggsave('plots/simulated_growth.png', g, width=9, height=5)
 data <- list(Nfish=Nfish, Nobs=nrow(dat), loglengths=dat$loglengths,
-                  fish=dat$fish, ages=dat$ages)
+                  fish=dat$fish-1, ages=dat$ages-1)
 inits <- list(list(logLinf_mean=logLinf.mean, logLinf_sigma=logLinf.sigma,
                   logk_mean=logk.mean, logk_sigma=logk.sigma, sigma_obs=sigma.obs,
                   logLinf=rep(logLinf.mean, len=Nfish),
-                  logk=rep(logk.mean, len=Nfish), delta=1))
-params.jags <-
+                  logk=rep(logk.mean, len=Nfish)))
+pars <-
     c("logLinf_mean", "logLinf_sigma", "logk_mean", "logk_sigma", "logk", "logLinf",
       "sigma_obs", "delta")
+
+## Precompile Stan model so it isn't done repeatedly and isn't in the
+## timings
+obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100, par=pars,
+                   warmup=50, chains=1, thin=1, algorithm='NUTS',
+                   init=list(inits[[1]]), seed=1, verbose=FALSE,
+                   control=list(adapt_engaged=FALSE))
+## Build TMB object
+compile(paste0(m, '_tmb.cpp'))
+dyn.load(paste0(m,"_tmb"))
+obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
+
+out <- run_mcmc(obj.tmb, nsim=500, alg='NUTS')
 
 ## Get independent samples from each model to make sure they are coded the
 ## same
 if(verify)
-verify.models(model=m, params.jags=params.jags, inits=inits, data=data,
+verify.models(model=m, pars=pars, inits=inits, data=data,
               Nout=Nout.ind, Nthin=Nthin.ind, sink=sink)
 
 sims.ind <- readRDS(file='sims.ind.RDS')
@@ -49,7 +62,7 @@ inits <- lapply(1:length(seeds), function(i)
         logLinf=as.numeric(sims.ind[i, grep('logLinf\\.', x=names(sims.ind))])))
 
 ## Fit empirical data with no thinning for efficiency tests
-fit.empirical(model=m, params.jag=params.jags, inits=inits, data=data,
+fit.empirical(model=m, params.jag=pars, inits=inits, data=data,
               lambda=lambda.vec, delta=delta, metric=metric, seeds=seeds,
               Nout=Nout)
 
@@ -62,7 +75,7 @@ for(i in seq_along(Npar.vec)){
     message(paste("======== Starting Npar=", Npar))
     set.seed(115)
     source("generate_data.R")
-    temp <- run.chains(model=m, inits=inits, params.jags=params.jags, data=data,
+    temp <- run.chains(model=m, inits=inits, pars=pars, data=data,
                        seeds=seeds, Nout=Nout, Nthin=1, lambda=NULL, delta=delta)
     adapt.list[[i]] <- temp$adapt
     perf.list[[i]] <- temp$perf
