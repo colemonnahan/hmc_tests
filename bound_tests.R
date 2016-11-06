@@ -10,17 +10,25 @@ covar <- matrix(.5121, nrow=2, ncol=2)
 diag(covar) <- c(1,1)
 covar.inv <- solve(covar)
 
+y <- seq(-100, 100, len=1000)
+x <- .boundp(y, -5,5)
+plot(x,y)
+px <- function(x) dnorm(x)
+py <- function(y)
+
+
 dyn.unload(dynlib('models/mvnb/mvnb_tmb'))
 compile(file='models/mvnb/mvnb_tmb.cpp')
 dyn.load(dynlib('models/mvnb/mvnb_tmb'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 pars <- 'mu'
-mvnb.obj <- MakeADFun(data=data, parameters=inits[[1]])
-nlminb(start=c(1,-1)*10, objective=mvnb.obj$fn, gradient=mvnb.obj$gr)
+mvnb.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)))
+nlminb(start=0.01*c(1,-1), objective=mvnb.obj$fn, gradient=mvnb.obj$gr)
+mvnb.obj$report()
 
 chains <- 3
 iter <- 500
-td <- 5
+td <- 9
 inits <- rep(list(list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar)))/2)),chains)
 stan.fit <- stan(file= 'models/mvnb/mvnb.stan', data=data, iter=iter, par='mu',
                   chains=chains, thin=1, algorithm='NUTS',
@@ -30,8 +38,8 @@ sims.stan <- data.frame(extract(stan.fit, permuted=FALSE)[,1,])
 sso.stan <- as.shinystan(stan.fit)
 launch_shinystan(sso.stan)
 
-tmb.fit <- run_mcmc(nsim=iter, obj=mvnb.obj, alg='NUTS', lower=c(-2,-2),
-                    upper=c(2,2), eps=5, chains=1, max_doubling=td,
+tmb.fit <- run_mcmc(nsim=iter, obj=mvnb.obj, alg='NUTS', lower=c(-100,-100),
+                    upper=c(100,100), eps=NULL, chains=1, max_doubling=td,
                     covar=NULL)
 sims.tmb <- data.frame(tmb.fit$samples[-(1:iter/2),1,])
 sso.tmb <- with(tmb.fit, as.shinystan(samples, burnin=warmup, max_treedepth=td,
