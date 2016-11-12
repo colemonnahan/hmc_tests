@@ -9,6 +9,6 @@ Type objective_function<Type>::operator() ()
   using namespace density;
   // MVNORM_t<Type> neg_log_density(covar);
   // Type nll= neg_log_density(mu);
-  Type nll= -dnorm(mu, Type(0), covar, true);
+  Type nll= mu*mu; //dnorm(mu_bounded, Type(0), covar, true);
   return(nll);
 }

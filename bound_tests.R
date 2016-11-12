@@ -12,64 +12,59 @@ boundpin <- function(y, minb, maxb) -log( (maxb-y)/(y-minb) )
 #' The derivative of boundp
 ndfboundp <- function(x, minb, maxb) (maxb-minb)*exp(-x)/(1+exp(-x))^2
 
-a <- -3
-b <- 3
-Npar <- 2
-covar <- matrix(.5121, nrow=2, ncol=2)
-diag(covar) <- c(1,1)
-covar <- diag(2)
-covar.inv <- solve(covar)
+## First test with a 1d normal. Three cases, mvnd1 is normal with bounds
+## created in R, mvnb1 is bounded in the template, and analytically in R.
+a <- -2
+b <- 2
 covar <- covar.inv <- 1
 Npar <- 1
 
-dyn.unload(dynlib('models/mvnb/mvnb_tmb'))
-compile(file='models/mvnb/mvnb_tmb.cpp')
-dyn.load(dynlib('models/mvnb/mvnb_tmb'))
+dyn.unload(dynlib('models/mvnb1/mvnb_tmb'))
+compile(file='models/mvnb1/mvnb_tmb.cpp')
+dyn.load(dynlib('models/mvnb1/mvnb_tmb'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar), bounds=c(a,b))
-pars <- 'mu'
 mvnb.obj <- MakeADFun(data=data, parameters=list(mu=rep(0, NROW(covar))), DLL='mvnb_tmb')
 nlminb(start=0.01*c(1), objective=mvnb.obj$fn, gradient=mvnb.obj$gr)
 mvnb.obj$env$beSilent()
 mvnb.obj$report()
-## ##
-## compile(file='models/mvnd/mvnd_tmb.cpp')
-## dyn.load(dynlib('models/mvnd/mvnd_tmb'))
-## data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
-## pars <- 'mu'
-## mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
-## nlminb(start=0.01*c(1,-1), objective=mvnd.obj$fn, gradient=mvnd.obj$gr)
-## mvnd.obj$env$beSilent()
-## mvnd.obj$report()
-
+log(ndfboundp(mvnb.obj$par, a,b))
+##
+dyn.unload(dynlib('models/mvnd1/mvnd_tmb'))
+compile(file='models/mvnd1/mvnd_tmb.cpp')
+dyn.load(dynlib('models/mvnd1/mvnd_tmb'))
+data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
+mvnd.obj <- MakeADFun(data=data, parameters=list(mu=0), DLL='mvnd_tmb')
+nlminb(start=0.01, objective=mvnd.obj$fn, gradient=mvnd.obj$gr)
+mvnd.obj$env$beSilent()
+mvnd.obj$report()
 
 ## Analytical MVN log-densities and gradients
 ## fn <- function(x) as.vector(dmvnorm(as.vector(x), sigma=covar, log=TRUE))
 ## gr <- function(x) -as.vector(covar.inv%*%x)
-fn <- function(x) dnorm(x, mean=0, sd=covar, log=TRUE)
-gr <- function(x) -2*x/covar^2
+fn <- function(x) -x^2
+gr <- function(x) -2*x
 plot(x <- seq(a,b, len=1000), y=fn(x))
 plot(x <- seq(a,b, len=1000), y=gr(x))
 fnb <- function(y){
-  yinv <- logit.inv(y)
-  scales <- (b-a)*yinv*(1-yinv)
-  fn(a+(b-a)*yinv) #+ sum(log(scales))
+  scales <- ndfboundp(y,a,b)
+  fn(boundp(y, a,b)) + log(scales)
   }
-grb <- function(x) {
-  gr(boundp(x, a,b))* ndfboundp(x,a,b)
-  }
-par(mfrow=c(1,2))
-plot(x <- seq(a,b, len=1000), y=fnb(x))
-plot(x <- seq(a,b, len=1000), y=-sapply(x, function(i) mvnb.obj$fn(i)), col='red')
-
-plot(x <- seq(a,b, len=1000), y=grb(x)); abline(h=0)
+grb <- function(y) {
+  gr(boundp(y, a,b))* ndfboundp(y,a,b)-1+2/(1+exp(y))
+}
 fn2 <- function(y){
  -mvnd.obj$fn(boundp(y, a,b)) + sum(log(abs(ndfboundp(y,a,b))))
 }
-gr2 <- function(y) -mvnd.obj$gr(boundp(y, a,b))* ndfboundp(y,a,b)
-
-
+gr2 <- function(y) -mvnd.obj$gr(boundp(y, a,b))* ndfboundp(y,a,b) -1 +2/(1+exp(y))
+x.seq <- seq(-10,10, len=1000)
+par(mfrow=c(2,3))
+plot(x.seq, y=fnb(x.seq))
+plot(x.seq, y=sapply(x.seq, function(i) fn2(i)), col='red')
+plot(x.seq, y=-sapply(x.seq, function(i) mvnb.obj$fn(i)), col='red')
+plot(x.seq, y=grb(x.seq)); abline(h=0)
+plot(x.seq, y=sapply(x.seq, function(i) gr2(i)), col='red')
+plot(x.seq, y=-sapply(x.seq, function(i) mvnb.obj$gr(i)), col='red')
 x1 <- rnorm(1)
-x2 <- rnorm(1)
 mvnb.obj$gr(x1)
 gr2(x1)
 grb(x1)
@@ -79,13 +74,76 @@ fn2(x1)-fn2(x2)
 
 ## Quick MCMC tests
 out.rwm <- TMB:::run_mcmc.rwm(nsim=20000, fn=fnb, params.init=c(0))
-##plot(boundp(out.rwm[,1], a,b), boundp(out.rwm[,2], a,b))
 plot(boundp(out.rwm[,1], a,b))
 ## RWM works fine, so fnb must be right
 out.nuts <- TMB:::run_mcmc.nuts(nsim=2000, fn=fnb, gr=grb, params.init=c(0), eps=NULL, max_doublings=6)
 ##with(out.nuts, plot(boundp(par[,1], a,b), boundp(par[,2], a,b)))
-with(out.nuts, plot(boundp(par[,1], a,b))
-plot(out.nuts$sampler_params[,2], log='y')
+with(out.nuts, plot(boundp(par[,1], a,b)))
+## OK it works for 1d example.
+
+## 2d example
+a <- -2
+b <- 2
+covar <- matrix(.354, nrow=2, ncol=2)
+diag(covar) <- 1
+covar.inv <- solve(covar)
+Npar <- 2
+
+dyn.unload(dynlib('models/mvnb/mvnb_tmb'))
+compile(file='models/mvnb/mvnb_tmb.cpp')
+dyn.load(dynlib('models/mvnb/mvnb_tmb'))
+data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar), bounds=c(a,b))
+mvnb.obj <- MakeADFun(data=data, parameters=list(mu=rep(0, 2)), DLL='mvnb_tmb')
+nlminb(start=0.01*c(1,1), objective=mvnb.obj$fn, gradient=mvnb.obj$gr)
+mvnb.obj$env$beSilent()
+mvnb.obj$report(par=c(1,1))
+log(ndfboundp(c(1,1), a,b))
+##
+dyn.unload(dynlib('models/mvnd/mvnd_tmb'))
+compile(file='models/mvnd/mvnd_tmb.cpp')
+dyn.load(dynlib('models/mvnd/mvnd_tmb'))
+data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
+mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
+nlminb(start=c(1,1), objective=mvnd.obj$fn, gradient=mvnd.obj$gr)
+mvnd.obj$env$beSilent()
+
+## Analytical MVN log-densities and gradients
+fn <- function(x) as.vector(dmvnorm(as.vector(x), sigma=covar, log=TRUE))
+gr <- function(x) -as.vector(covar.inv%*%x)
+fnb <- function(y){
+  scales <- ndfboundp(y,a,b)
+  fn(boundp(y, a,b)) + sum(log(scales))
+  }
+grb <- function(y) {
+  gr(boundp(y, a,b))* ndfboundp(y,a,b)-1+2/(1+exp(y))
+}
+fn2 <- function(y){
+ -mvnd.obj$fn(boundp(y, a,b)) + sum(log(abs(ndfboundp(y,a,b))))
+}
+gr2 <- function(y) -mvnd.obj$gr(boundp(y, a,b))* ndfboundp(y,a,b) -1 +2/(1+exp(y))
+x.seq <- seq(-10,10, len=1000)
+par(mfrow=c(2,3))
+x1 <- rnorm(2)
+x2 <- rnorm(2)
+mvnb.obj$gr(x1)
+gr2(x1)
+grb(x1)
+-mvnb.obj$fn(x1)+mvnb.obj$fn(x2)
+fnb(x1)-fnb(x2)
+fn2(x1)-fn2(x2)
+
+## Quick MCMC tests
+out.rwm <- TMB:::run_mcmc.rwm(nsim=20000, fn=fnb, params.init=c(0,0))
+plot(boundp(out.rwm[,1], a,b), boundp(out.rwm[,2], a,b))
+## RWM works fine, so fnb must be right
+out.nuts <- TMB:::run_mcmc.nuts(nsim=2000, fn=fnb, gr=grb, params.init=c(0,0), eps=NULL, max_doublings=6)
+##with(out.nuts, plot(boundp(par[,1], a,b), boundp(par[,2], a,b)))
+with(out.nuts, plot(boundp(par[,1], a,b), boundp(par[,2], a,b)))
+mvnd.nuts <- run_mcmc(nsim=2000, obj=mvnd.obj, alg='NUTS',
+                      lower=-1,upper=1, chains=3)
+sso.tmb <- with(mvnd.nuts, as.shinystan(samples, burnin=warmup, max_treedepth=8,
+             sampler_params=sampler_params, algorithm='NUTS'))
+launch_shinystan(sso.tmb)
 
 x1.seq <- x2.seq <- seq(-5,5, len=10)
 res <- ldply(x1.seq, function(x1)
