@@ -5,6 +5,36 @@ library(R2admb)
 library(rstan)
 main.dir <- file.path('C:/Users/Cole/Dropbox/Research/HMC_tests/')
 
+
+as.shinystan.tmb <- function(tmb.fit){
+  if(tmb.fit$algorithm=="NUTS"){
+    sso <- with(tmb.fit, as.shinystan(samples, burnin=warmup, max_treedepth=max_treedepth,
+             sampler_params=sampler_params, algorithm='NUTS', model_name=model))
+  } else if(tmb.fit$algorithm=="HMC"){
+    sso <- with(tmb.fit, as.shinystan(samples, burnin=warmup,
+             sampler_params=sampler_params, algorithm='HMC', model_name=model))
+  } else {
+    sso <- with(tmb.fit, as.shinystan(samples, burnin=warmup,
+             algorithm='RWM', model_name=model))
+  }
+  return(sso)
+}
+
+nuts <- run_mcmc(mvnd.obj, nsim=Niter, init=init, chains=3, alg="NUTS")
+hmc <- run_mcmc(mvnd.obj, nsim=Niter, init=init, L=50, chains=3, alg="HMC")
+rwm <- run_mcmc(mvnd.obj, nsim=10*Niter, init=init, chains=3, alg="RWM",
+                thin=10, alpha=.2)
+sso.nuts <- as.shinystan.tmb(nuts)
+launch_shinystan(sso.nuts)
+sso.hmc <- as.shinystan.tmb(hmc)
+launch_shinystan(sso.hmc)
+sso.rwm <- as.shinystan.tmb(rwm)
+launch_shinystan(sso.rwm)
+
+
+
+
+
 ## Quick experiment for looking at typical set from iid Z as dimension
 ## grows.
 n <- 5000
