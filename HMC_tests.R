@@ -3,27 +3,27 @@ library(plyr)
 library(coda)
 library(R2admb)
 library(rstan)
-main.dir <- file.path('C:/Users/Cole/Dropbox/Research/HMC_tests/')
 
+covar <- matrix(.954, nrow=2, ncol=2)
+diag(covar) <- 1
+covar.inv <- solve(covar)
+Npar <- 2
+Niter <- 1000
 
-as.shinystan.tmb <- function(tmb.fit){
-  if(tmb.fit$algorithm=="NUTS"){
-    sso <- with(tmb.fit, as.shinystan(samples, burnin=warmup, max_treedepth=max_treedepth,
-             sampler_params=sampler_params, algorithm='NUTS', model_name=model))
-  } else if(tmb.fit$algorithm=="HMC"){
-    sso <- with(tmb.fit, as.shinystan(samples, burnin=warmup,
-             sampler_params=sampler_params, algorithm='HMC', model_name=model))
-  } else {
-    sso <- with(tmb.fit, as.shinystan(samples, burnin=warmup,
-             algorithm='RWM', model_name=model))
-  }
-  return(sso)
-}
+dyn.unload(dynlib('models/mvnd/mvnd_tmb'))
+compile(file='models/mvnd/mvnd_tmb.cpp')
+dyn.load(dynlib('models/mvnd/mvnd_tmb'))
+data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
+mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
 
-nuts <- run_mcmc(mvnd.obj, nsim=Niter, init=init, chains=3, alg="NUTS")
-hmc <- run_mcmc(mvnd.obj, nsim=Niter, init=init, L=50, chains=3, alg="HMC")
-rwm <- run_mcmc(mvnd.obj, nsim=10*Niter, init=init, chains=3, alg="RWM",
-                thin=10, alpha=.2)
+init <- lapply(1:3, function(x) rnorm(2, sd=10))
+Niter <- 1000
+nuts <- run_mcmc(mvnd.obj, iter=2*Niter, init=init, chains=3, alg="NUTS",
+                 covar=covar, thin=2)
+hmc <- run_mcmc(mvnd.obj, iter=2*Niter, init=init, L=10, chains=3, alg="HMC",
+                covar=covar, thin=2)
+rwm <- run_mcmc(mvnd.obj, iter=10*Niter, init=init, chains=3, alg="RWM",
+                thin=10, alpha=.2, covar=covar)
 sso.nuts <- as.shinystan.tmb(nuts)
 launch_shinystan(sso.nuts)
 sso.hmc <- as.shinystan.tmb(hmc)
@@ -31,8 +31,16 @@ launch_shinystan(sso.hmc)
 sso.rwm <- as.shinystan.tmb(rwm)
 launch_shinystan(sso.rwm)
 
+## Some quick profiling
+Rprof()
+nuts <- run_mcmc(mvnd.obj, iter=2*Niter, init=init, chains=3, alg="NUTS",
+                 covar=diag(2), thin=2, upper=c(4,4), lower=c(-4,-4))
+Rprof(NULL)
+head(summaryRprof()$by.self)
 
 
+xx <- extract_samples(nuts)
+plot(xx)
 
 
 ## Quick experiment for looking at typical set from iid Z as dimension
@@ -59,7 +67,7 @@ system(m)
 
 L.vec <- floor(seq(2, 50, len=10))
 eps.vec <- exp(seq(log(.01), log(.2), len=10))
-nsim <- 2e3
+iter <- 2e3
 seed <- sample(1:1e3, size=1)
 results <- ldply(L.vec, function(L) {
     ldply(eps.vec, function(eps){
@@ -67,14 +75,14 @@ results <- ldply(L.vec, function(L) {
         if(file.exists(file.path(m,'.psv')))
             file.remove(file.path(m, '.psv'))
         time <- system.time(
-            system(paste(m, '-noest -hybrid -mcmc', nsim, '-hynstep', L, '-hyeps',
+            system(paste(m, '-noest -hybrid -mcmc', iter, '-hynstep', L, '-hyeps',
                          eps, '-mcseed', seed), ignore.stdout=TRUE))['elapsed']
         Sys.sleep(.1)
         psv <- read_psv(m, names=NULL)
         ## psv.array <- array(NA, dim=c(nrow(psv),1,ncol(psv)))
         ## rstan::monitor(sims=psv, warmup=0, probs=.5)
         ess <- effectiveSize(psv)
-        accept.rate <- 1- sum(psv[-nrow(psv),1]== psv[-1,1])/nsim
+        accept.rate <- 1- sum(psv[-nrow(psv),1]== psv[-1,1])/iter
         x <- cbind(L, eps, accept.rate, min.ess=min(ess), time=as.numeric(time))
         x})})
 results <- within(results, perf <- min.ess/time)
