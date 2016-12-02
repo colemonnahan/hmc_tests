@@ -5,7 +5,6 @@ library(plyr)
 library(mvtnorm)
 library(shinystan)
 
-
 ## Run a cross of bounded/unbounded and covar/no covar to make sure they
 ## all work
 ## 2d example
@@ -13,7 +12,7 @@ covar <- matrix(.954, nrow=2, ncol=2)
 diag(covar) <- 1
 covar.inv <- solve(covar)
 Npar <- 2
-Niter <- 1000
+Niter <- 500
 
 dyn.unload(dynlib('models/mvnd/mvnd_tmb'))
 compile(file='models/mvnd/mvnd_tmb.cpp')
@@ -21,17 +20,27 @@ dyn.load(dynlib('models/mvnd/mvnd_tmb'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
 
-lower <- c(-1.5,-2); upper <- c(0,1.13)
-init <- lapply(1:3, function(x) rnorm(2, sd=10))
-## No covar
-out1 <- run_mcmc(mvnd.obj, nsim=Niter, init=init, chains=3)
-out2 <- run_mcmc(mvnd.obj, nsim=Niter, init=init, lower=lower, upper=upper,
-                 chains=3)
-## With covar
-out3 <- run_mcmc(mvnd.obj, nsim=Niter, init=init, covar=covar, chains=3)
-out4 <- run_mcmc(mvnd.obj, nsim=Niter, init=init, lower=lower, upper=upper,
-                 covar=covar, chains=3)
+source("../adcomp/TMB/R/mcmc.R")
 
+lower <- c(0,-Inf); upper <- c(10,1.13)
+## lower <- c(-Inf,-100); upper <- c(Inf,100)
+## lower <- c(-50, -50); upper <- c(50, Inf)
+lower <- c(-Inf, -Inf); upper <- c(Inf, Inf)
+lower <- c(-2,-2); upper <- c(2,2)
+lower <- c(-Inf,-2); upper <- c(Inf,2)
+lower <- c(-20,-20); upper <- c(20,20)
+.transform.cases(lower,upper)
+init <- lapply(1:1, function(x) rnorm(2, sd=1))
+
+## No covar
+td <- 5
+out1 <- run_mcmc(mvnd.obj, iter=Niter, init=init, chains=3)
+out2 <- run_mcmc(mvnd.obj, iter=Niter, init=init, lower=lower, upper=upper,
+                 chains=1, max_treedepth=td)
+## With covar
+out3 <- run_mcmc(mvnd.obj, iter=Niter, init=init, covar=covar, chains=1)
+out4 <- run_mcmc(mvnd.obj, iter=Niter, init=init, lower=lower, upper=upper,
+                 covar=covar, chains=1, max_treedepth=td)
 get_efficiency_label<- function(x){
   samples <- x$samples[-(1:x$warmup),1,, drop=FALSE]
   minESS <- min(monitor(samples, probs=.5, print=FALSE)[,5])
@@ -50,7 +59,20 @@ plot(out4$samples[-(1:out2$warmup),1,], xlim=xlim, ylim=ylim)
 text(3,-3, labels=get_efficiency_label(out4))
 abline(v=c(lower[1], upper[1]), h=c(lower[2], upper[2]))
 
+launch_shinystan_tmb(out1)
+launch_shinystan_tmb(out2)
+launch_shinystan_tmb(out3)
+launch_shinystan_tmb(out4)
 
+fit <- run_mcmc(obj, iter=2000, init=NULL, chains=3)
+## samples from all chains, excluding warmup samples
+x <- extract_samples(fit)
+## Rhat, ESS, and quantiles
+diagnostics <- rstan::monitor(sims=fit$samples)
+## Quick way to get reported values for each row
+derived.report <- unlist(apply(x, 1, function(i) as.numeric(mvnd.obj$report(par=i))))
+## A shiny tool to look at NUTS output
+launch_shinystan_tmb(fit)
 
 ## First test with a 1d normal. Two cases: mvnb1 is bounded in the
 ## template, and analytically in R.
@@ -97,10 +119,10 @@ plot(x.seq, y=sapply(x.seq, function(i) grb(i))); abline(h=0)
 plot(x.seq, y=-sapply(x.seq, function(i) mvnb.obj$gr(i)), col='red'); abline(h=0)
 
 ## Quick MCMC tests
-out.rwm <- run_mcmc.rwm(nsim=20000, fn=fnb, init=c(0))
+out.rwm <- run_mcmc.rwm(iter=20000, fn=fnb, init=c(0))
 plot(sapply(1:nrow(out.rwm$par), function(i) .transform(out.rwm$par[i,1], a,b, cases)))
 ## RWM works fine, so fnb must be right
-out.nuts <- run_mcmc.nuts(nsim=2000, fn=fnb, gr=grb, init=c(0), eps=NULL, max_doublings=6)
+out.nuts <- run_mcmc.nuts(iter=2000, fn=fnb, gr=grb, init=c(0), eps=NULL, max_doublings=6)
 ##with(out.nuts, plot(boundp(par[,1], a,b), boundp(par[,2], a,b)))
 plot(sapply(1:nrow(out.nuts$par), function(i)
   .transform(out.nuts$par[i,1], a, b, cases)))
@@ -152,11 +174,11 @@ a <- c(-5,-5); b <- c(Inf, Inf)
 a <- b <- NULL
 a <- c(-Inf, -Inf); b <- c(Inf, Inf)
 
-out.rwm <- run_mcmc(obj=mvnd.obj, nsim=20000,init=c(0,0),
+out.rwm <- run_mcmc(obj=mvnd.obj, iter=20000,init=c(0,0),
                     lower=a, upper=b, alg='RWM', chain=1, alpha=.1,
                     thin=10)
 plot(out.rwm$samples[,1,1], out.rwm$samples[,1,2])
-out.nuts <- run_mcmc(obj=mvnd.obj, nsim=2000, alg='NUTS', max_doublings=10,
+out.nuts <- run_mcmc(obj=mvnd.obj, iter=2000, alg='NUTS', max_doublings=10,
                      chains=3, lower=a, upper=b)
 plot(out.nuts$samples[,1,1], out.nuts$samples[,1,2])
 sso.tmb <- with(out.nuts, as.shinystan(samples, burnin=warmup, max_treedepth=8,
@@ -180,12 +202,12 @@ library(shinystan)
 source('mcmc.R')
 
 set.seed(1)
-out.rwm <- run_mcmc.rwm(nsim=2000, fn=fnb, init=c(0,0))
-out1 <- run_mcmc(nsim=2000, obj=mvnb.obj, init=c(0,0), L=50, eps=.5, alg='HMC')
+out.rwm <- run_mcmc.rwm(iter=2000, fn=fnb, init=c(0,0))
+out1 <- run_mcmc(iter=2000, obj=mvnb.obj, init=c(0,0), L=50, eps=.5, alg='HMC')
 set.seed(1)
-out2 <- run_mcmc.hmc(nsim=2000, fn=fnb, gr=grb, init=c(0,0),
+out2 <- run_mcmc.hmc(iter=2000, fn=fnb, gr=grb, init=c(0,0),
                            L=50, eps=.1)
-out2 <- run_mcmc.nuts(nsim=2000, fn=fnb, gr=grb, init=c(0,0), eps=.1)
+out2 <- run_mcmc.nuts(iter=2000, fn=fnb, gr=grb, init=c(0,0), eps=.1)
 par(mfrow=c(2,2))
 with(out1, plot(samples[,1,1], samples[,1,2]))
 with(out2, plot(par[,1],par[,2]))
@@ -215,7 +237,7 @@ sims.stan <- data.frame(extract(stan.fit, permuted=FALSE)[,1,])
 sso.stan <- as.shinystan(stan.fit)
 launch_shinystan(sso.stan)
 
-tmb.fit <- run_mcmc(nsim=iter, obj=mvnb.obj, alg='NUTS', lower=c(-100,-100),
+tmb.fit <- run_mcmc(iter=iter, obj=mvnb.obj, alg='NUTS', lower=c(-100,-100),
                     upper=c(100,100), eps=NULL, chains=1, max_doubling=td,
                     covar=NULL)
 sims.tmb <- data.frame(tmb.fit$samples[-(1:iter/2),1,])
@@ -223,7 +245,7 @@ sso.tmb <- with(tmb.fit, as.shinystan(samples, burnin=warmup, max_treedepth=td,
              sampler_params=sampler_params, algorithm='NUTS'))
 launch_shinystan(sso.tmb)
 
-tmb.fit2 <- run_mcmc(nsim=iter, obj=mvnb.obj, alg='NUTS', lower=c(-2,-2),
+tmb.fit2 <- run_mcmc(iter=iter, obj=mvnb.obj, alg='NUTS', lower=c(-2,-2),
                     upper=c(2,2), eps=NULL, chains=chains, max_doubling=td,
                     covar=covar)
 sims.tmb2 <- data.frame(tmb.fit$samples[-(1:iter/2),1,])

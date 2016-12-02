@@ -13,7 +13,8 @@ Type objective_function<Type>::operator() ()
   for(int i=0; i<=1; i++){
     mu_bounded(i)=bounds(0)+(bounds(1)-bounds(0))/(1+exp(-mu(i)));
     // jacobian adjustment by hand
-	log_scales(i) = log( (bounds(1)-bounds(0)) ) -mu(i) -2*log(1+exp(-mu(i))) ;
+	log_scales(i) = log(bounds(1)-bounds(0)) -
+	  mu(i) -2*log(1+exp(-mu(i))) ;
 	nll-=log_scales(i);
   }
   using namespace density;
