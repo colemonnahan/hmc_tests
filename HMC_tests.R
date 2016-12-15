@@ -3,6 +3,58 @@ library(plyr)
 library(coda)
 library(R2admb)
 library(rstan)
+library(shinystan)
+
+## Super quick ADMB tests.
+setwd("c:/Users/Cole/admb/examples/admb/simple")
+system('admb_hmc simple')
+system('simple -mcmc 20 -hmc -hynstep 50')
+adapt <- read.csv("adaptation.csv")
+pars <- read_psv('simple')
+pars2 <- array(0, dim=c(nrow(pars), 1, ncol(pars)))
+pars2[,1,] <- as.matrix(pars)
+dimnames(pars2) <- list(iterations=NULL, chains="chain:1", parameters=names(pars))
+ss <- monitor(sims=pars2)
+y <- vector("list", length=length(names(pars)))
+names(y) <- names(pars)
+z <- lapply(y, function(x) x=numeric(0))
+sso2 <- shinystan:::shinystan(model_name='simple', param_names=names(pars),
+                  param_dims=z, posterior_sample=pars2,
+                  sampler_params=adapt,
+                  summary=ss, n_chain=1, n_iter=nrow(pars),
+                  n_warmup=nrow(pars)/2, model_code='NA',
+                  misc=list(max_td=10, stan_method='sampling',
+                            stan_algorithm='HMC',
+                            sso_version=utils::packageVersion('shinystan')))
+#launch_shinystan(sso2)
+
+
+## Super quick ADMB tests.
+setwd("c:/Users/Cole/admb/examples/admb/catage")
+system('admb_hmc catage')
+#system('catage')
+system('catage -nohess -mcmc 200 -hmc -hynstep 100 -mcseed 1')
+adapt <- read.csv("adaptation.csv")
+pars <- read_psv('catage')
+pars2 <- array(0, dim=c(nrow(pars), 1, ncol(pars)))
+pars2[,1,] <- as.matrix(pars)
+dimnames(pars2) <- list(iterations=NULL, chains="chain:1", parameters=names(pars))
+ss <- monitor(sims=pars2)
+y <- vector("list", length=length(names(pars)))
+names(y) <- names(pars)
+z <- lapply(y, function(x) x=numeric(0))
+sso2 <- shinystan:::shinystan(model_name='catage', param_names=names(pars),
+                  param_dims=z, posterior_sample=pars2,
+                  sampler_params=adapt,
+                  summary=ss, n_chain=1, n_iter=nrow(pars),
+                  n_warmup=nrow(pars)/2, model_code='NA',
+                  misc=list(max_td=10, stan_method='sampling',
+                            stan_algorithm='HMC',
+                            sso_version=utils::packageVersion('shinystan')))
+launch_shinystan(sso2)
+
+
+
 
 covar <- matrix(.954, nrow=2, ncol=2)
 diag(covar) <- 1
@@ -115,6 +167,7 @@ zz <- ddply(xx, .(seed, delta), summarize, accept.rate=mean(accepted))
 
 delta <- .8
 seed <- 13
+setwd('C:/Users/Cole/admb/examples/admb/catage/')
 system('admb_hmc catage')
 system(paste('catage -mcmc 2000 -hmc'),
        ignore.stdout=TRUE, ignore.stderr=TRUE )
