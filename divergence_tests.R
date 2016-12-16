@@ -31,6 +31,8 @@ launch_shinystan(sso.tmb)
 
 
 
+
+
 plot(0,0, type='n', xlim=c(-1.5,1.5), ylim=c(-.5,3))
 
 rm(theta.trajectory)
