@@ -5,6 +5,18 @@ library(R2admb)
 library(rstan)
 library(shinystan)
 
+
+## build_tree tests
+d <- read.csv('build_tree.csv', header=F)[-1,]
+names(d) <- c('x1', 'x2', 'y1', 'y2', 'z1', 'z2')
+par(mfrow=c(1,3))
+f <- function() points(0,0, pch=16)
+plot(d$x1, d$x2, type='b'); f()
+plot(d$y1, d$y2, type='b'); f()
+plot(d$z1, d$z2, type='b'); f()
+
+
+
 ## Super quick ADMB tests.
 setwd("c:/Users/Cole/admb/examples/admb/simple")
 system('admb_hmc simple')
