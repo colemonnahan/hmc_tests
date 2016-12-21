@@ -1,10 +1,11 @@
-
+library(TMB)
 library(plyr)
 library(coda)
 library(R2admb)
 library(rstan)
 library(shinystan)
-
+devtools::install("c:/Users/Cole/rnuts")
+library(rnuts)
 
 ## build_tree tests
 d <- read.csv('build_tree.csv', header=F)[-1,]
@@ -20,50 +21,31 @@ plot(d$z1, d$z2, type='b'); f()
 ## Super quick ADMB tests.
 setwd("c:/Users/Cole/admb/examples/admb/simple")
 system('admb_hmc simple')
-system('simple -mcmc 200 -hmc -hynstep 50 -mcseed 10')
-adapt <- read.csv("adaptation.csv")
+write.table(x=c(3,3), file='mcpin.txt', row.names=F, col.names=F)
+system('simple -noest -mcmc 2000 -nuts -hyeps .01 -mcpin mcpin.txt')
+adapt <- as.matrix(read.csv("adaptation.csv"))
 pars <- read_psv('simple')
+pars[,'log-posterior'] <- adapt[,'energy__']
 pars2 <- array(0, dim=c(nrow(pars), 1, ncol(pars)))
 pars2[,1,] <- as.matrix(pars)
-dimnames(pars2) <- list(iterations=NULL, chains="chain:1", parameters=names(pars))
+dimnames(pars2) <-
+  list(iterations=1:nrow(pars), chains="chain:1", parameters=dimnames(pars)[[2]])
 ss <- monitor(sims=pars2)
-y <- vector("list", length=length(names(pars)))
-names(y) <- names(pars)
+y <- vector("list", length=length(dimnames(pars2)[[3]]))
+names(y) <- dimnames(pars2)[[3]]
 z <- lapply(y, function(x) x=numeric(0))
 sso2 <- shinystan:::shinystan(model_name='simple', param_names=names(pars),
                   param_dims=z, posterior_sample=pars2,
-                  sampler_params=adapt,
+                  sampler_params=list(adapt),
                   summary=ss, n_chain=1, n_iter=nrow(pars),
                   n_warmup=nrow(pars)/2, model_code='NA',
-                  misc=list(max_td=10, stan_method='sampling',
-                            stan_algorithm='HMC',
-                            sso_version=utils::packageVersion('shinystan')))
-#launch_shinystan(sso2)
-
-
-## Super quick ADMB tests.
-setwd("c:/Users/Cole/admb/examples/admb/catage")
-system('admb_hmc catage')
-#system('catage')
-system('catage -nohess -mcmc 200 -hmc -hynstep 100 -mcseed 10')
-adapt <- read.csv("adaptation.csv")
-pars <- read_psv('catage')
-pars2 <- array(0, dim=c(nrow(pars), 1, ncol(pars)))
-pars2[,1,] <- as.matrix(pars)
-dimnames(pars2) <- list(iterations=NULL, chains="chain:1", parameters=names(pars))
-ss <- monitor(sims=pars2)
-y <- vector("list", length=length(names(pars)))
-names(y) <- names(pars)
-z <- lapply(y, function(x) x=numeric(0))
-sso2 <- shinystan:::shinystan(model_name='catage', param_names=names(pars),
-                  param_dims=z, posterior_sample=pars2,
-                  sampler_params=adapt,
-                  summary=ss, n_chain=1, n_iter=nrow(pars),
-                  n_warmup=nrow(pars)/2, model_code='NA',
-                  misc=list(max_td=10, stan_method='sampling',
-                            stan_algorithm='HMC',
+                  misc=list(max_td=12, stan_method='sampling',
+                            stan_algorithm='NUTS',
                             sso_version=utils::packageVersion('shinystan')))
 launch_shinystan(sso2)
+
+
+
 
 
 
@@ -74,15 +56,16 @@ covar.inv <- solve(covar)
 Npar <- 2
 Niter <- 1000
 
+setwd('C:/Users/Cole/hmc_tests/')
 dyn.unload(dynlib('models/mvnd/mvnd_tmb'))
 compile(file='models/mvnd/mvnd_tmb.cpp')
 dyn.load(dynlib('models/mvnd/mvnd_tmb'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
 
-init <- lapply(1:3, function(x) rnorm(2, sd=10))
+init <- lapply(1:1, function(x) rnorm(2, sd=10))
 Niter <- 1000
-nuts <- run_mcmc(mvnd.obj, iter=2*Niter, init=init, chains=3, alg="NUTS",
+nuts <- run_mcmc(mvnd.obj, iter=2*Niter, init=init, chains=1, alg="NUTS",
                  covar=covar, thin=2)
 hmc <- run_mcmc(mvnd.obj, iter=2*Niter, init=init, L=10, chains=3, alg="HMC",
                 covar=covar, thin=2)
