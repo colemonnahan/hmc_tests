@@ -6,6 +6,9 @@ library(rstan)
 library(shinystan)
 devtools::install("c:/Users/Cole/rnuts")
 library(rnuts)
+## devtools::document("c:/Users/Cole/admbtools")
+## devtools::install("c:/Users/Cole/admbtools")
+## library(admbtools)
 
 ## build_tree tests
 d <- read.csv('build_tree.csv', header=F)[-1,]
@@ -19,8 +22,13 @@ plot(d$z1, d$z2, type='b'); f()
 
 
 ## Super quick ADMB tests.
-setwd("c:/Users/Cole/admb/examples/admb/simple")
-system('admb_hmc simple')
+model.path="C:/Users/Cole/hmc_tests/models/mvnd"
+model.name='mvnd'
+x <- run_admb_mcmc(model.path, model.name, iter=500)
+
+run_mcmc_admb(
+  setwd("c:/Users/Cole/admb/examples/admb/simple")
+system('admb simple')
 write.table(x=c(3,3), file='mcpin.txt', row.names=F, col.names=F)
 system('simple -noest -mcmc 2000 -nuts -hyeps .01 -mcpin mcpin.txt')
 adapt <- as.matrix(read.csv("adaptation.csv"))
