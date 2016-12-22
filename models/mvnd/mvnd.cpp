@@ -24,8 +24,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
  model_data(argc,argv) , function_minimizer(sz)
 {
   initializationfunction();
-  mu.allocate(1,dim,-2,2,"mu");
-  trash.allocate("trash");
+  mu.allocate(1,dim,"mu");
   jnll.allocate("jnll");
   prior_function_value.allocate("prior_function_value");
   likelihood_function_value.allocate("likelihood_function_value");
@@ -46,7 +45,6 @@ void model_parameters::userfunction(void)
 {
   jnll =0.0;
   dvector x(1,dim);
-  trash=x(1);
   for(int i=1; i<=dim; i++) x(i)=0;
   jnll=neg_log_density(x-mu);
 }

@@ -7,8 +7,7 @@ DATA_SECTION
   init_matrix covar(1,dim,1,dim);
 
 PARAMETER_SECTION
-  init_bounded_vector mu(1,dim,-2,2);
-  sdreport_number trash;
+  init_vector mu(1,dim);
   objective_function_value jnll;
 
 PRELIMINARY_CALCS_SECTION
@@ -16,7 +15,6 @@ PRELIMINARY_CALCS_SECTION
 
 PROCEDURE_SECTION
   dvector x(1,dim);
-  trash=x(1);
   for(int i=1; i<=dim; i++) x(i)=0;
   jnll=neg_log_density(x-mu);
 

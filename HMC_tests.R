@@ -4,10 +4,12 @@ library(coda)
 library(R2admb)
 library(rstan)
 library(shinystan)
-devtools::install("c:/Users/Cole/rnuts")
-library(rnuts)
+devtools::load_all("c:/Users/Cole/rnuts")
+## devtools::install("c:/Users/Cole/rnuts")
+## library(rnuts)
 ## devtools::document("c:/Users/Cole/admbtools")
 ## devtools::install("c:/Users/Cole/admbtools")
+devtools::load_all("c:/Users/Cole/admbtools")
 ## library(admbtools)
 
 ## build_tree tests
@@ -22,41 +24,10 @@ plot(d$z1, d$z2, type='b'); f()
 
 
 ## Super quick ADMB tests.
-model.path="C:/Users/Cole/hmc_tests/models/mvnd"
-model.name='mvnd'
-x <- run_admb_mcmc(model.path, model.name, iter=500)
-
-run_mcmc_admb(
-  setwd("c:/Users/Cole/admb/examples/admb/simple")
-system('admb simple')
-write.table(x=c(3,3), file='mcpin.txt', row.names=F, col.names=F)
-system('simple -noest -mcmc 2000 -nuts -hyeps .01 -mcpin mcpin.txt')
-adapt <- as.matrix(read.csv("adaptation.csv"))
-pars <- read_psv('simple')
-pars[,'log-posterior'] <- adapt[,'energy__']
-pars2 <- array(0, dim=c(nrow(pars), 1, ncol(pars)))
-pars2[,1,] <- as.matrix(pars)
-dimnames(pars2) <-
-  list(iterations=1:nrow(pars), chains="chain:1", parameters=dimnames(pars)[[2]])
-ss <- monitor(sims=pars2)
-y <- vector("list", length=length(dimnames(pars2)[[3]]))
-names(y) <- dimnames(pars2)[[3]]
-z <- lapply(y, function(x) x=numeric(0))
-sso2 <- shinystan:::shinystan(model_name='simple', param_names=names(pars),
-                  param_dims=z, posterior_sample=pars2,
-                  sampler_params=list(adapt),
-                  summary=ss, n_chain=1, n_iter=nrow(pars),
-                  n_warmup=nrow(pars)/2, model_code='NA',
-                  misc=list(max_td=12, stan_method='sampling',
-                            stan_algorithm='NUTS',
-                            sso_version=utils::packageVersion('shinystan')))
-launch_shinystan(sso2)
-
-
-
-
-
-
+model.path="C:/Users/Cole/hmc_tests/models/catage"
+model.name='catage'
+x <- run_admb(model.path, model.name, iter=1000, chains=3)
+launch_shinystan_admb(x)
 
 covar <- matrix(.954, nrow=2, ncol=2)
 diag(covar) <- 1
