@@ -28,6 +28,11 @@ model.path="C:/Users/Cole/hmc_tests/models/catage"
 model.name='catage'
 x <- run_admb(model.path, model.name, iter=1000, chains=3)
 launch_shinystan_admb(x)
+setwd(model.path)
+system('admb catage')
+system('catage -nohess -mcmc 10 -nuts -mcseed 5')
+adapt <- read.csv("adaptation.csv")
+pars <- read_psv(model.name)
 
 covar <- matrix(.954, nrow=2, ncol=2)
 diag(covar) <- 1

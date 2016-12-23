@@ -200,9 +200,9 @@ void model_parameters::report(const dvector& gradients)
   report << "Estimated numbers in catch " << endl;
   report << C << endl;
   report << "Observed numbers in catch " << endl;
-  report << obs_catch_at_age << endl; 
+  report << obs_catch_at_age << endl;
   report << "Estimated fishing mortality " << endl;
-  report << F << endl; 
+  report << F << endl;
 }
 
 model_data::~model_data()
