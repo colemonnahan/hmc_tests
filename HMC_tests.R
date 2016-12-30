@@ -27,8 +27,8 @@ plot(d$z1, d$z2, type='b'); f()
 ## Super quick ADMB tests.
 model.path="C:/Users/Cole/hmc_tests/models/catage"
 model.name='catage'
-x <- run_admb_mcmc(model.path=model.path, model.name=model.name, iter=1000,
-                   chains=3, eps=.2, max_treedepth=14)
+x <- run_admb_mcmc(model.path=model.path, model.name=model.name, iter=20000,
+                   chains=1, eps=.2, max_treedepth=10, thin=100)
 launch_shinystan_admb(x)
 setwd(model.path)
 system('admb catage')
