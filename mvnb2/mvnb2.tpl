@@ -5,11 +5,11 @@ GLOBALS_SECTION
 DATA_SECTION
   init_number dim;
   init_matrix covar(1,dim,1,dim);
-  init_vector mins(1,2);
-  init_vector maxs(1,2);
+  init_vector lwr(1,2);
+  init_vector upr(1,2);
 
 PARAMETER_SECTION
-  init_bounded_number_vector mu(1,dim,mins,maxs);
+  init_bounded_number_vector mu(1,dim,lwr,upr);
   objective_function_value jnll;
 
 PRELIMINARY_CALCS_SECTION
