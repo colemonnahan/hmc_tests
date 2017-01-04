@@ -7,12 +7,14 @@ library(mvtnorm)
 library(shinystan)
 devtools::load_all("c:/Users/Cole/rnuts")
 
-
-covar <- matrix(-.54, nrow=2, ncol=2)
-diag(covar) <- 1
+## Setup posterior surface
+corr <- matrix(-.954, nrow=2, ncol=2)
+diag(corr) <- 1
+se <- c(1, 5)
+covar <- corr * (se %o% se)
 covar.inv <- solve(covar)
-
-## Make single buildtree trajectory using TMB
+zz <- rmvnorm(n=1e4, sigma=covar)
+## Setup temporary functions
 source("buildtree2.R")
 setwd('mvnb2/')
 dyn.unload(dynlib('mvnb2_tmb'))
@@ -21,8 +23,6 @@ dyn.load(dynlib('mvnb2_tmb'))
 data <- list(covar=covar, Npar=2, x=rep(0, len=2))
 obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnb2_tmb')
 obj$env$beSilent()
-
-
 ## Manual bounding functions
 fn <- function(y){
   x <- .transform(y, lower, upper, cases)
@@ -35,38 +35,11 @@ gr <- function(y){
   scales2 <- .transform.grad2(y, lower, upper, cases)
   -as.vector(obj$gr(x))*scales + scales2
 }
-if(TRUE){
-  fn2 <- function(theta) fn(chd %*% theta)
-  gr2 <- function(theta) as.vector( t( gr(chd %*% theta) ) %*% chd )
-  chd <- t(chol(covar))               # lower triangular Cholesky decomp.
-  chd.inv <- solve(chd)               # inverse
-} else {
-  fn2 <- fn; gr2 <- gr
-}
-
-
-lower <- c(-3.1,-3.8); upper <- c(3.4,2.9)
-lower <- 10*c(-3.1,-3.8); upper <- 10*c(3.4,2.9)
-## lower <- c(-Inf, -Inf); upper <- c(Inf, Inf)
-cases <- .transform.cases(lower, upper)
-z0 <- c(.5,2.1)
-y0 <- .transform.inv(z0, a=lower, b=upper, cases=cases)
-x0 <- as.vector(chd.inv %*% y0)
-## ## Recover z0
-## y02 <- as.vector(chd %*% x0)
-## z0- as.vector(.transform(y02, lower, upper, cases))
-## ## Recover gradients. Why doesnt this work??
-## .transform(as.vector(chd %*% gr2(x0)), upper,lower,cases)
-## -as.vector(covar.inv%*%z0)
-zz <- rmvnorm(n=1e4, sigma=covar)
-## filter out those outside bounds
-samples.z <- zz[zz[,1] > lower[1] & zz[,1] < upper[1] &
-              zz[,2] > lower[2] & zz[,2] < upper[2],]
-samples.y <- t(sapply(1:nrow(samples.z), function(i)
-  .transform.inv(samples.z[i,], lower,upper, cases)))
-samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
-u <- 1e-5
-r0 <- -c(1.5,-1.1)
+## Rotated, bounded functions
+fn2 <- function(theta) fn(chd %*% theta)
+gr2 <- function(theta) as.vector( t( gr(chd %*% theta) ) %*% chd )
+## Quick fun to run a single buildtree trajectory and return key things,
+## used to plot below
 f <- function(x0, r0, u, v=1, j, eps){
   rm(theta.trajectory, pos='.GlobalEnv')
   temp <- buildtree2(x0, r=r0, u=u, v=v, j=j, eps=eps,
@@ -76,25 +49,69 @@ f <- function(x0, r0, u, v=1, j, eps){
   traj.y <- t(apply(traj.x, 1, function(i) chd %*% i))
   traj.z <- t(sapply(1:nrow(traj.y), function(i)
     .transform(traj.y[i,], lower,upper, cases)))
-  return(list(x=traj.x, y=traj.y, z=traj.z, theta.prime=temp$theta.prime))
+  return(list(s=temp$s, x=traj.x, y=traj.y, z=traj.z, theta.prime=temp$theta.prime))
 }
-res <- f(x0, r0, u=1e-5, v=1, j=10, eps=.05)
+## Quick tests
+z0 <- c(.5,2.1)
+y0 <- .transform.inv(z0, a=lower, b=upper, cases=cases)
+x0 <- as.vector(chd.inv %*% y0)
+lower <- c(-3.1,-3.8); upper <- c(3.4,2.9)
+lower <- 10*c(-3.1,-3.8); upper <- 10*c(3.4,2.9)
+## Set mass matrix
+## ## Recover z0
+## y02 <- as.vector(chd %*% x0)
+## z0- as.vector(.transform(y02, lower, upper, cases))
+## ## Recover gradients. Why doesnt this work??
+## .transform(as.vector(chd %*% gr2(x0)), upper,lower,cases)
+## -as.vector(covar.inv%*%z0)
+u <- 1e-5
+r0 <- -c(1.5,-1.1)
+res <- f(x0, r0=c(0,0), u=1e-5, v=1, j=10, eps=.005)
 
 
-## Add single trajectory to surfaces
-x0 <- c(-.1,.2)
-y0 <- as.vector(chd %*% x0)
-z0 <- .transform(y0, a=lower, b=upper, cases=cases)
-res <- f(x0, rnorm(2), u=1e-5, v=1, j=15, eps=.005)
-par(mfrow=c(1,3))
+## Add single trajectory to surfaces, with and without a mass matrix for
+## both TMB and ADMB. THIS NEEDS TO WORK!!
 hh <- function(a,c, main, add=TRUE){
   if(add) plot(a, pch='.', main=main)
   points(c[1,1], c[1,2],col='red', pch=16)
   lines(c, type='l', col='red', pch=16, cex=.5, lwd=1)
 }
+z0 <- -c(2,-12.1)
+lower <- -3*se; upper <- 3*se
+lower <- c(-Inf, -Inf); upper <- c(Inf, Inf)
+cases <- .transform.cases(lower, upper)
+y0 <- .transform.inv(z0, lower,upper,cases)
+samples.z <- zz[zz[,1] > lower[1] & zz[,1] < upper[1] &
+              zz[,2] > lower[2] & zz[,2] < upper[2],]
+samples.y <- t(sapply(1:nrow(samples.z), function(i)
+  .transform.inv(samples.z[i,], lower,upper, cases)))
+## First with unit diag M
+r0 <- rnorm(2)#c(0,0)
+M <- diag(2)
+chd <- t(chol(M))               # lower triangular Cholesky decomp.
+chd.inv <- solve(chd)               # inverse
+samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
+x0 <- as.vector(chd.inv %*% y0)
+res <- f(x0=x0, r0=r0, u=1e-5, v=1, j=15, eps=.005)
+par(mfrow=c(2,3))
 hh(samples.x, res$x, main='Unbounded + Rotated')
-hh(samples.y, res$y, main='Unbounded + Rotated')
-hh(samples.z, res$z, main='Unbounded + Rotated')
+hh(samples.y, res$y, main='Bounded + Rotated')
+hh(samples.z, res$z, main='Model Space')
+## Now with M=covar
+M <- cov(samples.y)
+chd <- t(chol(M))               # lower triangular Cholesky decomp.
+chd.inv <- solve(chd)               # inverse
+samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
+x0 <- as.vector(chd.inv %*% y0)
+res <- f(x0=x0, r0=r0, u=1e-5, v=1, j=15, eps=.005)
+hh(samples.x, res$x, main='Unbounded + Rotated')
+hh(samples.y, res$y, main='Bounded + Rotated')
+hh(samples.z, res$z, main='Model Space')
+
+
+
+
+
 
 ## Add multiple random trajectories
 nsim <- 15
