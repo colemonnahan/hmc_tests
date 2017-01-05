@@ -11,11 +11,13 @@ buildtree2 <- function(theta, r, u, v, j, eps, theta0, r0, fn, gr,
     s <- H-log(u) + delta.max > 0
     if(is.na(s) | is.nan(s)) s <- 0
     n <- log(u) <= H
-    ## Useful code for debugging. Returns entire path to global env.
-    if(!exists('theta.trajectory'))
+    ## Useful code for debugging. Returns entire path to global env. as
+    ## long as s=1
+    if(s==1){ if(!exists('theta.trajectory'))
       theta.trajectory <<- theta
     else
       theta.trajectory <<- rbind(theta.trajectory, theta)
+      }
     temp <- .calculate.H(theta=theta, r=r, fn=fn)-
       .calculate.H(theta=theta0, r=r0, fn=fn)
     alpha <- min(exp(temp),1)

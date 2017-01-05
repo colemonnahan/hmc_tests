@@ -23,6 +23,7 @@ dyn.load(dynlib('mvnb2_tmb'))
 data <- list(covar=covar, Npar=2, x=rep(0, len=2))
 obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnb2_tmb')
 obj$env$beSilent()
+setwd('..')
 ## Manual bounding functions
 fn <- function(y){
   x <- .transform(y, lower, upper, cases)
@@ -53,8 +54,9 @@ f <- function(x0, r0, u, v=1, j, eps){
 }
 ## Quick tests
 z0 <- c(.5,2.1)
-lower <- -3*se; upper <- 3*se
-lower <- c(-Inf, -3*se[2]); upper <- c(Inf, 3*se[2])
+lower <- c(0, -3.5*se[2]); upper <- c(Inf, 3.5*se[2])
+lower <- c(-Inf, -Inf); upper <- c(Inf, Inf)
+lower <- -3.5*se; upper <- 3.5*se
 cases <- .transform.cases(lower, upper)
 y0 <- .transform.inv(z0, a=lower, b=upper, cases=cases)
 ## Check gradients in y space
@@ -73,66 +75,85 @@ z0- as.vector(.transform(y02, lower, upper, cases))
 c(fn2(x0+c(h,0))-fn2(x0), fn2(x0+c(0,h))-fn2(x0))/h
 gr2(x0)
 
-## Add single trajectory to surfaces, with and without a mass matrix for
+
+## Make trajectories with and without a mass matrix for
 ## both TMB and ADMB. THIS NEEDS TO WORK!!
-hh <- function(a,c, main, add=TRUE){
-  if(add) plot(a, pch='.', main=main)
-  points(c[1,1], c[1,2],col='red', pch=16)
+plot.tree <- function(a,c,space, main=NA, add=TRUE){
+  ## Function to add trajectory to surfaces.
+  if(add) {
+    xlim <- quantile(x=a[,1], probs=c(.025, .975))
+    ylim <- quantile(x=a[,2], probs=c(.025, .975))
+    plot(a, pch='.', main=NA, xlab=paste0(space, '[1]'),
+         ylab=paste0(space, '[2]'), col=rgb(0,0,0,.5),
+         xlim=xlim, ylim=ylim)
+    mtext(main, line=.5)
+    }
+  points(c[1,1], c[1,2],col='red', pch=16, cex=.5)
   lines(c, type='l', col='red', pch=16, cex=.5, lwd=1)
 }
-z0 <- -c(2,-12.1)
-lower <- c(-Inf, -Inf); upper <- c(Inf, Inf)
-lower <- -3*se; upper <- 3*se
-cases <- .transform.cases(lower, upper)
-y0 <- .transform.inv(z0, lower,upper,cases)
-samples.z <- zz[zz[,1] > lower[1] & zz[,1] < upper[1] &
-              zz[,2] > lower[2] & zz[,2] < upper[2],]
-samples.y <- t(sapply(1:nrow(samples.z), function(i)
-  .transform.inv(samples.z[i,], lower,upper, cases)))
+## Add multiple random trajectories
+nsim <- 50
+eps <- .01
+x.ind <- sample(1:nrow(samples.x), size=nsim)
+r0 <- matrix(rnorm(nsim*2), ncol=2)
+v <- sample(c(-1,1), nsim, replace=TRUE)
+png('plots/tree_trajectories.png', width=7, height=5, units='in', res=500)
+par(mfrow=c(3,3), mar=c(3,3,.5,.1), mgp=c(1.5,.5,.05), oma=c(0,0,1.5,0))
 ## First with unit diag M
-r0 <- rnorm(2)#c(0,0)
 M <- diag(2)
 chd <- t(chol(M))               # lower triangular Cholesky decomp.
 chd.inv <- solve(chd)               # inverse
 samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
-x0 <- as.vector(chd.inv %*% y0)
-gr2(x0)
-res <- f(x0=x0, r0=r0, u=1e-5, v=1, j=15, eps=.005)
-par(mfrow=c(2,3))
-hh(samples.x, res$x, main='Unbounded')
-hh(samples.y, res$y, main='Uounded + Rotated')
-hh(samples.z, res$z, main='Model Space')
+tmp <- lapply(1:nsim, function(i){
+  x0 <- samples.x[x.ind[i],]
+  return(f(x0, r0[i,], u=1e-5, v=v[i], j=15, eps=eps))
+})
+tt <- sapply(1:nsim, function(i)
+  plot.tree(samples.x, tmp[[i]]$x, space='x', main='Unbounded', add=(i==1)))
+tt <- sapply(1:nsim, function(i)
+  plot.tree(samples.y, tmp[[i]]$y, space='y', main='Unbounded + Rotated', add=(i==1)))
+tt <- sapply(1:nsim, function(i)
+  plot.tree(samples.z, tmp[[i]]$z, space='z',  main='Model Space', add=(i==1)))
+## Now with M= estimated diagonals
+M <- matrix(0, nrow=2, ncol=2)
+diag(M) <- apply(samples.y, 2, var)
+chd <- t(chol(M))               # lower triangular Cholesky decomp.
+chd.inv <- solve(chd)               # inverse
+samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
+tmp2 <- lapply(1:nsim, function(i){
+  x0 <- samples.x[x.ind[i],]
+  return(f(x0, r0[i,], u=1e-5, v=v[i], j=15, eps=eps))
+})
+tt <- sapply(1:nsim, function(i)
+  plot.tree(samples.x, tmp2[[i]]$x, space='x', add=(i==1)))
+tt <- sapply(1:nsim, function(i)
+  plot.tree(samples.y, tmp2[[i]]$y, space='y', add=(i==1)))
+tt <- sapply(1:nsim, function(i)
+  plot.tree(samples.z, tmp2[[i]]$z, space='z', add=(i==1)))
 ## Now with M=covar
 M <- cov(samples.y)
 chd <- t(chol(M))               # lower triangular Cholesky decomp.
 chd.inv <- solve(chd)               # inverse
 samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
-x0 <- as.vector(chd.inv %*% y0)
-gr2(x0)
-res <- f(x0=x0, r0=r0, u=1e-5, v=1, j=15, eps=.005)
-hh(samples.x, res$x, main='Unbounded')
-hh(samples.y, res$y, main='Unbounded + Rotated')
-hh(samples.z, res$z, main='Model Space')
-
-
-
-## Add multiple random trajectories
-nsim <- 15
-temp <- lapply(1:nsim, function(i){
-  x0 <- rnorm(2, mean=c(-.1, .2), sd=c(.1, .1))#c(-.1,1.2)
-  y0 <- as.vector(chd %*% x0)
-  z0 <- .transform(y0, a=lower, b=upper, cases=cases)
-  res <- f(x0, rnorm(2), u=1e-5, v=1, j=15, eps=.005)
-  return(res)
+tmp3 <- lapply(1:nsim, function(i){
+  x0 <- samples.x[x.ind[i],]
+  return(f(x0, r0[i,], u=1e-5, v=v[i], j=15, eps=eps))
 })
-par(mfrow=c(1,3))
 tt <- sapply(1:nsim, function(i)
-  hh(samples.x, temp[[i]]$x, main='Unbounded + Rotated', add=(i==1)))
+  plot.tree(samples.x, tmp3[[i]]$x, space='x', add=(i==1)))
 tt <- sapply(1:nsim, function(i)
-  hh(samples.y, temp[[i]]$y, main='Unbounded + Rotated', add=(i==1)))
+  plot.tree(samples.y, tmp3[[i]]$y, space='y', add=(i==1)))
 tt <- sapply(1:nsim, function(i)
-  hh(samples.z, temp[[i]]$z, main='Unbounded + Rotated', add=(i==1)))
+  plot.tree(samples.z, tmp3[[i]]$z, space='z', add=(i==1)))
+dev.off()
 
+any(unlist(lapply(tmp, function(x) x$s)) )
+any(unlist(lapply(tmp2, function(x) x$s)))
+any(unlist(lapply(tmp3, function(x) x$s)))
+par(mfrow=c(1,3))
+barplot(table(unlist(lapply(tmp, function(x) nrow(x$x)))))
+barplot(table(unlist(lapply(tmp2, function(x) nrow(x$x)))))
+barplot(table(unlist(lapply(tmp3, function(x) nrow(x$x)))))
 
 
 
