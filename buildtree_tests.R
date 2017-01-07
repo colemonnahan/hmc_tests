@@ -75,7 +75,6 @@ z0- as.vector(.transform(y02, lower, upper, cases))
 c(fn2(x0+c(h,0))-fn2(x0), fn2(x0+c(0,h))-fn2(x0))/h
 gr2(x0)
 
-
 ## Make trajectories with and without a mass matrix for
 ## both TMB and ADMB. THIS NEEDS TO WORK!!
 plot.tree <- function(a,c,space, main=NA, add=TRUE){
@@ -169,3 +168,38 @@ unique(test[,1])
 barplot(table(test[,1]))
 
 
+## Make sure TMB and ADMB produce identical buildtree trajectories given
+## the same model and initial values. I hard coded this test into ADMB
+## temporarily so it won't work generally.
+compare.traj <- function(x0,r0){
+  setwd('mvnb2')
+  write.table(c(x0, r0), file='input.txt', sep=' ', row.names=F, col.names=F)
+  lower <<- -3.5*se; upper <<- 3.5*se
+  write.table(x=c(2, covar, lower, upper), file='mvnb2.dat', row.names=FALSE, col.names=FALSE)
+  ##  system('admb mvnb2')
+  file <- 'trajectory.txt'
+  pp <- if(file.exists(file)) file.remove(file)
+  system('mvnb2 -mcmc 1 -nuts -hyeps .001 -noest', ignore.stdout=F)
+  traj.admb <- as.matrix(read.table(file, sep=' ')[,-1])
+  mle <- R2admb::read_admb('mvnb2')
+  ## match mass matrices
+  chd <- t(matrix(c(0.181891, 0, -0.173524, 0.0545322), nrow=2))
+  chd.inv <- solve(chd)               # inverse
+  res <- f(x0, r0, 1e-6, 1, j=15, eps=.001)
+  traj.tmb <- cbind(res$x, res$y, res$z)[-1,]
+  setwd('..')
+  return(list(traj.tmb=traj.tmb, traj.admb=traj.admb))
+}
+
+
+x0 <- rnorm(2)
+r0 <- rnorm(2)
+x <- compare.traj(x0, r0)
+col1 <- 1; col2 <- 2
+par(mfrow=c(1,3))
+plot(x$traj.admb[,1], x$traj.admb[,2], col=col1, type='l', lwd=2)
+lines(x$traj.tmb[,1], x$traj.tmb[,2], col=col2, type='l', lwd=.5)
+plot(x$traj.admb[,3], x$traj.admb[,4], col=col1, type='l', lwd=2)
+lines(x$traj.tmb[,3], x$traj.tmb[,4], col=col2, type='l', lwd=.5)
+plot(x$traj.admb[,5], x$traj.admb[,6], col=col1, type='l', lwd=2)
+lines(x$traj.tmb[,5], x$traj.tmb[,6], col=col2, type='l', lwd=.5)
