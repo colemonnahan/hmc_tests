@@ -10,7 +10,7 @@ devtools::load_all("c:/Users/Cole/rnuts")
 ## Setup posterior surface
 corr <- matrix(-.954, nrow=2, ncol=2)
 diag(corr) <- 1
-se <- c(1, 5)
+se <- c(1, 25)
 covar <- corr * (se %o% se)
 covar.inv <- solve(covar)
 zz <- rmvnorm(n=1e4, sigma=covar)
@@ -56,7 +56,7 @@ f <- function(x0, r0, u, v=1, j, eps){
 z0 <- c(.5,2.1)
 lower <- c(0, -3.5*se[2]); upper <- c(Inf, 3.5*se[2])
 lower <- c(-Inf, -Inf); upper <- c(Inf, Inf)
-lower <- -3.5*se; upper <- 3.5*se
+lower <- -2.5*se; upper <- 2.5*se
 cases <- .transform.cases(lower, upper)
 y0 <- .transform.inv(z0, a=lower, b=upper, cases=cases)
 ## Check gradients in y space
@@ -80,8 +80,9 @@ gr2(x0)
 plot.tree <- function(a,c,space, main=NA, add=TRUE){
   ## Function to add trajectory to surfaces.
   if(add) {
-    xlim <- quantile(x=a[,1], probs=c(.025, .975))
-    ylim <- quantile(x=a[,2], probs=c(.025, .975))
+    xlim <- quantile(x=a[,1], probs=c(.005, .995))
+    ylim <- quantile(x=a[,2], probs=c(.005, .995))
+    ## xlim <- ylim <- NULL
     plot(a, pch='.', main=NA, xlab=paste0(space, '[1]'),
          ylab=paste0(space, '[2]'), col=rgb(0,0,0,.5),
          xlim=xlim, ylim=ylim)
@@ -91,9 +92,15 @@ plot.tree <- function(a,c,space, main=NA, add=TRUE){
   lines(c, type='l', col='red', pch=16, cex=.5, lwd=1)
 }
 ## Add multiple random trajectories
-nsim <- 50
+nsim <- 15
 eps <- .01
-x.ind <- sample(1:nrow(samples.x), size=nsim)
+lower <- c(-1, -4)*se; upper <- c(1,4)*se
+## Filter out points out of bounds
+samples.z <-
+  zz[zz[,1] > lower[1] & zz[,1] < upper[1] &
+     zz[,2] > lower[2] & zz[,2] < upper[2],]
+samples.y <- t(apply(samples.z, 1, function(i)
+  .transform.inv(i, lower, upper, cases)))
 r0 <- matrix(rnorm(nsim*2), ncol=2)
 v <- sample(c(-1,1), nsim, replace=TRUE)
 png('plots/tree_trajectories.png', width=7, height=5, units='in', res=500)
@@ -103,6 +110,7 @@ M <- diag(2)
 chd <- t(chol(M))               # lower triangular Cholesky decomp.
 chd.inv <- solve(chd)               # inverse
 samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
+x.ind <- sample(1:nrow(samples.x), size=nsim)
 tmp <- lapply(1:nsim, function(i){
   x0 <- samples.x[x.ind[i],]
   return(f(x0, r0[i,], u=1e-5, v=v[i], j=15, eps=eps))
@@ -145,7 +153,8 @@ tt <- sapply(1:nsim, function(i)
 tt <- sapply(1:nsim, function(i)
   plot.tree(samples.z, tmp3[[i]]$z, space='z', add=(i==1)))
 dev.off()
-
+## Check some properties of the trajectories. Why so many duplicated number
+## of steps for tmp3?? Shouldn't they be random??
 any(unlist(lapply(tmp, function(x) x$s)) )
 any(unlist(lapply(tmp2, function(x) x$s)))
 any(unlist(lapply(tmp3, function(x) x$s)))
@@ -155,51 +164,69 @@ barplot(table(unlist(lapply(tmp2, function(x) nrow(x$x)))))
 barplot(table(unlist(lapply(tmp3, function(x) nrow(x$x)))))
 
 
-
-## Check that it is drawing uniformly from the trajectory
-test <- ldply(1:50, function(i){
-  u <- .sample.u(theta=y0, r=r0, fn=fn)
- .buildtree(x0, r=r0, u=u, v=1, j=0, eps=5000,
-            theta0=x0, r0=r0, fn=fn, gr=gr)$theta.prime})
-test.bounded <- t(sapply(1:nrow(test), function(i)
-  .transform(as.matrix(test)[i,], lower,upper, cases)))
-
-unique(test[,1])
-barplot(table(test[,1]))
-
-
 ## Make sure TMB and ADMB produce identical buildtree trajectories given
 ## the same model and initial values. I hard coded this test into ADMB
 ## temporarily so it won't work generally.
-compare.traj <- function(x0,r0){
+compare.traj <- function(x0,r0, j=15, eps=.05, seed=1){
   setwd('mvnb2')
-  write.table(c(x0, r0), file='input.txt', sep=' ', row.names=F, col.names=F)
-  lower <<- -3.5*se; upper <<- 3.5*se
+  write.table(c(x0, r0, j), file='input.txt', sep=' ', row.names=F, col.names=F)
   write.table(x=c(2, covar, lower, upper), file='mvnb2.dat', row.names=FALSE, col.names=FALSE)
-  ##  system('admb mvnb2')
+  ## system('admb mvnb2')
   file <- 'trajectory.txt'
   pp <- if(file.exists(file)) file.remove(file)
-  system('mvnb2 -mcmc 1 -nuts -hyeps .001 -noest', ignore.stdout=F)
+  file2 <- 'theta_prime.txt'
+  pp <- if(file.exists(file2)) file.remove(file2)
+  system(paste0('mvnb2 -noest -mcmc 1 -nuts -hyeps ', eps, ' -mcseed ',seed), ignore.stdout=T)
   traj.admb <- as.matrix(read.table(file, sep=' ')[,-1])
-  mle <- R2admb::read_admb('mvnb2')
-  ## match mass matrices
-  chd <- t(matrix(c(0.181891, 0, -0.173524, 0.0545322), nrow=2))
-  chd.inv <- solve(chd)               # inverse
-  res <- f(x0, r0, 1e-6, 1, j=15, eps=.001)
+  theta.admb <- as.matrix(read.table('theta_prime.txt'))
+  set.seed(seed)
+  res <- f(x0, r0, exp(-15), 1, j=j, eps=eps)
   traj.tmb <- cbind(res$x, res$y, res$z)[-1,]
+  theta.tmb <- matrix(res$theta.prime, ncol=2)
   setwd('..')
-  return(list(traj.tmb=traj.tmb, traj.admb=traj.admb))
+  return(list(traj.tmb=traj.tmb, traj.admb=traj.admb,
+              theta.admb=theta.admb, theta.tmb=theta.tmb))
 }
-
-
+set.seed(3)
 x0 <- rnorm(2)
 r0 <- rnorm(2)
+lower <- c(-1, -4)*se; upper <- c(1,4)*se
+## match mass matrices
+chd <- t(matrix(c(0.181891, 0, -0.173524, 0.0545322), nrow=2))
+chd.inv <- solve(chd)               # inverse
 x <- compare.traj(x0, r0)
 col1 <- 1; col2 <- 2
+png('plots/tree_trajectories_comparison.png', width=7, height=3, units='in', res=500)
+par(mfrow=c(1,3), mar=c(3,3,1.5,.1), mgp=c(1.5,.5,.05), oma=c(0,0,1.5,0))
+plot(x$traj.admb[,1], x$traj.admb[,2], col=col1, type='l', lwd=3,
+     main="Unbounded, Rotated", xlab='x[1]', ylab='x[2]')
+lines(x$traj.tmb[,1], x$traj.tmb[,2], col=col2, type='l', lwd=1)
+plot(x$traj.admb[,3], x$traj.admb[,4], col=col1, type='l', lwd=3,
+          main="Unbounded", xlab='y[1]', ylab='y[2]')
+lines(x$traj.tmb[,3], x$traj.tmb[,4], col=col2, type='l', lwd=1)
+plot(x$traj.admb[,5], x$traj.admb[,6], col=col1, type='l', lwd=3,
+          main="Model Space", xlab='z[1]', ylab='z[2]')
+lines(x$traj.tmb[,5], x$traj.tmb[,6], col=col2, type='l', lwd=1)
+legend('bottomleft', legend=c('ADMB', 'TMB'), lwd=c(3,1), col=c(col1,col2))
+dev.off()
+
+
+## Check that it is drawing uniformly from the trajectory for both ADMB and
+## TMB. Run the same trajectory but get different theta_primes by using a
+## different seed.
+## !!!! This takes a long time to run !!!!!
+x0 <- c(1,2)
+r0 <- c(.112, -1.147)
+test <- ldply(1:2000, function(i){
+  x <- compare.traj(x0, r0, j=5, eps=.01, seed=i)
+  data.frame(tmb=x$theta.tmb[1], admb=x$theta.admb[1])})
+x1 <- sort(as.numeric(as.factor(test[,1])))
+x2 <- sort(as.numeric(as.factor(test[,2])))
+length(unique(x1))
+length(unique(x2))
+png('plots/trajectory_sampling.png', width=6, height=3, units='in', res=500)
 par(mfrow=c(1,3))
-plot(x$traj.admb[,1], x$traj.admb[,2], col=col1, type='l', lwd=2)
-lines(x$traj.tmb[,1], x$traj.tmb[,2], col=col2, type='l', lwd=.5)
-plot(x$traj.admb[,3], x$traj.admb[,4], col=col1, type='l', lwd=2)
-lines(x$traj.tmb[,3], x$traj.tmb[,4], col=col2, type='l', lwd=.5)
-plot(x$traj.admb[,5], x$traj.admb[,6], col=col1, type='l', lwd=2)
-lines(x$traj.tmb[,5], x$traj.tmb[,6], col=col2, type='l', lwd=.5)
+plot(x1,x2)
+barplot(table(x1))
+barplot(table(x2))
+dev.off()
