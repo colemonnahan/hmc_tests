@@ -92,6 +92,7 @@ plot.tree <- function(a,c,space, main=NA, add=TRUE){
   lines(c, type='l', col='red', pch=16, cex=.5, lwd=1)
 }
 ## Add multiple random trajectories
+set.seed(35123)
 nsim <- 15
 eps <- .01
 lower <- c(-1, -4)*se; upper <- c(1,4)*se
@@ -113,7 +114,7 @@ samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
 x.ind <- sample(1:nrow(samples.x), size=nsim)
 tmp <- lapply(1:nsim, function(i){
   x0 <- samples.x[x.ind[i],]
-  return(f(x0, r0[i,], u=1e-5, v=v[i], j=15, eps=eps))
+  return(f(x0, r0[i,], u=1e-15, v=v[i], j=15, eps=eps))
 })
 tt <- sapply(1:nsim, function(i)
   plot.tree(samples.x, tmp[[i]]$x, space='x', main='Unbounded', add=(i==1)))
@@ -129,7 +130,7 @@ chd.inv <- solve(chd)               # inverse
 samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
 tmp2 <- lapply(1:nsim, function(i){
   x0 <- samples.x[x.ind[i],]
-  return(f(x0, r0[i,], u=1e-5, v=v[i], j=15, eps=eps))
+  return(f(x0, r0[i,], u=1e-15, v=v[i], j=15, eps=eps))
 })
 tt <- sapply(1:nsim, function(i)
   plot.tree(samples.x, tmp2[[i]]$x, space='x', add=(i==1)))
@@ -144,7 +145,7 @@ chd.inv <- solve(chd)               # inverse
 samples.x <- t(apply(samples.y, 1, function(i) chd.inv %*% i))
 tmp3 <- lapply(1:nsim, function(i){
   x0 <- samples.x[x.ind[i],]
-  return(f(x0, r0[i,], u=1e-5, v=v[i], j=15, eps=eps))
+  return(f(x0, r0[i,], u=1e-15, v=v[i], j=15, eps=eps))
 })
 tt <- sapply(1:nsim, function(i)
   plot.tree(samples.x, tmp3[[i]]$x, space='x', add=(i==1)))
@@ -158,17 +159,24 @@ dev.off()
 any(unlist(lapply(tmp, function(x) x$s)) )
 any(unlist(lapply(tmp2, function(x) x$s)))
 any(unlist(lapply(tmp3, function(x) x$s)))
-par(mfrow=c(1,3))
+png('plots/trajectory_lengths.png', width=7, height=3, units='in', res=500)
+par(mfrow=c(1,3), mar=c(3,3,1,.1), mgp=c(1.5,.5,.05), oma=c(0,0,1,.5))
 barplot(table(unlist(lapply(tmp, function(x) nrow(x$x)))))
+mtext("Identity M");box()
 barplot(table(unlist(lapply(tmp2, function(x) nrow(x$x)))))
+mtext("Diagonal M");box()
 barplot(table(unlist(lapply(tmp3, function(x) nrow(x$x)))))
-
+mtext("Dense M");box()
+mtext("Frequency", side=2, outer=TRUE, line=-1.5)
+mtext("Trajectory length (steps)", side=1, outer=TRUE, line=-1.4)
+dev.off()
 
 ## Make sure TMB and ADMB produce identical buildtree trajectories given
 ## the same model and initial values. I hard coded this test into ADMB
 ## temporarily so it won't work generally.
 compare.traj <- function(x0,r0, j=15, eps=.05, seed=1){
   setwd('mvnb2')
+  on.exit(setwd('..'))
   write.table(c(x0, r0, j), file='input.txt', sep=' ', row.names=F, col.names=F)
   write.table(x=c(2, covar, lower, upper), file='mvnb2.dat', row.names=FALSE, col.names=FALSE)
   ## system('admb mvnb2')
@@ -183,18 +191,17 @@ compare.traj <- function(x0,r0, j=15, eps=.05, seed=1){
   res <- f(x0, r0, exp(-15), 1, j=j, eps=eps)
   traj.tmb <- cbind(res$x, res$y, res$z)[-1,]
   theta.tmb <- matrix(res$theta.prime, ncol=2)
-  setwd('..')
   return(list(traj.tmb=traj.tmb, traj.admb=traj.admb,
               theta.admb=theta.admb, theta.tmb=theta.tmb))
 }
-set.seed(3)
+set.seed(6)
 x0 <- rnorm(2)
 r0 <- rnorm(2)
 lower <- c(-1, -4)*se; upper <- c(1,4)*se
 ## match mass matrices
-chd <- t(matrix(c(0.181891, 0, -0.173524, 0.0545322), nrow=2))
+chd <- t(matrix(c(0.636619, 0, -0.151834, 0.0477157), nrow=2))
 chd.inv <- solve(chd)               # inverse
-x <- compare.traj(x0, r0)
+x <- compare.traj(x0, r0, j=15, eps=.01, seed=3)
 col1 <- 1; col2 <- 2
 png('plots/tree_trajectories_comparison.png', width=7, height=3, units='in', res=500)
 par(mfrow=c(1,3), mar=c(3,3,1.5,.1), mgp=c(1.5,.5,.05), oma=c(0,0,1.5,0))
@@ -226,7 +233,7 @@ length(unique(x1))
 length(unique(x2))
 png('plots/trajectory_sampling.png', width=6, height=3, units='in', res=500)
 par(mfrow=c(1,3), mar=c(3,3,1.5,.1), mgp=c(1.5,.5,.05), oma=c(0,0,1.5,0))
-plot(x1,x2)
-barplot(table(x1))
-barplot(table(x2))
+plot(x1,x2, xlab="TMB", ylab="ADMB")
+barplot(table(x1), main="TMB", xlab="Step # selected")
+barplot(table(x2), main="ADMB",xlab="Step # selected")
 dev.off()
