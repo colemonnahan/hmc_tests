@@ -75,8 +75,7 @@ z0- as.vector(.transform(y02, lower, upper, cases))
 c(fn2(x0+c(h,0))-fn2(x0), fn2(x0+c(0,h))-fn2(x0))/h
 gr2(x0)
 
-## Make trajectories with and without a mass matrix for
-## both TMB and ADMB. THIS NEEDS TO WORK!!
+## Make trajectories with and without a mass matrix for TMB
 plot.tree <- function(a,c,space, main=NA, add=TRUE){
   ## Function to add trajectory to surfaces.
   if(add) {
@@ -170,6 +169,8 @@ mtext("Dense M");box()
 mtext("Frequency", side=2, outer=TRUE, line=-1.5)
 mtext("Trajectory length (steps)", side=1, outer=TRUE, line=-1.4)
 dev.off()
+## End of trajectories
+
 
 ## Make sure TMB and ADMB produce identical buildtree trajectories given
 ## the same model and initial values. I hard coded this test into ADMB
@@ -237,3 +238,4 @@ plot(x1,x2, xlab="TMB", ylab="ADMB")
 barplot(table(x1), main="TMB", xlab="Step # selected")
 barplot(table(x2), main="ADMB",xlab="Step # selected")
 dev.off()
+
