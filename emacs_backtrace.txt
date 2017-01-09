@@ -1,6 +1,0 @@
-
-Exception 0xc0000005 at this address:
-010a8106
-
-Backtrace:
-01151828
