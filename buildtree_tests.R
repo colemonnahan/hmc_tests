@@ -1,5 +1,6 @@
 ## Quick code to test that TMB and ADMB build tree functions do the same
 ## thing and work with bounds and arbitrary mass matrix
+rm(list=ls())
 library(TMB)
 library(rstan)
 library(plyr)
@@ -8,6 +9,7 @@ library(shinystan)
 devtools::load_all("c:/Users/Cole/rnuts")
 
 ## Setup posterior surface
+set.seed(235)
 corr <- matrix(-.954, nrow=2, ncol=2)
 diag(corr) <- 1
 se <- c(1, 25)
@@ -52,7 +54,20 @@ f <- function(x0, r0, u, v=1, j, eps){
     .transform(traj.y[i,], lower,upper, cases)))
   return(list(s=temp$s, x=traj.x, y=traj.y, z=traj.z, theta.prime=temp$theta.prime))
 }
-## Quick tests
+plot.tree <- function(a,c,space, main=NA, add=TRUE){
+  ## Function to add trajectory to surfaces.
+  if(add) {
+    xlim <- quantile(x=a[,1], probs=c(2/10000, .9998))
+    ylim <- quantile(x=a[,2], probs=c(2/10000, .9998))
+    ## xlim <- ylim <- NULL
+    plot(a, pch='.', main=NA, xlab=paste0(space, '[1]'),
+         ylab=paste0(space, '[2]'), col=rgb(0,0,0,.5),
+         xlim=xlim, ylim=ylim)
+    mtext(main, line=.5)
+    }
+  points(c[1,1], c[1,2],col='red', pch=16, cex=.5)
+  lines(c, type='l', col='red', pch=16, cex=.5, lwd=1)
+}## Quick tests
 z0 <- c(.5,2.1)
 lower <- c(0, -3.5*se[2]); upper <- c(Inf, 3.5*se[2])
 lower <- c(-Inf, -Inf); upper <- c(Inf, Inf)
@@ -76,25 +91,12 @@ c(fn2(x0+c(h,0))-fn2(x0), fn2(x0+c(0,h))-fn2(x0))/h
 gr2(x0)
 
 ## Make trajectories with and without a mass matrix for TMB
-plot.tree <- function(a,c,space, main=NA, add=TRUE){
-  ## Function to add trajectory to surfaces.
-  if(add) {
-    xlim <- quantile(x=a[,1], probs=c(.005, .995))
-    ylim <- quantile(x=a[,2], probs=c(.005, .995))
-    ## xlim <- ylim <- NULL
-    plot(a, pch='.', main=NA, xlab=paste0(space, '[1]'),
-         ylab=paste0(space, '[2]'), col=rgb(0,0,0,.5),
-         xlim=xlim, ylim=ylim)
-    mtext(main, line=.5)
-    }
-  points(c[1,1], c[1,2],col='red', pch=16, cex=.5)
-  lines(c, type='l', col='red', pch=16, cex=.5, lwd=1)
-}
 ## Add multiple random trajectories
-set.seed(35123)
+set.seed(3512)
 nsim <- 15
 eps <- .01
 lower <- c(-1, -4)*se; upper <- c(1,4)*se
+cases <- .transform.cases(lower,upper)
 ## Filter out points out of bounds
 samples.z <-
   zz[zz[,1] > lower[1] & zz[,1] < upper[1] &
@@ -102,7 +104,7 @@ samples.z <-
 samples.y <- t(apply(samples.z, 1, function(i)
   .transform.inv(i, lower, upper, cases)))
 r0 <- matrix(rnorm(nsim*2), ncol=2)
-v <- sample(c(-1,1), nsim, replace=TRUE)
+v <- rep(1, nsim)                       # all 1 so matches admb
 png('plots/tree_trajectories.png', width=7, height=5, units='in', res=500)
 par(mfrow=c(3,3), mar=c(3,3,.5,.1), mgp=c(1.5,.5,.05), oma=c(0,0,1.5,0))
 ## First with unit diag M
