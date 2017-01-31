@@ -28,9 +28,12 @@ mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
 model.path <- 'models/mvnd'
 model.name <- 'mvnd'
 write.table(x=c(2, covar), file='models/mvnd/mvnd.dat', row.names=FALSE, col.names=FALSE)
-system('models/mvnd/mvnd')
+setwd('models/mvnd')
+system('admb mvnd')
+system('mvnd')
+setwd('../..')
 
-chains <- 15
+chains <- 5
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
 iter <- 1000
 tmb1 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains, covar=diag(2))
@@ -52,6 +55,8 @@ adapt <- rbind(cbind(name='tmb', adapt.tmb),
                cbind(name='admb', adapt.admb))
 ggplot(adapt, aes(form, stepsize, color=name)) + geom_jitter()
 ggplot(adapt, aes(form, nsteps.median, color=name)) + geom_jitter()
+ggplot(adapt, aes(form, accept.prob, color=name)) + geom_jitter()
+ggplot(adapt, aes(form, log(stepsize0), color=name)) + geom_jitter()
 ## launch_shinystan_tmb(tmb1)
 ## launch_shinystan_tmb(tmb2)
 ## launch_shinystan_tmb(tmb3)
@@ -62,7 +67,8 @@ extract_adapt <- function(fit){
     xx <- fit$sampler_params[[i]]
     cbind(chain=i, stepsize=tail(xx[ind,2],1), nsteps.median= median(xx[ind,4]),
           nsteps.mean=mean(xx[ind,4]),
-          accept.prob=mean(xx[ind,1]))})
+          accept.prob=mean(xx[ind,1]),
+          stepsize0=head(xx[ind,2],1))})
 }
 
 
