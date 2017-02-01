@@ -1,6 +1,9 @@
 buildtree2 <- function(theta, r, u, v, j, eps, theta0, r0, fn, gr,
                        delta.max=1000, info = environment() ){
   if(j==0){
+    H <- H0 <- .calculate.H(theta=theta0, r=r0, fn=fn)
+    if(!exists('theta.trajectory'))
+      theta.trajectory <<- c(theta, H, H0, r)
     ## base case, take one step in direction v
     eps <- v*eps
     r <- r+(eps/2)*gr(theta)
@@ -13,14 +16,15 @@ buildtree2 <- function(theta, r, u, v, j, eps, theta0, r0, fn, gr,
     n <- log(u) <= H
     ## Useful code for debugging. Returns entire path to global env. as
     ## long as s=1
-    if(s==1){ if(!exists('theta.trajectory'))
-      theta.trajectory <<- theta
-    else
-      theta.trajectory <<- rbind(theta.trajectory, theta)
-      }
     temp <- .calculate.H(theta=theta, r=r, fn=fn)-
       .calculate.H(theta=theta0, r=r0, fn=fn)
+    H <- .calculate.H(theta=theta, r=r, fn=fn)
     alpha <- min(exp(temp),1)
+    if(s==1){ if(!exists('theta.trajectory'))
+      theta.trajectory <<- c(theta, H, H0, r)
+    else
+      theta.trajectory <<- rbind(theta.trajectory, c(theta, H, H0,r))
+    }
     info$n.calls <- info$n.calls + 5
     return(list(theta.minus=theta, theta.plus=theta, theta.prime=theta, r.minus=r,
                 r.plus=r, s=s, n=n, alpha=alpha, nalpha=1))

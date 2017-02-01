@@ -32,10 +32,33 @@ setwd('models/mvnd')
 system('admb mvnd')
 system('mvnd')
 setwd('../..')
+extract_adapt <- function(fit){
+  ldply(1:length(fit$sampler_params), function(i){
+    ind <- -(1:fit$warmup)
+    xx <- fit$sampler_params[[i]]
+    cbind(chain=i, stepsize=tail(xx[ind,2],1), nsteps.median= median(xx[ind,4]),
+          nsteps.mean=mean(xx[ind,4]),
+          accept.prob=mean(xx[ind,1]),
+          stepsize0=head(xx[ind,2],1))})
+}
 
-chains <- 5
+## Run across fixed step size to see if matches
+iter <- 5000
+chains <- 1
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
-iter <- 1000
+admb3 <- run_admb_mcmc(model.path, model.name, iter=iter, init=init,
+                       chains=chains, covar=covar, eps=1)
+tmb3 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains,
+                 covar=covar, eps=1)
+plot(admb3$sampler_params[[1]][,2])
+points(tmb3$sampler_params[[1]][,2], col=2)
+plot(admb3$sampler_params[[1]][,1])
+points(tmb3$sampler_params[[1]][,1], col=2)
+qqplot(tmb3$samples[,1,1], admb3$samples[,1,1])
+
+chains <- 10
+init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
+iter <- 500
 tmb1 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains, covar=diag(2))
 tmb2 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains, covar=covar2)
 tmb3 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains, covar=covar)
@@ -51,8 +74,16 @@ adapt.admb2 <- cbind(form=2, extract_adapt(admb2))
 adapt.admb3 <- cbind(form=3, extract_adapt(admb3))
 adapt.admb <- rbind(adapt.admb1, adapt.admb2, adapt.admb3)
 
+plot(admb3$sampler_params[[10]][,2])
+points(tmb3$sampler_params[[10]][,2], col=2)
+plot(admb3$sampler_params[[10]][,1])
+points(tmb3$sampler_params[[10]][,1], col=2)
+
 adapt <- rbind(cbind(name='tmb', adapt.tmb),
                cbind(name='admb', adapt.admb))
+adapt.long <- reshape2::melt(adapt, c("name", "form", "chain"))
+ggplot(adapt.long, aes(form, value, color=name)) + geom_jitter() +
+  facet_wrap('variable', scales='free')
 ggplot(adapt, aes(form, stepsize, color=name)) + geom_jitter()
 ggplot(adapt, aes(form, nsteps.median, color=name)) + geom_jitter()
 ggplot(adapt, aes(form, accept.prob, color=name)) + geom_jitter()
@@ -60,16 +91,9 @@ ggplot(adapt, aes(form, log(stepsize0), color=name)) + geom_jitter()
 ## launch_shinystan_tmb(tmb1)
 ## launch_shinystan_tmb(tmb2)
 ## launch_shinystan_tmb(tmb3)
-
-extract_adapt <- function(fit){
-  ldply(1:length(fit$sampler_params), function(i){
-    ind <- -(1:fit$warmup)
-    xx <- fit$sampler_params[[i]]
-    cbind(chain=i, stepsize=tail(xx[ind,2],1), nsteps.median= median(xx[ind,4]),
-          nsteps.mean=mean(xx[ind,4]),
-          accept.prob=mean(xx[ind,1]),
-          stepsize0=head(xx[ind,2],1))})
-}
+launch_shinystan_admb(admb1)
+launch_shinystan_admb(admb2)
+## launch_shinystan_admb(admb3)
 
 
 

@@ -6,9 +6,67 @@ library(rstan)
 library(plyr)
 library(mvtnorm)
 library(shinystan)
-devtools::load_all("c:/Users/Cole/rnuts")
+devtools::load_all("c:/Users/Cole/adnuts")
+source("buildtree2.R")
 
-## Setup posterior surface
+## Generate single trajectory and make sure identical path and acceptance
+## probabilities. Start with basic parabola as easiest case.
+set.seed(6)
+x0 <- c(1,0)
+r0 <- c(.27, -.63) #rnorm(2)
+eps <- .1
+setwd('parabola/')
+compile(file='parabola_tmb.cpp')
+dyn.load(dynlib('parabola_tmb'))
+data <- list(Npar=2)
+obj <- MakeADFun(data=data, parameters=list(x1=0, x2=0), DLL='parabola_tmb')
+obj$env$beSilent()
+fn2 <- function(x) -obj$fn(x)
+gr2 <- function(x) -as.vector(obj$gr(x))
+rm(theta.trajectory, pos='.GlobalEnv')
+temp <- buildtree2(x0, r=r0, u=1e-15, v=1, j=10, eps=eps,
+                   theta0=x0, r0=r0, fn=fn2, gr=gr2)
+theta.tmb <- theta.trajectory[,1:2]
+p.tmb <- theta.trajectory[, 5:6]
+alpha.tmb <- theta.trajectory[,3:4]
+dimnames(p.tmb) <- dimnames(theta.tmb) <- dimnames(alpha.tmb) <- NULL
+## Repeat with admb
+write.table(c(x0, r0, 10), file='input.txt', sep=' ', row.names=F,
+            col.names=F)
+write.table(x=2, file='parabola.dat', row.names=FALSE, col.names=FALSE)
+system('admb parabola'); system('parabola')
+file <- 'trajectory.txt'
+pp <- if(file.exists(file)) file.remove(file)
+system(paste0('parabola -noest -mcmc 1 -nuts -hyeps ', eps), ignore.stdout=F)
+yy <- as.matrix(read.table(file, sep=' ')[,-1])
+dimnames(yy) <- NULL
+alpha.admb <- yy[,7:8]
+p.admb <- yy[,9:10]
+theta.admb <- yy[,1:2]
+setwd('..')
+alpha.tmb <- exp(alpha.tmb[,1]-alpha.tmb[,2])
+alpha.admb <- exp(alpha.admb[,1]-alpha.admb[,2])
+par(mfrow=c(2,3), mar=c(3,3,1.5,.1), mgp=c(1.5,.5,.05), oma=c(0,0,1.5,0))
+plot(alpha.tmb, ylim=c(0,1))
+points(alpha.admb, col=2, pch=16)
+plot(alpha.tmb, alpha.tmb-alpha.admb); abline(h=0)
+col1 <- 1; col2 <- 2
+plot(theta.admb[,1], theta.admb[,2], col=col1, type='l', lwd=3,
+     main="Unbounded, Rotated", xlab='x[1]', ylab='x[2]')
+lines(theta.tmb[,1], theta.tmb[,2], col=col2, type='l', lwd=1)
+ii <- 5
+theta.tmb[ii,]
+theta.admb[ii,]
+p.tmb[ii,]
+p.admb[ii,]
+plot(theta.tmb)
+points(theta.admb, pch=16, col=2)
+plot(p.tmb)
+points(p.admb, pch=16, col=2)
+
+
+
+## Setup more complicated posterior surface
 set.seed(235)
 corr <- matrix(-.954, nrow=2, ncol=2)
 diag(corr) <- 1
@@ -16,10 +74,7 @@ se <- c(1, 25)
 covar <- corr * (se %o% se)
 covar.inv <- solve(covar)
 zz <- rmvnorm(n=1e4, sigma=covar)
-## Setup temporary functions
-source("buildtree2.R")
 setwd('mvnb2/')
-dyn.unload(dynlib('mvnb2_tmb'))
 compile(file='mvnb2_tmb.cpp')
 dyn.load(dynlib('mvnb2_tmb'))
 data <- list(covar=covar, Npar=2, x=rep(0, len=2))
@@ -41,19 +96,6 @@ gr <- function(y){
 ## Rotated, bounded functions
 fn2 <- function(theta) fn(chd %*% theta)
 gr2 <- function(theta) as.vector( t( gr(chd %*% theta) ) %*% chd )
-## Quick fun to run a single buildtree trajectory and return key things,
-## used to plot below
-f <- function(x0, r0, u, v=1, j, eps){
-  rm(theta.trajectory, pos='.GlobalEnv')
-  temp <- buildtree2(x0, r=r0, u=u, v=v, j=j, eps=eps,
-                  theta0=x0, r0=r0, fn=fn2, gr=gr2)
-  traj.x <- rbind(x0,theta.trajectory)
-  dimnames(traj.x) <- NULL
-  traj.y <- t(apply(traj.x, 1, function(i) chd %*% i))
-  traj.z <- t(sapply(1:nrow(traj.y), function(i)
-    .transform(traj.y[i,], lower,upper, cases)))
-  return(list(s=temp$s, x=traj.x, y=traj.y, z=traj.z, theta.prime=temp$theta.prime))
-}
 plot.tree <- function(a,c,space, main=NA, add=TRUE){
   ## Function to add trajectory to surfaces.
   if(add) {
@@ -174,20 +216,22 @@ dev.off()
 ## End of trajectories
 
 
+
+
 ## Make sure TMB and ADMB produce identical buildtree trajectories given
 ## the same model and initial values. I hard coded this test into ADMB
-## temporarily so it won't work generally.
-compare.traj <- function(x0,r0, j=15, eps=.05, seed=1){
+## temporarily so it won't work generally. See commit 4c3ea869...
+compare.traj <- function(x0,r0, j=15, eps=.05, seed=1, lower,upper){
   setwd('mvnb2')
   on.exit(setwd('..'))
   write.table(c(x0, r0, j), file='input.txt', sep=' ', row.names=F, col.names=F)
   write.table(x=c(2, covar, lower, upper), file='mvnb2.dat', row.names=FALSE, col.names=FALSE)
-  ## system('admb mvnb2')
+   system('admb mvnb2')
   file <- 'trajectory.txt'
   pp <- if(file.exists(file)) file.remove(file)
   file2 <- 'theta_prime.txt'
   pp <- if(file.exists(file2)) file.remove(file2)
-  system(paste0('mvnb2 -noest -mcmc 1 -nuts -hyeps ', eps, ' -mcseed ',seed), ignore.stdout=T)
+  system(paste0('mvnb2 -noest -mcmc 1 -nuts -hyeps ', eps, ' -mcseed ',seed), ignore.stdout=F)
   traj.admb <- as.matrix(read.table(file, sep=' ')[,-1])
   theta.admb <- as.matrix(read.table('theta_prime.txt'))
   set.seed(seed)
@@ -195,17 +239,12 @@ compare.traj <- function(x0,r0, j=15, eps=.05, seed=1){
   traj.tmb <- cbind(res$x, res$y, res$z)[-1,]
   theta.tmb <- matrix(res$theta.prime, ncol=2)
   return(list(traj.tmb=traj.tmb, traj.admb=traj.admb,
-              theta.admb=theta.admb, theta.tmb=theta.tmb))
+              theta.admb=theta.admb, theta.tmb=theta.tmb,
+              alpha.tmb=res$alpha, alpha.admb=traj.admb[,7:8]))
 }
-set.seed(6)
-x0 <- rnorm(2)
-r0 <- rnorm(2)
-lower <- c(-1, -4)*se; upper <- c(1,4)*se
-## match mass matrices
-chd <- t(matrix(c(0.636619, 0, -0.151834, 0.0477157), nrow=2))
-chd.inv <- solve(chd)               # inverse
-x <- compare.traj(x0, r0, j=15, eps=.01, seed=3)
-col1 <- 1; col2 <- 2
+
+
+
 png('plots/tree_trajectories_comparison.png', width=7, height=3, units='in', res=500)
 par(mfrow=c(1,3), mar=c(3,3,1.5,.1), mgp=c(1.5,.5,.05), oma=c(0,0,1.5,0))
 plot(x$traj.admb[,1], x$traj.admb[,2], col=col1, type='l', lwd=3,
