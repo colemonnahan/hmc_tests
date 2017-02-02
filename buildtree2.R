@@ -2,8 +2,18 @@ buildtree2 <- function(theta, r, u, v, j, eps, theta0, r0, fn, gr,
                        delta.max=1000, info = environment() ){
   if(j==0){
     H <- H0 <- .calculate.H(theta=theta0, r=r0, fn=fn)
-    if(!exists('theta.trajectory'))
+    if(!exists('theta.trajectory')){
       theta.trajectory <<- c(theta, H, H0, r)
+      ## ##      cat("initial pars=", theta, gr(theta), r, "\n")
+      ## eps <- v*eps
+      ## phalf <- r+(eps/2)*gr(theta)
+      ## ##    cat("phalf=", phalf, "\n")
+      ## theta2 <- theta+eps*phalf
+      ## ##  cat("theta2=", theta2, "\n")
+      ## ##cat("gr2 new=", gr(theta2), "\n")
+      ## p <- phalf+(eps/2)*gr(theta2)
+      ## ##cat("p2=", p, "\n")
+    }
     ## base case, take one step in direction v
     eps <- v*eps
     r <- r+(eps/2)*gr(theta)
