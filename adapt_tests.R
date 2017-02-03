@@ -8,19 +8,19 @@ library(shinystan)
 devtools::load_all("c:/Users/Cole/adnuts")
 
 ## Test that step size and mass matrix adaptation is consistent across TMB
-## and ADMB Start with simple MVN model.
+## and ADMB. Start with simple MVN model.
 set.seed(235)
 Npar <- 2
 corr <- matrix(.98, nrow=2, ncol=2)
 diag(corr) <- 1
 se <- c(1, .10)
 covar <- corr * (se %o% se)
+covar <- diag(2)
 covar2 <- diag(x=se^2)
 covar.inv <- solve(covar)
 samples <- mvtnorm::rmvnorm(n=1e5, sigma=covar)
 apply(samples, 2, var)
 setwd('C:/Users/Cole/hmc_tests/')
-dyn.unload(dynlib('models/mvnd/mvnd_tmb'))
 compile(file='models/mvnd/mvnd_tmb.cpp')
 dyn.load(dynlib('models/mvnd/mvnd_tmb'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
@@ -43,18 +43,25 @@ extract_adapt <- function(fit){
 }
 
 ## Run across fixed step size to see if matches
-iter <- 5000
+iter <- 1000
 chains <- 1
+eps <- NULL
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
-admb3 <- run_admb_mcmc(model.path, model.name, iter=iter, init=init,
-                       chains=chains, covar=covar, eps=1)
-tmb3 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains,
-                 covar=covar, eps=1)
-plot(admb3$sampler_params[[1]][,2])
-points(tmb3$sampler_params[[1]][,2], col=2)
-plot(admb3$sampler_params[[1]][,1])
-points(tmb3$sampler_params[[1]][,1], col=2)
-qqplot(tmb3$samples[,1,1], admb3$samples[,1,1])
+admb <- run_admb_mcmc(model.path, model.name, iter=iter, init=init,
+                       chains=chains, covar=diag(2), eps=eps)
+tmb <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains,
+                 covar=diag(2), eps=eps)
+
+par(mfrow=c(2,2))
+plot(admb$sampler_params[[1]][,4])
+points(tmb$sampler_params[[1]][,4], col=2)
+plot(admb$sampler_params[[1]][,1])
+points(tmb$sampler_params[[1]][,1], col=2)
+plot(admb$sampler_params[[1]][,2])
+points(tmb$sampler_params[[1]][,2], col=2)
+qqplot(tmb$samples[,1,1], admb$samples[,1,1])
+## launch_shinystan_admb(admb)
+## launch_shinystan_admb(tmb)
 
 chains <- 10
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
