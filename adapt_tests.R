@@ -45,13 +45,12 @@ extract_adapt <- function(fit){
 ## Run across fixed step size to see if matches
 iter <- 1000
 chains <- 1
-eps <- NULL
+eps <- .5
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
 admb <- run_admb_mcmc(model.path, model.name, iter=iter, init=init,
                        chains=chains, covar=diag(2), eps=eps)
 tmb <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains,
                  covar=diag(2), eps=eps)
-
 par(mfrow=c(2,2))
 plot(admb$sampler_params[[1]][,4])
 points(tmb$sampler_params[[1]][,4], col=2)
@@ -59,11 +58,14 @@ plot(admb$sampler_params[[1]][,1])
 points(tmb$sampler_params[[1]][,1], col=2)
 plot(admb$sampler_params[[1]][,2])
 points(tmb$sampler_params[[1]][,2], col=2)
-qqplot(tmb$samples[,1,1], admb$samples[,1,1])
+admb.samples <- extract_samples(admb)
+tmb.samples <- extract_samples(tmb)
+qqplot(admb.samples[,1], tmb.samples[,1])
 ## launch_shinystan_admb(admb)
 ## launch_shinystan_admb(tmb)
 
-chains <- 10
+
+chains <- 6
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
 iter <- 500
 tmb1 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains, covar=diag(2))
@@ -81,10 +83,21 @@ adapt.admb2 <- cbind(form=2, extract_adapt(admb2))
 adapt.admb3 <- cbind(form=3, extract_adapt(admb3))
 adapt.admb <- rbind(adapt.admb1, adapt.admb2, adapt.admb3)
 
-plot(admb3$sampler_params[[10]][,2])
-points(tmb3$sampler_params[[10]][,2], col=2)
-plot(admb3$sampler_params[[10]][,1])
-points(tmb3$sampler_params[[10]][,1], col=2)
+yy1 <- ldply(1:chains, function(i)
+  cbind(seed=i, iter=1:iter, covar=1, m='admb', as.data.frame(admb1$sampler_params[[i]])))
+xx1 <- ldply(1:chains, function(i)
+  cbind(seed=i, iter=1:iter, covar=1, m='tmb', as.data.frame(tmb1$sampler_params[[i]])))
+yy2 <- ldply(1:chains, function(i)
+  cbind(seed=i, iter=1:iter, covar=2, m='admb', as.data.frame(admb2$sampler_params[[i]])))
+xx2 <- ldply(1:chains, function(i)
+  cbind(seed=i, iter=1:iter, covar=2, m='tmb', as.data.frame(tmb2$sampler_params[[i]])))
+yy3 <- ldply(1:chains, function(i)
+  cbind(seed=i, iter=1:iter,  covar=3,m='admb', as.data.frame(admb3$sampler_params[[i]])))
+xx3 <- ldply(1:chains, function(i)
+  cbind(seed=i, iter=1:iter, covar=3, m='tmb', as.data.frame(tmb3$sampler_params[[i]])))
+zz <- rbind(yy1,yy2,yy3, xx1,xx2,xx3)
+ggplot(zz, aes(iter, log( stepsize__), group=seed)) +
+  facet_grid(m~covar) + geom_point(alpha=.15, size=.5)
 
 adapt <- rbind(cbind(name='tmb', adapt.tmb),
                cbind(name='admb', adapt.admb))
@@ -95,7 +108,7 @@ ggplot(adapt, aes(form, stepsize, color=name)) + geom_jitter()
 ggplot(adapt, aes(form, nsteps.median, color=name)) + geom_jitter()
 ggplot(adapt, aes(form, accept.prob, color=name)) + geom_jitter()
 ggplot(adapt, aes(form, log(stepsize0), color=name)) + geom_jitter()
-## launch_shinystan_tmb(tmb1)
+launch_shinystan_tmb(tmb1)
 ## launch_shinystan_tmb(tmb2)
 ## launch_shinystan_tmb(tmb3)
 launch_shinystan_admb(admb1)
@@ -106,6 +119,8 @@ launch_shinystan_admb(admb2)
 
 model.path="C:/Users/Cole/hmc_tests/models/catage"
 model.name='catage'
+x <- run_admb_mcmc(model.path=model.path, model.name=model.name, iter=20000,
+                   chains=1, eps=.2, max_treedepth=10, thin=100)
 x <- run_admb_mcmc(model.path=model.path, model.name=model.name, iter=20000,
                    chains=1, eps=.2, max_treedepth=10, thin=100)
 launch_shinystan_admb(x)
