@@ -34,8 +34,8 @@ nll-= dnorm(logk_mean, logk, logk_sigma, true).sum();
   // Calculate likelihood
   Type delta=1;
    for(int i=0; i<Nobs; i++){
-    Linf = exp(logLinf(fish(i)));
-    k = exp(logk(fish(i)));
+    Linf = exp(logLinf(fish(i)-1));
+    k = exp(logk(fish(i)-1));
     ypred(i) = log( Linf*pow(1-exp(-k*(ages(i)-Type(5))),delta));
 	nll-=dnorm(loglengths(i), ypred(i), sigma_obs, true);
    }

@@ -10,9 +10,9 @@ parameters {
   real<lower=0, upper=5> delta;
   real<lower=0> sigma_obs; // data on log scale
 
-  // hyperparameters with bounds
-  real<lower=-5, upper=5> logLinf_mean;
-  real<lower=-5, upper=5> logk_mean;
+  // hyperparameters 
+  real logLinf_mean;
+  real logk_mean;
   real<lower=0> logLinf_sigma;
   real<lower=0> logk_sigma;
 

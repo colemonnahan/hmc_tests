@@ -20,6 +20,7 @@ metric <- c('unit_e', 'diag_e', 'dense_e')[1]
 ## console and judge progress.
 sink <- TRUE
 ## The paper was run with these key software versions
+devtools::load_all("c:/Users/Cole/adnuts")
 version$version.string                  # R version 3.2.3
 packageVersion('rstan')                 # 2.11.1
 packageVersion('R2jags')                # 0.5.7
