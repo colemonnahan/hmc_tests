@@ -5,13 +5,8 @@ devtools::install_github('bbolker/R2admb/R2admb')
 library(R2admb)
 library(rstan)
 library(shinystan)
-devtools::load_all("c:/Users/Cole/rnuts")
-## devtools::install("c:/Users/Cole/rnuts")
-## library(rnuts)
-## devtools::document("c:/Users/Cole/admbtools")
-## devtools::install("c:/Users/Cole/admbtools")
-## devtools::load_all("c:/Users/Cole/admbtools")
-## library(admbtools)
+devtools::load_all("c:/Users/Cole/adnuts")
+
 
 ## build_tree tests
 d <- read.csv('build_tree.csv', header=F)[-1,]
@@ -27,15 +22,17 @@ plot(d$z1, d$z2, type='b'); f()
 ## Super quick ADMB tests.
 model.path="C:/Users/Cole/hmc_tests/models/catage"
 model.name='catage'
-x <- run_admb_mcmc(model.path=model.path, model.name=model.name, iter=20000,
-                   chains=1, eps=.2, max_treedepth=10, thin=100)
-launch_shinystan_admb(x)
 setwd(model.path)
 system('admb catage')
 system('catage -nohess -mcmc 10 -nuts -mcseed 5')
+fit <- read_admb(model.name)
+inits <- list(fit$coefficients)
+x <- run_admb_mcmc(model.path=model.path, model.name=model.name, iter=2000,
+                   chains=1, eps=.4, max_treedepth=11, thin=1,
+                   init=inits)
+launch_shinystan_admb(x)
 adapt <- read.csv("adaptation.csv")
 pars <- read_psv(model.name)
-fit <- read_admb(model.name)
 
 covar <- matrix(.954, nrow=2, ncol=2)
 diag(covar) <- 1
