@@ -7,11 +7,13 @@ library(R2jags)
 library(reshape2)
 library(MASS)                           # has mvrnorm()
 library(TMB)
+library(adnuts)
+library(R2admb)
 ggwidth <- 8
 ggheight <- 5
 results.file <- function(file) paste0(main.dir,'results/', file)
 
-#' Run Stan and JAGS models to compare efficiency.
+#' Run Stan, TMB, and ADMB versions of the same model with NUTS.
 #'
 #' @param model Character string for model name
 #' @param seeds A vector of seeds to run across (sequentially) for each
@@ -54,87 +56,120 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
     set.seed(seed)
     for(idelta in delta){
       for(imetric in metric){
-        time.stan <- as.vector(system.time(fit.stan.nuts <-
+        fit.stan <-
           stan(fit=obj.stan, data=data, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin, algorithm='NUTS',
                init=inits.seed, seed=seed, par=pars,
                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
-                 metric=imetric, max_treedepth=max_treedepth))))[3]
-        sims.stan.nuts <- extract(fit.stan.nuts, permuted=FALSE)
-        perf.stan.nuts <- data.frame(monitor(sims=sims.stan.nuts, warmup=0, print=FALSE, probs=.5))
-        Rhat.stan.nuts <- with(perf.stan.nuts, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
-        adapt.nuts <- as.data.frame(get_sampler_params(fit.stan.nuts, inc_warmup=FALSE))
+                            metric=imetric, max_treedepth=max_treedepth))
+        sims.stan <- extract(fit.stan, permuted=FALSE)
+        perf.stan <- data.frame(monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
+        Rhat.stan <- with(perf.stan, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
+        adapt <- as.data.frame(get_sampler_params(fit.stan, inc_warmup=FALSE))
         adapt.list[[k]] <-
-          data.frame(platform='stan.nuts', seed=seed,
-                     Npar=dim(sims.stan.nuts)[3]-1,
-                     Nsims=dim(sims.stan.nuts)[1],
-                     delta.mean=mean(adapt.nuts$accept_stat__),
+          data.frame(platform='stan', seed=seed,
+                     Npar=dim(sims.stan)[3]-1,
+                     Nsims=dim(sims.stan)[1],
+                     delta.mean=mean(adapt$accept_stat__),
                      delta.target=idelta,
-                     eps.final=tail(adapt.nuts$stepsize__,1),
-                     max_treedepths=sum(adapt.nuts$treedepth__>max_treedepth),
-                     ndivergent=sum(adapt.nuts$divergent__),
-                     nsteps.mean=mean(adapt.nuts$n_leapfrog__),
-                     nsteps.median=median(adapt.nuts$n_leapfrog__),
-                     nsteps.sd=sd(adapt.nuts$n_leapfrog__),
+                     eps.final=tail(adapt$stepsize__,1),
+                     max_treedepths=sum(adapt$treedepth__>max_treedepth),
+                     ndivergent=sum(adapt$divergent__),
+                     nsteps.mean=mean(adapt$n_leapfrog__),
+                     nsteps.median=median(adapt$n_leapfrog__),
+                     nsteps.sd=sd(adapt$n_leapfrog__),
                      metric=imetric)
         perf.list[[k]] <-
-          data.frame(platform='stan.nuts',
+          data.frame(platform='stan',
                      seed=seed, delta.target=idelta, metric=imetric,
-                     eps.final=tail(adapt.nuts$stepsize__,1),
-                     Npar=dim(sims.stan.nuts)[3]-1,
-                     time=time.stan,
-                     minESS=min(perf.stan.nuts$n_eff),
-                     medianESS=median(perf.stan.nuts$n_eff),
-                     Nsims=dim(sims.stan.nuts)[1],
-                     minESS.coda=min(effectiveSize(as.data.frame(sims.stan.nuts[,1,]))),
-                     Rhat.stan.nuts)
+                     eps.final=tail(adapt$stepsize__,1),
+                     Npar=dim(sims.stan)[3]-1,
+                     time.warmup= get_elapsed_time(fit.stan)[1],
+                     time.total= sum(get_elapsed_time(fit.stan)),
+                     minESS=min(perf.stan$n_eff),
+                     medianESS=median(perf.stan$n_eff),
+                     Nsims=dim(sims.stan)[1],
+                     minESS.coda=min(effectiveSize(as.data.frame(sims.stan[,1,]))),
+                     Rhat.stan)
         k <- k+1
         ## Start of TMB run
-        time.tmb <- as.vector(system.time(fit.tmb.nuts <-
-          run_mcmc(obj=obj.tmb, nsim=Niter,
-               warmup=Nwarmup, chains=1, algorithm='NUTS',
-               params.init=inits.seed[[1]][[1]], covar=NULL, adapt_delta=idelta,
-               max_doubling=max_treedepth)))[3]
-        ## saveRDS(fit.tmb.nuts, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
-        sims.tmb.nuts <- fit.tmb.nuts$samples[-(1:Nwarmup),,, drop=FALSE]
-        perf.tmb.nuts <- data.frame(monitor(sims=sims.tmb.nuts, warmup=0, print=FALSE, probs=.5))
-        Rhat.tmb.nuts <- with(perf.tmb.nuts, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
-        adapt.nuts <- as.data.frame(fit.tmb.nuts$sampler_params[[1]])
+        fit.tmb <- run_mcmc(obj=obj.tmb, iter=Niter,
+                                 warmup=Nwarmup, chains=1, algorithm='NUTS',
+                                 init=inits.seed[[1]], covar=NULL, adapt_delta=idelta,
+                                 max_treedepth=max_treedepth)
+        ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
+        sims.tmb <- fit.tmb$samples[-(1:Nwarmup),,, drop=FALSE]
+        perf.tmb <- data.frame(monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
+        Rhat.tmb <- with(perf.tmb, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
+        adapt <- as.data.frame(fit.tmb$sampler_params[[1]])
         adapt.list[[k]] <-
-          data.frame(platform='tmb.nuts', seed=seed,
-                     Npar=dim(sims.tmb.nuts)[3]-1,
-                     Nsims=dim(sims.tmb.nuts)[1],
-                     delta.mean=mean(adapt.nuts$accept_stat__),
+          data.frame(platform='tmb', seed=seed,
+                     Npar=dim(sims.tmb)[3]-1,
+                     Nsims=dim(sims.tmb)[1],
+                     delta.mean=mean(adapt$accept_stat__),
                      delta.target=idelta,
-                     eps.final=tail(adapt.nuts$stepsize__,1),
-                     max_treedepths=sum(adapt.nuts$treedepth__>max_treedepth),
-                     ndivergent=sum(adapt.nuts$divergent__),
-                     nsteps.mean=mean(adapt.nuts$n_leapfrog__),
-                     nsteps.median=median(adapt.nuts$n_leapfrog__),
-                     nsteps.sd=sd(adapt.nuts$n_leapfrog__),
+                     eps.final=tail(adapt$stepsize__,1),
+                     max_treedepths=sum(adapt$treedepth__>max_treedepth),
+                     ndivergent=sum(adapt$divergent__),
+                     nsteps.mean=mean(adapt$n_leapfrog__),
+                     nsteps.median=median(adapt$n_leapfrog__),
+                     nsteps.sd=sd(adapt$n_leapfrog__),
                      metric=imetric)
         perf.list[[k]] <-
-          data.frame(platform='tmb.nuts',
+          data.frame(platform='tmb',
                      seed=seed, delta.target=idelta, metric=imetric,
-                     eps.final=tail(adapt.nuts$stepsize__,1),
-                     Npar=dim(sims.tmb.nuts)[3]-1,
-                     time=time.tmb,
-                     minESS=min(perf.tmb.nuts$n_eff),
-                     medianESS=median(perf.tmb.nuts$n_eff),
-                     Nsims=dim(sims.tmb.nuts)[1],
-                     minESS.coda=min(effectiveSize(as.data.frame(sims.tmb.nuts[,1,]))),
-                     Rhat.tmb.nuts)
+                     eps.final=tail(adapt$stepsize__,1),
+                     Npar=dim(sims.tmb)[3]-1,
+                     time.warmup=fit.tmb$time.warmup,
+                     time.total=fit.tmb$time.total,
+                     minESS=min(perf.tmb$n_eff),
+                     medianESS=median(perf.tmb$n_eff),
+                     Nsims=dim(sims.tmb)[1],
+                     minESS.coda=min(effectiveSize(as.data.frame(sims.tmb[,1,]))),
+                     Rhat.tmb)
         k <- k+1
-      }
-    }
-    rm(fit.stan.nuts, sims.stan.nuts, perf.stan.nuts, adapt.nuts)
-    rm(fit.tmb.nuts, sims.tmb.nuts, perf.tmb.nuts)
+        ## Run ADMB model
+        fit.admb <- run_admb_mcmc('admb', 'mvnd', iter=Niter, warmup=Nwarmup,
+                                         init=inits.seed[[1]])
+        sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
+        perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
+        Rhat.admb <- with(perf.admb, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
+        adapt <- as.data.frame(fit.admb$sampler_params[[1]])
+        adapt.list[[k]] <-
+          data.frame(platform='admb', seed=seed,
+                     Npar=dim(sims.admb)[3]-1,
+                     Nsims=dim(sims.admb)[1],
+                     delta.mean=mean(adapt$accept_stat__),
+                     delta.target=idelta,
+                     eps.final=tail(adapt$stepsize__,1),
+                     max_treedepths=sum(adapt$treedepth__>max_treedepth),
+                     ndivergent=sum(adapt$divergent__),
+                     nsteps.mean=mean(adapt$n_leapfrog__),
+                     nsteps.median=median(adapt$n_leapfrog__),
+                     nsteps.sd=sd(adapt$n_leapfrog__),
+                     metric=imetric)
+        perf.list[[k]] <-
+          data.frame(platform='admb',
+                     seed=seed, delta.target=idelta, metric=imetric,
+                     eps.final=tail(adapt$stepsize__,1),
+                     Npar=dim(sims.admb)[3]-1,
+                     time.warmup=fit.admb$time.warmup,
+                     time.total=fit.admb$time.total,
+                     minESS=min(perf.admb$n_eff),
+                     medianESS=median(perf.admb$n_eff),
+                     Nsims=dim(sims.admb)[1],
+                     minESS.coda=min(effectiveSize(as.data.frame(sims.admb[,1,]))),
+                     Rhat.admb)
+        k <- k+1
+        ## End of ADMB model
+      } # End loop over metric
+    }   # end loop over adapt_delta
+    rm(fit.stan, sims.stan, perf.stan, adapt)
+    rm(fit.tmb, sims.tmb, perf.tmb)
+    rm(fit.admb, sims.admb, perf.admb)
   }
   perf <- do.call(rbind.fill, perf.list)
-  perf <- within(perf, {
-                   time.total <- time
-                   samples.per.time <- minESS/time.total
-                 })
+  perf$efficiency <- with(perf, minESS/time.total)
   adapt <- do.call(rbind.fill, adapt.list[!ldply(adapt.list, is.null)])
   perf$model <- adapt$model <- model
   return(invisible(list(adapt=adapt, perf=perf)))
