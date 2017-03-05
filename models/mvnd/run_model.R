@@ -22,6 +22,23 @@ compile(paste0(m, '_tmb.cpp'))
 dyn.load(paste0(m,"_tmb"))
 obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
 
+inits2 <- rep(inits, 5)
+temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
+                   inits=inits2, pars=pars, data=data,
+                   seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
+perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
+                                            'minESS', 'efficiency', 'Rhat.min'))
+adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
+                                              'max_treedepths',
+                                              'ndivergent',
+                                              'nsteps.median', 'nsteps.mean'))
+ggplot(perf.long, aes(platform, value, color=platform)) + geom_jitter() +
+  facet_wrap('variable', scales='free')
+ggplot(adapt.long, aes(platform, value, color=platform)) + geom_jitter() +
+  facet_wrap('variable', scales='free')
+
+
+
 ## Get independent samples from each model to make sure they are coded the
 ## same
 if(verify)
