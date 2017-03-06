@@ -26,24 +26,24 @@ write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE,
 system('mvnd')
 setwd('..')
 
-seeds <- 1:5
-inits2 <- rep(inits, length(seeds))
-Nout <- 1000
-temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
-                   inits=inits2, pars=pars, data=data,
-                   metric=c('unit', 'diag', 'dense'), covar=covar,
-                   seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
-perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
-                                            'minESS', 'efficiency', 'Rhat.min'))
-adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
-                                              'max_treedepths',
-                                              'ndivergent',
-                                              'nsteps.median', 'nsteps.mean'))
+## seeds <- 1:5
+## inits2 <- rep(inits, length(seeds))
+## Nout <- 1000
+## temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
+##                    inits=inits2, pars=pars, data=data,
+##                    metric=c('unit', 'diag', 'dense'), covar=covar,
+##                    seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
+## perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
+##                                             'minESS', 'efficiency', 'Rhat.min'))
+## adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
+##                                               'max_treedepths',
+##                                               'ndivergent',
+##                                               'nsteps.median', 'nsteps.mean'))
 
-ggplot(perf.long, aes(platform, value, color=metric)) + geom_point() +
-  facet_wrap('variable', scales='free')
-ggplot(adapt.long, aes(platform, value, color=metric)) + geom_point() +
-  facet_wrap('variable', scales='free')
+## ggplot(perf.long, aes(platform, value, color=metric)) + geom_point() +
+##   facet_wrap('variable', scales='free')
+## ggplot(adapt.long, aes(platform, value, color=metric)) + geom_point() +
+##   facet_wrap('variable', scales='free')
 
 
 

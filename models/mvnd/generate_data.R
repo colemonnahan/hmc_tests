@@ -10,7 +10,7 @@ if(j==0){
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 inits <- lapply(1:length(seeds), function(i)
   list(mu=mvrnorm(n=1, mu=rep(0, len=Npar), Sigma=covar)))
-params.jags <- 'mu'
+
 ### old tests for how to get correlations along a gradient, for now using a
 ### two step approach (above)
 ## cors <- ldply(c(2,5), function(Npar){
