@@ -3,28 +3,35 @@
 setwd(paste0('models/',m))
 
 ## Load empirical data and inits
-Npar <- 5
+Npar <- 15
 covar <- rWishart(n=1, df=Npar, Sigma=diag(Npar))[,,1]
 covar <- diag(Npar)
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 inits <- list(list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar)))/2))
 pars <- 'mu'
 
-## Precompile Stan model so it isn't done repeatedly and isn't in the
-## timings
-obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100, par=pars,
-                   warmup=50, chains=1, thin=1, algorithm='NUTS',
-                   init=list(inits[[1]]), seed=1, verbose=FALSE,
+## Compile Stan and TMB models. ADMB precompiled.
+obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100,
+                   warmup=50, chains=1, init=list(inits[[1]]),
                    control=list(adapt_engaged=FALSE))
-xx <- get_adaptation_info(obj.stan)
+
 ## Build TMB object
 compile(paste0(m, '_tmb.cpp'))
 dyn.load(paste0(m,"_tmb"))
 obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
+## Rerun ADMB
+setwd('admb')
+write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE,
+            col.names=FALSE )
+system('mvnd')
+setwd('..')
 
-inits2 <- rep(inits, 5)
+seeds <- 1:5
+inits2 <- rep(inits, length(seeds))
+Nout <- 1000
 temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
                    inits=inits2, pars=pars, data=data,
+                   metric=c('unit', 'diag', 'dense'), covar=covar,
                    seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
 perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
                                             'minESS', 'efficiency', 'Rhat.min'))
@@ -32,9 +39,10 @@ adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
                                               'max_treedepths',
                                               'ndivergent',
                                               'nsteps.median', 'nsteps.mean'))
-ggplot(perf.long, aes(platform, value, color=platform)) + geom_jitter() +
+
+ggplot(perf.long, aes(platform, value, color=metric)) + geom_point() +
   facet_wrap('variable', scales='free')
-ggplot(adapt.long, aes(platform, value, color=platform)) + geom_jitter() +
+ggplot(adapt.long, aes(platform, value, color=metric)) + geom_point() +
   facet_wrap('variable', scales='free')
 
 

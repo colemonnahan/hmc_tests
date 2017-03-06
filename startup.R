@@ -3,15 +3,12 @@ library(coda)
 library(ggplot2)
 library(plyr)
 library(rstan)
-library(R2jags)
 library(reshape2)
-library(MASS)                           # has mvrnorm()
 library(TMB)
 library(adnuts)
 library(R2admb)
 ggwidth <- 8
 ggheight <- 5
-results.file <- function(file) paste0(main.dir,'results/', file)
 
 #' Run Stan, TMB, and ADMB versions of the same model with NUTS.
 #'
@@ -35,7 +32,7 @@ results.file <- function(file) paste0(main.dir,'results/', file)
 #' Stan, and perf is the performance metrics for each run.
 run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, delta=.8,
                        metric='diag_e', data, inits, pars, max_treedepth=10,
-                       sink.console=TRUE){
+                       sink.console=TRUE, covar=NULL){
   if(Nthin!=1) stop('this probably breaks if Nthin!=1')
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
@@ -56,12 +53,25 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
     set.seed(seed)
     for(idelta in delta){
       for(imetric in metric){
+        ## Crazy way to convert imetric into arguments for the different
+        ## platforms.
+        N <- length(as.vector(unlist(inits.seed)))
+        if(imetric=='unit')
+          M <- diag(N)
+        else if(imetric=='diag'){
+          M <- matrix(0, N, N)
+          diag(M) <- diag(covar)
+          }
+        else if(imetric=='dense')
+          M <- covar
+        else stop("Invalid metric option supplied")
+
         fit.stan <-
           stan(fit=obj.stan, data=data, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin, algorithm='NUTS',
                init=inits.seed, seed=seed, par=pars,
                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
-                            metric=imetric, max_treedepth=max_treedepth))
+                            metric=paste0(imetric,'_e'), max_treedepth=max_treedepth))
         sims.stan <- extract(fit.stan, permuted=FALSE)
         perf.stan <- data.frame(monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
         Rhat.stan <- with(perf.stan, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
@@ -95,7 +105,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
         ## Start of TMB run
         fit.tmb <- run_mcmc(obj=obj.tmb, iter=Niter,
                                  warmup=Nwarmup, chains=1, algorithm='NUTS',
-                                 init=inits.seed[[1]], covar=NULL, adapt_delta=idelta,
+                                 init=inits.seed[[1]], covar=M, adapt_delta=idelta,
                                  max_treedepth=max_treedepth)
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
         sims.tmb <- fit.tmb$samples[-(1:Nwarmup),,, drop=FALSE]
@@ -128,9 +138,8 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
                      minESS.coda=min(effectiveSize(as.data.frame(sims.tmb[,1,]))),
                      Rhat.tmb)
         k <- k+1
-        ## Run ADMB model
         fit.admb <- run_admb_mcmc('admb', 'mvnd', iter=Niter, warmup=Nwarmup,
-                                         init=inits.seed[[1]])
+                                  covar=M, init=inits.seed[[1]])
         sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
         Rhat.admb <- with(perf.admb, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
@@ -169,7 +178,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
     rm(fit.admb, sims.admb, perf.admb)
   }
   perf <- do.call(rbind.fill, perf.list)
-  perf$efficiency <- with(perf, minESS/time.total)
+  perf$efficiency <- perf$minESS/perf$time.total
   adapt <- do.call(rbind.fill, adapt.list[!ldply(adapt.list, is.null)])
   perf$model <- adapt$model <- model
   return(invisible(list(adapt=adapt, perf=perf)))

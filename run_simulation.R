@@ -5,7 +5,6 @@
 ### ------------------------------------------------------------
 ### Step 1: prepare working space; load libraries, functions, and global
 ### variables
-## Set the reference directory from which everything else is relative.
 main.dir <- 'C:/Users/Cole/hmc_tests/'
 setwd(main.dir)
 source("startup.R")
@@ -13,18 +12,12 @@ Nreps <- 3                 # number of replicates
 Nout.ind <- 1000            # number of independent samples if verify==TRUE
 set.seed(241)
 seeds <- 1:Nreps#sample(1:1e5, size=Nreps)         #
-## Which metric to use for NUTS. Paper only used estimated diagonal (Stan
-## default) but others could be used.
 metric <- c('unit_e', 'diag_e', 'dense_e')[1]
 ## Suppress output to file via sink? Useful after debugging to clean up
 ## console and judge progress.
-sink <- TRUE
+sink <- FALSE
 ## The paper was run with these key software versions
 devtools::load_all("c:/Users/Cole/adnuts")
-version$version.string                  # R version 3.2.3
-packageVersion('rstan')                 # 2.11.1
-packageVersion('R2jags')                # 0.5.7
-packageVersion('rjags')                 # 4.4
 ### End of Step 1.
 ### ------------------------------------------------------------
 
