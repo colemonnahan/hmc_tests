@@ -15,3 +15,6 @@
 *.par
 *.dll
 *.o
+*admb*.dat
+*init.pin
+*trash.txt
