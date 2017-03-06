@@ -1,20 +1,60 @@
 
 SAMPLING FOR MODEL 'mvnd' NOW (CHAIN 1).
 
-Chain 1, Iteration:     1 / 20000 [  0%]  (Warmup)
-Chain 1, Iteration:  2000 / 20000 [ 10%]  (Warmup)
-Chain 1, Iteration:  4000 / 20000 [ 20%]  (Warmup)
-Chain 1, Iteration:  6000 / 20000 [ 30%]  (Warmup)
-Chain 1, Iteration:  8000 / 20000 [ 40%]  (Warmup)
-Chain 1, Iteration: 10000 / 20000 [ 50%]  (Warmup)
-Chain 1, Iteration: 10001 / 20000 [ 50%]  (Sampling)
-Chain 1, Iteration: 12000 / 20000 [ 60%]  (Sampling)
-Chain 1, Iteration: 14000 / 20000 [ 70%]  (Sampling)
-Chain 1, Iteration: 16000 / 20000 [ 80%]  (Sampling)
-Chain 1, Iteration: 18000 / 20000 [ 90%]  (Sampling)
-Chain 1, Iteration: 20000 / 20000 [100%]  (Sampling)
- Elapsed Time: 1.142 seconds (Warm-up)
-               0.813 seconds (Sampling)
-               1.955 seconds (Total)
+Chain 1, Iteration:   1 / 1000 [  0%]  (Warmup)
+Chain 1, Iteration: 100 / 1000 [ 10%]  (Warmup)
+Chain 1, Iteration: 200 / 1000 [ 20%]  (Warmup)
+Chain 1, Iteration: 300 / 1000 [ 30%]  (Warmup)
+Chain 1, Iteration: 400 / 1000 [ 40%]  (Warmup)
+Chain 1, Iteration: 500 / 1000 [ 50%]  (Warmup)
+Chain 1, Iteration: 501 / 1000 [ 50%]  (Sampling)
+Chain 1, Iteration: 600 / 1000 [ 60%]  (Sampling)
+Chain 1, Iteration: 700 / 1000 [ 70%]  (Sampling)
+Chain 1, Iteration: 800 / 1000 [ 80%]  (Sampling)
+Chain 1, Iteration: 900 / 1000 [ 90%]  (Sampling)
+Chain 1, Iteration: 1000 / 1000 [100%]  (Sampling)
+ Elapsed Time: 1.08 seconds (Warm-up)
+               0.14 seconds (Sampling)
+               1.22 seconds (Total)
+
+reading output ...
+
+SAMPLING FOR MODEL 'mvnd' NOW (CHAIN 1).
+
+Chain 1, Iteration:   1 / 1000 [  0%]  (Warmup)
+Chain 1, Iteration: 100 / 1000 [ 10%]  (Warmup)
+Chain 1, Iteration: 200 / 1000 [ 20%]  (Warmup)
+Chain 1, Iteration: 300 / 1000 [ 30%]  (Warmup)
+Chain 1, Iteration: 400 / 1000 [ 40%]  (Warmup)
+Chain 1, Iteration: 500 / 1000 [ 50%]  (Warmup)
+Chain 1, Iteration: 501 / 1000 [ 50%]  (Sampling)
+Chain 1, Iteration: 600 / 1000 [ 60%]  (Sampling)
+Chain 1, Iteration: 700 / 1000 [ 70%]  (Sampling)
+Chain 1, Iteration: 800 / 1000 [ 80%]  (Sampling)
+Chain 1, Iteration: 900 / 1000 [ 90%]  (Sampling)
+Chain 1, Iteration: 1000 / 1000 [100%]  (Sampling)
+ Elapsed Time: 0.563 seconds (Warm-up)
+               0.156 seconds (Sampling)
+               0.719 seconds (Total)
+
+reading output ...
+
+SAMPLING FOR MODEL 'mvnd' NOW (CHAIN 1).
+
+Chain 1, Iteration:   1 / 1000 [  0%]  (Warmup)
+Chain 1, Iteration: 100 / 1000 [ 10%]  (Warmup)
+Chain 1, Iteration: 200 / 1000 [ 20%]  (Warmup)
+Chain 1, Iteration: 300 / 1000 [ 30%]  (Warmup)
+Chain 1, Iteration: 400 / 1000 [ 40%]  (Warmup)
+Chain 1, Iteration: 500 / 1000 [ 50%]  (Warmup)
+Chain 1, Iteration: 501 / 1000 [ 50%]  (Sampling)
+Chain 1, Iteration: 600 / 1000 [ 60%]  (Sampling)
+Chain 1, Iteration: 700 / 1000 [ 70%]  (Sampling)
+Chain 1, Iteration: 800 / 1000 [ 80%]  (Sampling)
+Chain 1, Iteration: 900 / 1000 [ 90%]  (Sampling)
+Chain 1, Iteration: 1000 / 1000 [100%]  (Sampling)
+ Elapsed Time: 0.766 seconds (Warm-up)
+               0.158 seconds (Sampling)
+               0.924 seconds (Total)
 
 reading output ...

@@ -215,14 +215,15 @@ fit.empirical <- function(obj.stan, obj.tmb, model, pars, model.jags, inits, dat
 plot.simulated.results <- function(perf, adapt){
     model.name <- as.character(perf$model[1])
     perf.long <- melt(perf,
-                      id.vars=c('model', 'platform', 'seed', 'Npar', 'Nsims'),
-                      measure.vars=c('time.total', 'minESS', 'samples.per.time'))
-    perf.long <- ddply(perf.long, .(platform, Npar, variable), mutate,
+                      id.vars=c('model', 'platform', 'seed', 'Npar',
+                                'Nsims', 'metric', 'cor'),
+                      measure.vars=c('time.total', 'minESS', 'efficiency'))
+    perf.long <- ddply(perf.long, .(platform, cor, Npar, variable), mutate,
                        mean.value=mean(value))
-    g <- ggplot(perf.long, aes(Npar, log(value), group=platform, color=platform)) +
+    g <- ggplot(perf.long, aes(Npar, log10(value), group=platform, color=platform)) +
         geom_point()+
-            geom_line(data=perf.long, aes(Npar, log(mean.value))) +
-                facet_wrap('variable') + ggtitle("Performance Comparison")
+            geom_line(data=perf.long, aes(Npar, log10(mean.value))) +
+                facet_grid(variable~cor, scales='free_y') + ggtitle("Performance Comparison")
     ggsave(paste0('plots/', model.name, '_perf_simulated.png'), g, width=ggwidth, height=ggheight)
     adapt$pct.divergent <- with(adapt, ndivergent/Nsims)
     adapt$pct.max.treedepths <- with(adapt, max_treedepths/Nsims)

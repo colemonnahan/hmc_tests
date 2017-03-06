@@ -80,8 +80,13 @@ for(i in seq_along(Npar.vec)){
                    init=list(inits[[1]]), seed=1, verbose=FALSE,
                    control=list(adapt_engaged=FALSE))
     obj.tmb <- MakeADFun(data=data, parameters=list(mu=rep(0,Npar)))
+    setwd('admb')
+    write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE,
+                col.names=FALSE )
+    system('mvnd'); setwd('..')
     temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
-                       inits=inits, pars=pars, data=data,
+                       inits=inits, pars=pars, data=data, metric='diag',
+                       covar=covar,
                        seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
     adapt.list[[k]] <- cbind(temp$adapt, cor=j)
     perf.list[[k]] <- cbind(temp$perf, cor=j)
@@ -89,12 +94,12 @@ for(i in seq_along(Npar.vec)){
     perf <- do.call(rbind, perf.list)
     adapt <- do.call(rbind, adapt.list)
     plot.simulated.results(perf, adapt)
-    write.csv(x=perf, file=results.file(paste0(m,'_perf_simulated.csv')))
-    write.csv(x=adapt, file=results.file(paste0(m,'_adapt_simulated.csv')))
+    write.csv(x=perf, file=paste0(m,'_perf_simulated.csv'))
+    write.csv(x=adapt, file=paste0(m,'_adapt_simulated.csv'))
     rm(temp)
     k <- k+1
   }
 }
-message(paste('Finished with model:', m))
 
+message(paste('Finished with model:', m))
 setwd('../..')
