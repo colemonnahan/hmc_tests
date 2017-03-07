@@ -23,27 +23,28 @@ obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
 setwd('admb')
 write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE,
             col.names=FALSE )
+system('admb_hmc mvnd')
 system('mvnd')
 setwd('..')
 
-## seeds <- 1:5
-## inits2 <- rep(inits, length(seeds))
-## Nout <- 1000
-## temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
-##                    inits=inits2, pars=pars, data=data,
-##                    metric=c('unit', 'diag', 'dense'), covar=covar,
-##                    seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
-## perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
-##                                             'minESS', 'efficiency', 'Rhat.min'))
-## adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
-##                                               'max_treedepths',
-##                                               'ndivergent',
-##                                               'nsteps.median', 'nsteps.mean'))
+seeds <- 1:7
+inits2 <- rep(inits, length(seeds))
+Nout <- 2000
+temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
+                   inits=inits2, pars=pars, data=data,
+                   metric=c('unit', 'diag', 'dense')[-3], covar=covar,
+                   seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
+perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
+                                            'minESS', 'efficiency', 'Rhat.min'))
+adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
+                                              'max_treedepths',
+                                              'ndivergent',
+                                              'nsteps.median', 'nsteps.mean'))
 
-## ggplot(perf.long, aes(platform, value, color=metric)) + geom_point() +
-##   facet_wrap('variable', scales='free')
-## ggplot(adapt.long, aes(platform, value, color=metric)) + geom_point() +
-##   facet_wrap('variable', scales='free')
+ggplot(perf.long, aes(platform, value, color=metric)) + geom_point() +
+  facet_wrap('variable', scales='free')
+ggplot(adapt.long, aes(platform, value, color=metric)) + geom_point() +
+  facet_wrap('variable', scales='free')
 
 
 
@@ -75,10 +76,8 @@ for(i in seq_along(Npar.vec)){
     set.seed(115)
     source("generate_data.R")
     ## Data changes so need to rebuild when Npar changes
-    obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100, par=pars,
-                   warmup=50, chains=1, thin=1, algorithm='NUTS',
-                   init=list(inits[[1]]), seed=1, verbose=FALSE,
-                   control=list(adapt_engaged=FALSE))
+    obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100,
+                     chains=1, init=list(inits[[1]]), verbose=FALSE)
     obj.tmb <- MakeADFun(data=data, parameters=list(mu=rep(0,Npar)))
     setwd('admb')
     write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE,
