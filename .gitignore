@@ -10,11 +10,11 @@
 *.exe
 *.obj
 *.mc2
+*.std
 *adaptation.csv
 *.psv
 *.par
 *.dll
 *.o
-*admb*.dat
 *init.pin
 *trash.txt
