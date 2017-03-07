@@ -1,4 +1,3 @@
-
 ## Test that step size and mass matrix adaptation is consistent across TMB
 ## and ADMB. Start with simple MVN model.
 set.seed(235)
