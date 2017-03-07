@@ -17,13 +17,13 @@ compile(file='models/mvnd/mvnd_tmb.cpp')
 dyn.load(dynlib('models/mvnd/mvnd_tmb'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
-model.path <- 'models/mvnd'
+model.path <- 'models/mvnd/admb'
 model.name <- 'mvnd'
-write.table(x=c(2, covar), file='models/mvnd/mvnd.dat', row.names=FALSE, col.names=FALSE)
-setwd('models/mvnd')
+setwd(model.path)
+write.table(x=c(2, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
 system('admb mvnd')
 system('mvnd')
-setwd('../..')
+setwd('../../..')
 extract_adapt <- function(fit){
   ldply(1:length(fit$sampler_params), function(i){
     ind <- -(1:fit$warmup)
@@ -35,21 +35,24 @@ extract_adapt <- function(fit){
 }
 
 ## Run across fixed step size to see if matches
-iter <- 1000
+iter <- 400
 chains <- 1
 eps <- .5
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
-admb <- run_admb_mcmc(model.path, model.name, iter=iter, init=init,
-                       chains=chains, covar=diag(2), eps=eps)
-tmb <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains,
-                 covar=diag(2), eps=eps)
+admb <- sample_admb(model.path, model.name, iter=iter, init=init,
+                        chains=chains, control=list(stepsize=eps))
+tmb <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains,
+                 control=list(stepsize=eps))
+
 par(mfrow=c(2,2))
-plot(admb$sampler_params[[1]][,4])
-points(tmb$sampler_params[[1]][,4], col=2)
-plot(admb$sampler_params[[1]][,1])
-points(tmb$sampler_params[[1]][,1], col=2)
-plot(admb$sampler_params[[1]][,2])
-points(tmb$sampler_params[[1]][,2], col=2)
+x1 <- as.data.frame(admb$sampler_params)
+x2 <- as.data.frame(tmb$sampler_params)
+plot(x1[,4], ylab='n_leapfrog')
+points(x2[,4], col=2)
+plot(x1[,1], ylab='acceptance probability')
+points(x2[,1], col=2)
+plot(x1[,2], ylab='stepsize')
+points(x2[,2], col=2)
 admb.samples <- extract_samples(admb)
 tmb.samples <- extract_samples(tmb)
 qqplot(admb.samples[,1], tmb.samples[,1])
@@ -60,16 +63,16 @@ qqplot(admb.samples[,1], tmb.samples[,1])
 chains <- 6
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
 iter <- 500
-tmb1 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains, covar=diag(2))
-tmb2 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains, covar=covar2)
-tmb3 <- run_mcmc(mvnd.obj, iter=iter, init=init, chains=chains, covar=covar)
+tmb1 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, covar=diag(2))
+tmb2 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, covar=covar2)
+tmb3 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, covar=covar)
 adapt.tmb1 <- cbind(form=1, extract_adapt(tmb1))
 adapt.tmb2 <- cbind(form=2, extract_adapt(tmb2))
 adapt.tmb3 <- cbind(form=3, extract_adapt(tmb3))
 adapt.tmb <- rbind(adapt.tmb1, adapt.tmb2, adapt.tmb3)
-admb1 <- run_admb_mcmc(model.path, model.name, iter=iter, init=init, chains=chains, covar=diag(2))
-admb2 <- run_admb_mcmc(model.path, model.name, iter=iter, init=init, chains=chains, covar=covar2)
-admb3 <- run_admb_mcmc(model.path, model.name, iter=iter, init=init, chains=chains, covar=covar)
+admb1 <- sample_admb(model.path, model.name, iter=iter, init=init, chains=chains, covar=diag(2))
+admb2 <- sample_admb(model.path, model.name, iter=iter, init=init, chains=chains, covar=covar2)
+admb3 <- sample_admb(model.path, model.name, iter=iter, init=init, chains=chains, covar=covar)
 adapt.admb1 <- cbind(form=1, extract_adapt(admb1))
 adapt.admb2 <- cbind(form=2, extract_adapt(admb2))
 adapt.admb3 <- cbind(form=3, extract_adapt(admb3))
@@ -111,9 +114,9 @@ launch_shinystan_admb(admb2)
 
 model.path="C:/Users/Cole/hmc_tests/models/catage"
 model.name='catage'
-x <- run_admb_mcmc(model.path=model.path, model.name=model.name, iter=20000,
+x <- sample_admb(model.path=model.path, model.name=model.name, iter=20000,
                    chains=1, eps=.2, max_treedepth=10, thin=100)
-x <- run_admb_mcmc(model.path=model.path, model.name=model.name, iter=20000,
+x <- sample_admb(model.path=model.path, model.name=model.name, iter=20000,
                    chains=1, eps=.2, max_treedepth=10, thin=100)
 launch_shinystan_admb(x)
 setwd(model.path)
