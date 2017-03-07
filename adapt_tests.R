@@ -1,11 +1,3 @@
-library(TMB)
-library(plyr)
-library(coda)
-## devtools::install_github('bbolker/R2admb/R2admb')
-library(R2admb)
-library(rstan)
-library(shinystan)
-devtools::load_all("c:/Users/Cole/adnuts")
 
 ## Test that step size and mass matrix adaptation is consistent across TMB
 ## and ADMB. Start with simple MVN model.

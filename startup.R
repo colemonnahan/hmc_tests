@@ -5,10 +5,11 @@ library(plyr)
 library(rstan)
 library(reshape2)
 library(TMB)
-library(adnuts)
 library(R2admb)
+library(shinystan)
 ggwidth <- 8
 ggheight <- 5
+
 
 #' Run Stan, TMB, and ADMB versions of the same model with NUTS.
 #'
