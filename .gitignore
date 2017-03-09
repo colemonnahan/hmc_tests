@@ -10,6 +10,7 @@
 *.exe
 *.obj
 *.mc2
+*.mcm
 *.std
 *adaptation.csv
 *.psv
@@ -18,3 +19,4 @@
 *.o
 *init.pin
 *trash.txt
+sims
