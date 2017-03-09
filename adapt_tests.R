@@ -33,10 +33,11 @@ extract_adapt <- function(fit){
           stepsize0=head(xx[ind,2],1))})
 }
 
+
 ## Run across fixed step size to see if matches
 iter <- 400
-chains <- 1
-eps <- .5
+chains <- 3
+eps <- .1244
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
 admb <- sample_admb(model.path, model.name, iter=iter, init=init,
                         chains=chains, control=list(stepsize=eps))
@@ -55,8 +56,8 @@ points(x2[,2], col=2)
 admb.samples <- extract_samples(admb)
 tmb.samples <- extract_samples(tmb)
 qqplot(admb.samples[,1], tmb.samples[,1])
-## launch_shinystan_admb(admb)
-## launch_shinystan_admb(tmb)
+launch_shinystan_admb(admb)
+launch_shinystan_admb(tmb)
 
 
 chains <- 6

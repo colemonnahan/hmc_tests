@@ -7,6 +7,7 @@ library(reshape2)
 library(TMB)
 library(R2admb)
 library(shinystan)
+devtools::load_all('C:/Users/Cole/adnuts')
 ggwidth <- 8
 ggheight <- 5
 
@@ -139,7 +140,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
                      minESS.coda=min(effectiveSize(as.data.frame(sims.tmb[,1,]))),
                      Rhat.tmb)
         k <- k+1
-        fit.admb <- run_admb_mcmc('admb', 'mvnd', iter=Niter, warmup=Nwarmup,
+        fit.admb <- run_admb_mcmc('admb', model, iter=Niter, warmup=Nwarmup,
                                   covar=M, init=inits.seed[[1]])
         sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
@@ -171,12 +172,52 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
                      minESS.coda=min(effectiveSize(as.data.frame(sims.admb[,1,]))),
                      Rhat.admb)
         k <- k+1
+        ## ADMB default RWM algorithm
+        fit.admb.rwm <- sample_admb(model.path, model, iter=Niter,
+                                    warmup=Nwarmup,
+                                    init=inits.seed[[1]],
+                   control=list(algorithm='RWM'))
+
+        fit.admb.rwm <- run_admb_mcmc('admb', 'mvnd', iter=Niter, warmup=Nwarmup,
+                                  covar=M, init=inits.seed[[1]])
+        sims.admb.rwm <- fit.admb.rwm$samples[-(1:Nwarmup),,, drop=FALSE]
+        perf.admb.rwm <- data.frame(monitor(sims=sims.admb.rwm, warmup=0, print=FALSE, probs=.5))
+        Rhat.admb.rwm <- with(perf.admb.rwm, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
+        adapt <- as.data.frame(fit.admb.rwm$sampler_params[[1]])
+        adapt.list[[k]] <-
+          data.frame(platform='admb', seed=seed,
+                     Npar=dim(sims.admb.rwm)[3]-1,
+                     Nsims=dim(sims.admb.rwm)[1],
+                     delta.mean=mean(adapt$accept_stat__),
+                     delta.target=idelta,
+                     eps.final=tail(adapt$stepsize__,1),
+                     max_treedepths=sum(adapt$treedepth__>max_treedepth),
+                     ndivergent=sum(adapt$divergent__),
+                     nsteps.mean=mean(adapt$n_leapfrog__),
+                     nsteps.median=median(adapt$n_leapfrog__),
+                     nsteps.sd=sd(adapt$n_leapfrog__),
+                     metric=imetric)
+        perf.list[[k]] <-
+          data.frame(platform='admb',
+                     seed=seed, delta.target=idelta, metric=imetric,
+                     eps.final=tail(adapt$stepsize__,1),
+                     Npar=dim(sims.admb.rwm)[3]-1,
+                     time.warmup=fit.admb.rwm$time.warmup,
+                     time.total=fit.admb.rwm$time.total,
+                     minESS=min(perf.admb.rwm$n_eff),
+                     medianESS=median(perf.admb.rwm$n_eff),
+                     Nsims=dim(sims.admb.rwm)[1],
+                     minESS.coda=min(effectiveSize(as.data.frame(sims.admb.rwm[,1,]))),
+                     Rhat.admb.rwm)
+        k <- k+1
         ## End of ADMB model
       } # End loop over metric
     }   # end loop over adapt_delta
     rm(fit.stan, sims.stan, perf.stan, adapt)
     rm(fit.tmb, sims.tmb, perf.tmb)
     rm(fit.admb, sims.admb, perf.admb)
+    rm(fit.admb.rwm, sims.admb.rwm, perf.admb.rwm)
+
   }
   perf <- do.call(rbind.fill, perf.list)
   perf$efficiency <- perf$minESS/perf$time.total
