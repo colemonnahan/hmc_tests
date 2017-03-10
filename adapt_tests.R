@@ -9,20 +9,17 @@ covar <- corr * (se %o% se)
 covar <- diag(2)
 covar2 <- diag(x=se^2)
 covar.inv <- solve(covar)
-samples <- mvtnorm::rmvnorm(n=1e5, sigma=covar)
-apply(samples, 2, var)
-setwd('C:/Users/Cole/hmc_tests/')
-compile(file='models/mvnd/mvnd_tmb.cpp')
-dyn.load(dynlib('models/mvnd/mvnd_tmb'))
+setwd('C:/Users/Cole/hmc_tests/models/mvnd')
+compile(file='mvnd.cpp')
+dyn.load(dynlib('mvnd'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
 mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
-model.path <- 'models/mvnd/admb'
-model.name <- 'mvnd'
-setwd(model.path)
-write.table(x=c(2, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
+dir <- 'admb'; model <- 'mvnd'
+setwd(dir)
+write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
 system('admb mvnd')
 system('mvnd')
-setwd('../../..')
+setwd('..')
 extract_adapt <- function(fit){
   ldply(1:length(fit$sampler_params), function(i){
     ind <- -(1:fit$warmup)
@@ -33,13 +30,12 @@ extract_adapt <- function(fit){
           stepsize0=head(xx[ind,2],1))})
 }
 
-
 ## Run across fixed step size to see if matches
 iter <- 400
 chains <- 3
 eps <- .1244
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
-admb <- sample_admb(model.path, model.name, iter=iter, init=init,
+admb <- sample_admb(dir, model, iter=iter, init=init,
                         chains=chains, control=list(stepsize=eps))
 tmb <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains,
                  control=list(stepsize=eps))
@@ -56,8 +52,8 @@ points(x2[,2], col=2)
 admb.samples <- extract_samples(admb)
 tmb.samples <- extract_samples(tmb)
 qqplot(admb.samples[,1], tmb.samples[,1])
-launch_shinystan_admb(admb)
-launch_shinystan_admb(tmb)
+## launch_shinystan_admb(admb)
+## launch_shinystan_admb(tmb)
 
 
 chains <- 6

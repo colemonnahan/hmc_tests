@@ -16,8 +16,6 @@ metric <- c('unit_e', 'diag_e', 'dense_e')[1]
 ## Suppress output to file via sink? Useful after debugging to clean up
 ## console and judge progress.
 sink <- FALSE
-## The paper was run with these key software versions
-devtools::load_all("c:/Users/Cole/adnuts")
 ### End of Step 1.
 ### ------------------------------------------------------------
 
