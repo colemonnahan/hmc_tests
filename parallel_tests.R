@@ -31,9 +31,9 @@ sfStop()
 sfInit(parallel=TRUE, cpus=cores)
 sfExportAll()
 chains <- 3
-out <- sample_admb(dir='admb', model='mvnd', iter=2000,
+out <- sample_admb(dir='admb', model='mvnd', iter=20000, duration=.001,
                    init=rep(list(c(0,0)), chains), chains=chains,
-                   parallel=TRUE, cores=3, control=list(algorithm="RWM"))
+                   parallel=TRUE, cores=3, control=list(algorithm="NUTS"))
 
 
 xx <- sfLapply(1:8, sample_admb_parallel, dir='admb', iter=4000,

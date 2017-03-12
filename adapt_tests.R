@@ -30,6 +30,12 @@ extract_adapt <- function(fit){
           stepsize0=head(xx[ind,2],1))})
 }
 
+## Quick test
+inits <- lapply(1:3, function(x) rnorm(2))
+temp <- sample_admb(dir=dir, model=model, iter=10000, init=inits, duration=.0001,
+                        chains=3, warmup=500)
+launch_shinystan_tmb(temp)
+
 ## Run across fixed step size to see if matches
 iter <- 400
 chains <- 3
