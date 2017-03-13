@@ -1,18 +1,18 @@
 library(snowfall)
 set.seed(235)
-Npar <- 2
-corr <- matrix(.98, nrow=2, ncol=2)
+Npar <- 10
+corr <- matrix(.98, nrow=Npar, ncol=Npar)
 diag(corr) <- 1
-se <- c(1, .10)
+se <- runif(Npar, .1, 5)
 covar <- corr * (se %o% se)
-covar <- diag(2)
+#covar <- diag(Npar)
 covar2 <- diag(x=se^2)
 covar.inv <- solve(covar)
 setwd('C:/Users/Cole/hmc_tests/models/mvnd')
 compile(file='mvnd.cpp')
 dyn.load(dynlib('mvnd'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
-mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
+mvnd.obj <- MakeADFun(data=data, parameters=list(mu=rep(0,Npar)), DLL='mvnd')
 dir <- 'admb'; model <- 'mvnd'
 setwd(dir)
 write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
@@ -20,35 +20,40 @@ system('admb mvnd')
 system('mvnd')
 setwd('..')
 
-devtools::document('C:/Users/Cole/adnuts')
 
-devtools::load_all('C:/Users/Cole/adnuts')
-
-rm(list=ls())
+#rm(list=ls())
 devtools::install('C:/Users/Cole/adnuts')
 library(adnuts)
+Npar <- 10
 cores <- 3
 chains <- 3
+ww <- 1000 # warmup
+dd <- .5 # duration
+pp <- TRUE
+ii <- 10000
 sfStop()
 sfInit(parallel=TRUE, cpus=cores)
 sfExportAll()
 
 
-out.nuts <- sample_admb(dir='admb', model='mvnd', iter=20000, duration=.002,
-                   init=rep(list(c(0,0)), chains), chains=chains, warmup=200,
-                   parallel=TRUE, cores=3, control=list(algorithm="NUTS"))
-out.rwm <- sample_admb(dir='admb', model='mvnd', iter=2000000, duration=.001,
-                       init=rep(list(c(0,0)), chains), chains=chains, thin=10,
-                       warmup=200, parallel=TRUE, cores=3,
-                   control=list(algorithm="RWM"))
-sfStop()
-launch_shinystan_tmb(out.nuts)
-launch_shinystan_tmb(out.rwm)
+out.nuts1 <- sample_admb(dir='admb', model='mvnd', iter=ii, duration=dd, thin=5,
+                   init=rep(list(rep(0,Npar)), chains), chains=chains, warmup=ww,
+                   parallel=pp,  control=list(algorithm="NUTS"))
+out.rwm1 <- sample_admb(dir='admb', model='mvnd', iter=10*ii, duration=dd,
+                        init=rep(list(rep(0,Npar)), chains), chains=chains, thin=50,
+                        warmup=10*ww, parallel=pp,
+                        control=list(algorithm="RWM"))
 
-xx <- sfLapply(1:8, sample_admb_parallel, dir='admb', iter=4000,
-               model='mvnd', init=rep(list(c(0,0)),1),
-               control=list(algorithm='NUTS', thin=2))
-yy <- combine_fits(xx)
-out <- sample_admb_parallel(1, dir=dir, model='mvnd', iter=2000, init=list(rnorm(2)))
-out <- sample_admb(chains=2, dir=dir, model='mvnd', mceval=TRUE, iter=2000,
-                   init=rep(list(rnorm(2)),2), control=list(algorithm='RWM'))
+sfStop()
+launch_shinystan_admb(out.nuts1)
+launch_shinystan_admb(out.rwm1)
+
+## lps of both
+x <- as.vector(out.nuts1$samples[-(1:500),,11])
+y <- as.vector(out.rwm1$samples[-(1:500),,11])
+true <- mvtnorm::rmvnorm(n=length(x), sigma=covar)
+z <- mvtnorm::dmvnorm(x=true, sigma=covar, log=TRUE)
+par(mfrow=c(1,3))
+qqplot(x,y)
+qqplot(z,x)
+qqplot(z,y)

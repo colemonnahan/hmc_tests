@@ -19,6 +19,10 @@ sink <- FALSE
 ### End of Step 1.
 ### ------------------------------------------------------------
 
+devtools::document('C:/Users/Cole/adnuts')
+devtools::load_all('C:/Users/Cole/adnuts')
+
+
 ### ------------------------------------------------------------
 ### Step 2: Run the models.
 ## Run multivariate normal, empirical and simulated
