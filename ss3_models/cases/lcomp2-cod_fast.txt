@@ -1,0 +1,4 @@
+fleets;c(1,2)
+years;list(1:50, 1:50)
+Nsamp;list(100, 100)
+cpar;c(NA,NA)
