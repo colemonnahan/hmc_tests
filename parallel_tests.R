@@ -24,17 +24,26 @@ devtools::document('C:/Users/Cole/adnuts')
 
 devtools::load_all('C:/Users/Cole/adnuts')
 
+rm(list=ls())
 devtools::install('C:/Users/Cole/adnuts')
 library(adnuts)
-cores <- 4
+cores <- 3
+chains <- 3
 sfStop()
 sfInit(parallel=TRUE, cpus=cores)
 sfExportAll()
-chains <- 3
-out <- sample_admb(dir='admb', model='mvnd', iter=20000, duration=.001,
-                   init=rep(list(c(0,0)), chains), chains=chains,
-                   parallel=TRUE, cores=3, control=list(algorithm="NUTS"))
 
+
+out.nuts <- sample_admb(dir='admb', model='mvnd', iter=20000, duration=.002,
+                   init=rep(list(c(0,0)), chains), chains=chains, warmup=200,
+                   parallel=TRUE, cores=3, control=list(algorithm="NUTS"))
+out.rwm <- sample_admb(dir='admb', model='mvnd', iter=2000000, duration=.001,
+                       init=rep(list(c(0,0)), chains), chains=chains, thin=10,
+                       warmup=200, parallel=TRUE, cores=3,
+                   control=list(algorithm="RWM"))
+sfStop()
+launch_shinystan_tmb(out.nuts)
+launch_shinystan_tmb(out.rwm)
 
 xx <- sfLapply(1:8, sample_admb_parallel, dir='admb', iter=4000,
                model='mvnd', init=rep(list(c(0,0)),1),
