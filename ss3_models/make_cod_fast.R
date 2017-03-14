@@ -1,16 +1,20 @@
 ## This file runs a vvery pared down ss3sim cod model. Few years and wide
 ## bins so it hsould run really fast per iteration.
 
+## Recompile SS3 if needed
+setwd('cod_fast_dummy')
+system('admb ss3.tpl')
+setwd('..')
+
 ## devtools::install_github("ss3sim/ss3sim")
 ## devtools::install_github('r4ss/r4ss')
 case_folder <- 'cases'
-em.paths <- list('cod_fast'='cod_fast/em')
-om.paths <- list('cod_fast'='cod_fast/om')
+em.paths <- list('cod_fast'='cod_fast_dummy/em')
+om.paths <- list('cod_fast'='cod_fast_dummy/om')
 library(ss3sim)
 ### ------------------------------------------------------------
 
-
-## Try to craft a fast model
+## Craft a contrived but fast model (few years, big bins)
 spp <- 'cod_fast'
 case_files <- list(F="F", B="em_binning", I="data",
                    D=c("index","lcomp","agecomp"))
@@ -21,15 +25,25 @@ run_ss3sim(iterations=1:Nsim, scenarios=scenarios,
            parallel=FALSE, parallel_iterations=FALSE,
            case_folder=case_folder, om_dir=om.paths[spp],
            em_dir=em.paths[spp], case_files=case_files,
-           ## bias_adjust=TRUE, bias_nsim=10,
-           ## admb_options= " -maxfn 1 -phase 50",
-           call_change_data=TRUE)
-get_results_all(user=scenarios, over=TRUE)
-xx <- read.csv("ss3sim_scalar.csv")
+           admb_options= " -maxfn 1 -phase 50",
+           call_change_data=TRUE, seed=21415)
 
-
-
-
+## Move the EM folder into more convenient place, copy exe in and run it
+## with Hessian. Then make plots
+newdir <- 'cod_fast'
+olddir <- file.path(scenarios[1], '1/em')
+if(dir.exists(newdir)) unlink(newdir, TRUE)
+dir.create(newdir)
+trash <- file.copy(from=list.files(olddir, full.names=TRUE), to=newdir)
+file.copy('cod_fast_dummy/ss3.exe', to=newdir)
+unlink(scenarios, TRUE)
+setwd(newdir)
+system('ss3')
+## Make plots to check it
+replist <- r4ss::SS_output(getwd(), covar=TRUE)
+r4ss::SS_plots(replist)
+setwd('..')
+## DONE! Can now use it for testing
 
 ## dat <- r4ss::SS_readdat(file='models/cod/om/ss3.dat')
 ## ## use ss3sim function to extend burn in for yellow model

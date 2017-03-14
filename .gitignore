@@ -1,3 +1,4 @@
+*.Rhistory
 *admodel.*
 *.cor
 *.bar
@@ -33,3 +34,6 @@ ss3.r0*
 ss3.rep
 ss3.cpp
 *.tmp
+log.txt
+ss3_models/cod_fast/plots
+ss3_models/model*

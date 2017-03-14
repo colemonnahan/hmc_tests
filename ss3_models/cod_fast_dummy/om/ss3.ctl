@@ -1,5 +1,5 @@
 #V3.24O
-#_data_and_control_files: ss3.dat // om.ctl
+#_data_and_control_files: ss3.dat // ss3.ctl
 #_SS-V3.24O-safe-win64;_04/10/2013;_Stock_Synthesis_by_Richard_Methot_(NOAA)_using_ADMB_11.1
 1  #_N_Growth_Patterns
 1 #_N_Morphs_Within_GrowthPattern 
@@ -113,6 +113,7 @@
 # if Fmethod=3; read N iterations for tuning for Fmethod 3
 0.2 1 1 # overall start F value; overall phase; N detailed inputs to read
 #Fleet Year Seas F_value se phase (for detailed setup of F_Method=2)
+1 1 1 0.004 0.005 -1
 #
 #_initial_F_parms
 #_LO HI INIT PRIOR PR_type SD PHASE
