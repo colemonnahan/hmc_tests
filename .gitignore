@@ -1,5 +1,6 @@
 *.Rhistory
 *admodel.*
+*admodel_original.cov
 *.cor
 *.bar
 *.log
