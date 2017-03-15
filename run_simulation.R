@@ -20,6 +20,7 @@ sink <- FALSE
 ### ------------------------------------------------------------
 
 devtools::document('C:/Users/Cole/adnuts')
+devtools::install('C:/Users/Cole/adnuts')
 devtools::load_all('C:/Users/Cole/adnuts')
 
 

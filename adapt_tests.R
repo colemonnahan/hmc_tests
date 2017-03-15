@@ -5,21 +5,23 @@ Npar <- 2
 corr <- matrix(.98, nrow=2, ncol=2)
 diag(corr) <- 1
 se <- c(1, .10)
-covar <- corr * (se %o% se)
 covar <- diag(2)
-covar2 <- diag(x=se^2)
+covar <- corr * (se %o% se)
+covar2 <- diag(x=diag(covar))
 covar.inv <- solve(covar)
 setwd('C:/Users/Cole/hmc_tests/models/mvnd')
 compile(file='mvnd.cpp')
 dyn.load(dynlib('mvnd'))
 data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
-mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd_tmb')
+mvnd.obj <- MakeADFun(data=data, parameters=list(mu=c(0,0)), DLL='mvnd')
 dir <- 'admb'; model <- 'mvnd'
 setwd(dir)
 write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
 system('admb mvnd')
 system('mvnd')
 setwd('..')
+stan.fit <- stan(file='mvnd.stan', data=data, chains=1, iter=10)
+
 extract_adapt <- function(fit){
   ldply(1:length(fit$sampler_params), function(i){
     ind <- -(1:fit$warmup)
@@ -30,26 +32,33 @@ extract_adapt <- function(fit){
           stepsize0=head(xx[ind,2],1))})
 }
 
-## Quick test
-inits <- lapply(1:3, function(x) rnorm(2))
-temp <- sample_admb(dir=dir, model=model, iter=10000, init=inits, duration=.0001,
-                        chains=3, warmup=500)
-launch_shinystan_tmb(temp)
-
 ## Run across fixed step size to see if matches
-iter <- 400
-chains <- 3
-eps <- .1244
-init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
-admb <- sample_admb(dir, model, iter=iter, init=init,
-                        chains=chains, control=list(stepsize=eps))
+iter <- 200
+chains <- 1
+td <- 12
+eps <- .011
+rm(admb, tmb)
+init <- lapply(1:chains, function(x) rnorm(2, sd=se*10))
+stan2 <- stan(fit=stan.fit, data=data, chains=chains, iter=iter,
+              control=list(metric='unit_e', stepsize=eps,
+                           adapt_engaged=FALSE, max_treedepth=td))
+admb <- sample_admb(dir=dir, model=model, iter=iter, init=init,
+                        chains=chains, control=list(stepsize=eps, max_treedepth=td,
+                                                    metric=diag(2)))
 tmb <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains,
-                 control=list(stepsize=eps))
+                 control=list(stepsize=eps, metric=diag(2), max_treedepth=td))
+x1 <- data.frame(platform='admb', admb$sampler_params[[1]])
+x2 <- data.frame(platform='tmb', tmb$sampler_params[[1]])
+x3 <- data.frame(platform='stan', get_sampler_params(stan2)[[1]])
+nevals <- cbind(i=1:iter, rbind(x1,x2,x3))
+ggplot(nevals, aes(i, log2(n_leapfrog__), color=platform)) + geom_point(alpha=.5)
+
+plot(x1[,4]+.1, ylab='n_leapfrog')
+points(x2[,4], col=2)
+points(x3[,4]-.1, col=3)
 
 par(mfrow=c(2,2))
-x1 <- as.data.frame(admb$sampler_params)
-x2 <- as.data.frame(tmb$sampler_params)
-plot(x1[,4], ylab='n_leapfrog')
+plot(x1[,4]+.1, ylab='n_leapfrog')
 points(x2[,4], col=2)
 plot(x1[,1], ylab='acceptance probability')
 points(x2[,1], col=2)
@@ -58,43 +67,44 @@ points(x2[,2], col=2)
 admb.samples <- extract_samples(admb)
 tmb.samples <- extract_samples(tmb)
 qqplot(admb.samples[,1], tmb.samples[,1])
-## launch_shinystan_admb(admb)
-## launch_shinystan_admb(tmb)
+launch_shinystan_admb(admb)
+launch_shinystan_admb(tmb)
+launch_shinystan(stan2)
 
 
 chains <- 6
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
 iter <- 500
-tmb1 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, covar=diag(2))
-tmb2 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, covar=covar2)
-tmb3 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, covar=covar)
+tmb1 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, control=list(metric=diag(2)))
+tmb2 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, control=list(metric=covar2))
+tmb3 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, control=list(metric=covar))
 adapt.tmb1 <- cbind(form=1, extract_adapt(tmb1))
 adapt.tmb2 <- cbind(form=2, extract_adapt(tmb2))
 adapt.tmb3 <- cbind(form=3, extract_adapt(tmb3))
 adapt.tmb <- rbind(adapt.tmb1, adapt.tmb2, adapt.tmb3)
-admb1 <- sample_admb(model.path, model.name, iter=iter, init=init, chains=chains, covar=diag(2))
-admb2 <- sample_admb(model.path, model.name, iter=iter, init=init, chains=chains, covar=covar2)
-admb3 <- sample_admb(model.path, model.name, iter=iter, init=init, chains=chains, covar=covar)
+admb1 <- sample_admb(dir=dir, model, iter=iter, init=init, chains=chains, control=list(metric=diag(2)))
+admb2 <- sample_admb(dir=dir, model, iter=iter, init=init, chains=chains, control=list(metric=covar2))
+admb3 <- sample_admb(dir=dir, model, iter=iter, init=init, chains=chains, control=list(metric=covar))
 adapt.admb1 <- cbind(form=1, extract_adapt(admb1))
 adapt.admb2 <- cbind(form=2, extract_adapt(admb2))
 adapt.admb3 <- cbind(form=3, extract_adapt(admb3))
 adapt.admb <- rbind(adapt.admb1, adapt.admb2, adapt.admb3)
 
 yy1 <- ldply(1:chains, function(i)
-  cbind(seed=i, iter=1:iter, covar=1, m='admb', as.data.frame(admb1$sampler_params[[i]])))
+  cbind(seed=i, iter=1:iter, covar='unit', m='admb', as.data.frame(admb1$sampler_params[[i]])))
 xx1 <- ldply(1:chains, function(i)
-  cbind(seed=i, iter=1:iter, covar=1, m='tmb', as.data.frame(tmb1$sampler_params[[i]])))
+  cbind(seed=i, iter=1:iter, covar='unit', m='tmb', as.data.frame(tmb1$sampler_params[[i]])))
 yy2 <- ldply(1:chains, function(i)
-  cbind(seed=i, iter=1:iter, covar=2, m='admb', as.data.frame(admb2$sampler_params[[i]])))
+  cbind(seed=i, iter=1:iter, covar='diag', m='admb', as.data.frame(admb2$sampler_params[[i]])))
 xx2 <- ldply(1:chains, function(i)
-  cbind(seed=i, iter=1:iter, covar=2, m='tmb', as.data.frame(tmb2$sampler_params[[i]])))
+  cbind(seed=i, iter=1:iter, covar='diag', m='tmb', as.data.frame(tmb2$sampler_params[[i]])))
 yy3 <- ldply(1:chains, function(i)
-  cbind(seed=i, iter=1:iter,  covar=3,m='admb', as.data.frame(admb3$sampler_params[[i]])))
+  cbind(seed=i, iter=1:iter,  covar='dense',m='admb', as.data.frame(admb3$sampler_params[[i]])))
 xx3 <- ldply(1:chains, function(i)
-  cbind(seed=i, iter=1:iter, covar=3, m='tmb', as.data.frame(tmb3$sampler_params[[i]])))
+  cbind(seed=i, iter=1:iter, covar='dense', m='tmb', as.data.frame(tmb3$sampler_params[[i]])))
 zz <- rbind(yy1,yy2,yy3, xx1,xx2,xx3)
-ggplot(zz, aes(iter, log( stepsize__), group=seed)) +
-  facet_grid(m~covar) + geom_point(alpha=.15, size=.5)
+ggplot(subset(zz, iter>5), aes(iter, log10( stepsize__), group=seed, color=m)) +
+  facet_grid(covar~., scales='free') + geom_point(alpha=.15, size=.5)
 
 adapt <- rbind(cbind(name='tmb', adapt.tmb),
                cbind(name='admb', adapt.admb))
@@ -114,16 +124,16 @@ launch_shinystan_admb(admb2)
 
 
 
-model.path="C:/Users/Cole/hmc_tests/models/catage"
-model.name='catage'
-x <- sample_admb(model.path=model.path, model.name=model.name, iter=20000,
+dir="C:/Users/Cole/hmc_tests/models/catage"
+model='catage'
+x <- sample_admb(dir=dir, model=model, iter=20000,
                    chains=1, eps=.2, max_treedepth=10, thin=100)
-x <- sample_admb(model.path=model.path, model.name=model.name, iter=20000,
+x <- sample_admb(dir=dir, model=model, iter=20000,
                    chains=1, eps=.2, max_treedepth=10, thin=100)
 launch_shinystan_admb(x)
-setwd(model.path)
+setwd(dir)
 system('admb catage')
 system('catage -nohess -mcmc 10 -nuts -mcseed 5')
 adapt <- read.csv("adaptation.csv")
-pars <- read_psv(model.name)
-fit <- read_admb(model.name)
+pars <- read_psv(model)
+fit <- read_admb(model)
