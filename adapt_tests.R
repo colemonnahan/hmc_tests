@@ -1,12 +1,14 @@
 ## Test that step size and mass matrix adaptation is consistent across TMB
 ## and ADMB. Start with simple MVN model.
+## devtools::install("../adnuts")
+source("startup.R")
 set.seed(235)
 Npar <- 2
 corr <- matrix(.98, nrow=2, ncol=2)
 diag(corr) <- 1
 se <- c(1, .10)
-covar <- diag(2)
 covar <- corr * (se %o% se)
+covar <- diag(2)
 covar2 <- diag(x=diag(covar))
 covar.inv <- solve(covar)
 setwd('C:/Users/Cole/hmc_tests/models/mvnd')
@@ -21,7 +23,6 @@ system('admb mvnd')
 system('mvnd')
 setwd('..')
 stan.fit <- stan(file='mvnd.stan', data=data, chains=1, iter=10)
-
 extract_adapt <- function(fit){
   ldply(1:length(fit$sampler_params), function(i){
     ind <- -(1:fit$warmup)
@@ -35,8 +36,8 @@ extract_adapt <- function(fit){
 ## Run across fixed step size to see if matches
 iter <- 200
 chains <- 1
-td <- 12
-eps <- .011
+td <- 5
+eps <- 1.312/2
 rm(admb, tmb)
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*10))
 stan2 <- stan(fit=stan.fit, data=data, chains=chains, iter=iter,
@@ -47,26 +48,37 @@ admb <- sample_admb(dir=dir, model=model, iter=iter, init=init,
                                                     metric=diag(2)))
 tmb <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains,
                  control=list(stepsize=eps, metric=diag(2), max_treedepth=td))
-x1 <- data.frame(platform='admb', admb$sampler_params[[1]])
-x2 <- data.frame(platform='tmb', tmb$sampler_params[[1]])
-x3 <- data.frame(platform='stan', get_sampler_params(stan2)[[1]])
-nevals <- cbind(i=1:iter, rbind(x1,x2,x3))
-ggplot(nevals, aes(i, log2(n_leapfrog__), color=platform)) + geom_point(alpha=.5)
-
-plot(x1[,4]+.1, ylab='n_leapfrog')
-points(x2[,4], col=2)
-points(x3[,4]-.1, col=3)
-
+x1 <- data.frame(admb$sampler_params[[1]],platform='admb')
+x2 <- data.frame(tmb$sampler_params[[1]], platform='tmb')
+x3 <- data.frame(get_sampler_params(stan2)[[1]],platform='stan')
+nevals <- cbind(rbind(x1,x2,x3),i=1:iter)
+ggplot(nevals, aes(i, log2(n_leapfrog__), color=platform)) + geom_jitter(alpha=.5)
+ggplot(nevals, aes(log2(n_leapfrog__))) +
+  geom_histogram() + facet_wrap('platform')
+## par(mfrow=c(2,2))
+## plot(x1[,4]+.1, ylab='n_leapfrog')
+## points(x2[,4], col=2)
+## plot(x1[,1], ylab='acceptance probability')
+## points(x2[,1], col=2)
+## plot(x1[,2], ylab='stepsize' ,pch='.')
+## points(x2[,2], col=2, pch='.')
+## admb.samples <- extract_samples(admb)
+## tmb.samples <- extract_samples(tmb)
+## qqplot(admb.samples[,1], tmb.samples[,1])
 par(mfrow=c(2,2))
-plot(x1[,4]+.1, ylab='n_leapfrog')
-points(x2[,4], col=2)
-plot(x1[,1], ylab='acceptance probability')
-points(x2[,1], col=2)
-plot(x1[,2], ylab='stepsize')
-points(x2[,2], col=2)
+plot(sort(x1[,4])+.1, ylab='n_leapfrog')
+points(sort(x2[,4]), col=2)
+points(sort(x3[,4]), col=3)
+plot(sort(x1[,1]), ylab='acceptance probability')
+points(sort(x2[,1]), col=2)
+points(sort(x3[,1]), col=3)
+plot(sort(x1[,2]), ylab='stepsize' ,pch='.')
+points(sort(x2[,2]), col=2, pch='.')
+points(sort(x3[,2]), col=3)
 admb.samples <- extract_samples(admb)
 tmb.samples <- extract_samples(tmb)
 qqplot(admb.samples[,1], tmb.samples[,1])
+
 launch_shinystan_admb(admb)
 launch_shinystan_admb(tmb)
 launch_shinystan(stan2)
