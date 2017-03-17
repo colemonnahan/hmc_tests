@@ -34,11 +34,17 @@ extract_adapt <- function(fit){
 }
 
 ## Run across fixed step size to see if matches
-iter <- 200
+dir <- 'admb'; model <- 'mvnd'
+setwd(dir)
+write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
+system('admb mvnd')
+system('mvnd')
+setwd('..')
+iter <- 2000
 chains <- 1
-td <- 5
-eps <- 1.312/2
-rm(admb, tmb)
+td <- 12
+eps <- 1.312/3
+rm(admb, tmb, stan2)
 init <- lapply(1:chains, function(x) rnorm(2, sd=se*10))
 stan2 <- stan(fit=stan.fit, data=data, chains=chains, iter=iter,
               control=list(metric='unit_e', stepsize=eps,
@@ -52,32 +58,25 @@ x1 <- data.frame(admb$sampler_params[[1]],platform='admb')
 x2 <- data.frame(tmb$sampler_params[[1]], platform='tmb')
 x3 <- data.frame(get_sampler_params(stan2)[[1]],platform='stan')
 nevals <- cbind(rbind(x1,x2,x3),i=1:iter)
-ggplot(nevals, aes(i, log2(n_leapfrog__), color=platform)) + geom_jitter(alpha=.5)
-ggplot(nevals, aes(log2(n_leapfrog__))) +
-  geom_histogram() + facet_wrap('platform')
-## par(mfrow=c(2,2))
-## plot(x1[,4]+.1, ylab='n_leapfrog')
-## points(x2[,4], col=2)
-## plot(x1[,1], ylab='acceptance probability')
-## points(x2[,1], col=2)
-## plot(x1[,2], ylab='stepsize' ,pch='.')
-## points(x2[,2], col=2, pch='.')
-## admb.samples <- extract_samples(admb)
-## tmb.samples <- extract_samples(tmb)
-## qqplot(admb.samples[,1], tmb.samples[,1])
+## ggplot(nevals, aes(i, log2(n_leapfrog__), color=platform)) + geom_jitter(alpha=.5)
+## ggplot(nevals, aes(log2(n_leapfrog__))) +
+##   geom_histogram() + facet_wrap('platform')
+
 par(mfrow=c(2,2))
-plot(sort(x1[,4])+.1, ylab='n_leapfrog')
+plot(sort(x1[,4])+.1, ylim=c(0,1+max(nevals$n_leapfrog__)), ylab='n_leapfrog')
 points(sort(x2[,4]), col=2)
-points(sort(x3[,4]), col=3)
+points(sort(x3[,4])-.1, col=3)
 plot(sort(x1[,1]), ylab='acceptance probability')
 points(sort(x2[,1]), col=2)
 points(sort(x3[,1]), col=3)
-plot(sort(x1[,2]), ylab='stepsize' ,pch='.')
-points(sort(x2[,2]), col=2, pch='.')
-points(sort(x3[,2]), col=3)
+legend('bottomright', legend=c('admb', 'tmb', 'stan'), pch=16, col=1:3)
+plot(sort(x1[,3])+.1, ylim=c(0, 1+max(nevals$treedepth__)), ylab='treedepths')
+points(sort(x2[,3]), col=2)
+points(sort(x3[,3])-.1, col=3)
 admb.samples <- extract_samples(admb)
 tmb.samples <- extract_samples(tmb)
-qqplot(admb.samples[,1], tmb.samples[,1])
+stan.samples <- data.frame(extract(stan2, permuted=FALSE)[,1,])
+qqplot(stan.samples[,1], admb.samples[,1])
 
 launch_shinystan_admb(admb)
 launch_shinystan_admb(tmb)
