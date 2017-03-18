@@ -37,7 +37,7 @@ Nthin.ind <- 1                          # thin rate for verify mode
 ## from wishart (1) (see paper). Npar is how many parameters.
 cor.vec <- c(0,1)
 ## Npar.vec <- c(5, 15, 25, 50, 100, 200, 300, 400)
-Npar.vec <- c(2,4,8,16,32,64)
+Npar.vec <- c(2,4,8,16,32)[1:3]
 source(paste0('models/',m,'/run_model.R'))
 
 ## Quick exploration of mvnd plots

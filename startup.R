@@ -33,7 +33,7 @@ ggheight <- 5
 #' @return A list of two data frames. adapt is the adaptive results from
 #' Stan, and perf is the performance metrics for each run.
 run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, delta=.8,
-                       metric='diag_e', data, inits, pars, max_treedepth=10,
+                       metric='diag', data, inits, pars, max_treedepth=10,
                        sink.console=TRUE, covar=NULL){
   if(Nthin!=1) stop('this probably breaks if Nthin!=1')
   Niter <- 2*Nout*Nthin
@@ -43,12 +43,12 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
   perf.list <- list()
   adapt.list <- list()
   k <- 1
-  if(sink.console){
-    sink(file='trash.txt', append=FALSE, type='output')
-    on.exit(sink())
-  }
+  ## if(sink.console){
+  ##   sink(file='trash.txt', append=FALSE, type='output')
+  ##   on.exit(sink())
+  ## }
 
-  max_treedepth <- 12
+  max_treedepth <- 10
   for(seed in seeds){
     message(paste('==== Starting seed',seed, 'at', Sys.time()))
     inits.seed <- list(inits[[which(seed==seeds)]])
@@ -105,10 +105,10 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
                      Rhat.stan)
         k <- k+1
         ## Start of TMB run
-        fit.tmb <- run_mcmc(obj=obj.tmb, iter=Niter,
-                                 warmup=Nwarmup, chains=1, algorithm='NUTS',
-                                 init=inits.seed[[1]], covar=M, adapt_delta=idelta,
-                                 max_treedepth=max_treedepth)
+        fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
+                                 warmup=Nwarmup, chains=1,
+                                 init=inits.seed[[1]], control=list(metric=M, adapt_delta=idelta,
+                                 max_treedepth=max_treedepth))
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
         sims.tmb <- fit.tmb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.tmb <- data.frame(monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
@@ -140,8 +140,9 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
                      minESS.coda=min(effectiveSize(as.data.frame(sims.tmb[,1,]))),
                      Rhat.tmb)
         k <- k+1
-        fit.admb <- run_admb_mcmc('admb', model, iter=Niter, warmup=Nwarmup,
-                                  covar=M, init=inits.seed[[1]])
+        fit.admb <- sample_admb(dir='admb', model=model, iter=Niter, warmup=Nwarmup,
+                                   init=inits.seed[[1]],
+          control=list(metric=M, max_treedepth=max_treedepth, adapt_delta=idelta))
         sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
         Rhat.admb <- with(perf.admb, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
@@ -173,34 +174,19 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
                      Rhat.admb)
         k <- k+1
         ## ADMB default RWM algorithm
-        fit.admb.rwm <- sample_admb(model.path, model, iter=Niter,
-                                    warmup=Nwarmup,
-                                    init=inits.seed[[1]],
-                   control=list(algorithm='RWM'))
+        fit.admb.rwm <-
+          sample_admb(dir='admb', model=model, iter=Niter, warmup=Nwarmup,
+                      init=inits.seed[[1]], chains=1,
+                      control=list(metric=M,algorithm='RWM'))
 
-        fit.admb.rwm <- run_admb_mcmc('admb', 'mvnd', iter=Niter, warmup=Nwarmup,
-                                  covar=M, init=inits.seed[[1]])
         sims.admb.rwm <- fit.admb.rwm$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb.rwm <- data.frame(monitor(sims=sims.admb.rwm, warmup=0, print=FALSE, probs=.5))
         Rhat.admb.rwm <- with(perf.admb.rwm, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
         adapt <- as.data.frame(fit.admb.rwm$sampler_params[[1]])
-        adapt.list[[k]] <-
-          data.frame(platform='admb', seed=seed,
-                     Npar=dim(sims.admb.rwm)[3]-1,
-                     Nsims=dim(sims.admb.rwm)[1],
-                     delta.mean=mean(adapt$accept_stat__),
-                     delta.target=idelta,
-                     eps.final=tail(adapt$stepsize__,1),
-                     max_treedepths=sum(adapt$treedepth__>max_treedepth),
-                     ndivergent=sum(adapt$divergent__),
-                     nsteps.mean=mean(adapt$n_leapfrog__),
-                     nsteps.median=median(adapt$n_leapfrog__),
-                     nsteps.sd=sd(adapt$n_leapfrog__),
-                     metric=imetric)
         perf.list[[k]] <-
-          data.frame(platform='admb',
+          data.frame(platform='admb.rwm',
                      seed=seed, delta.target=idelta, metric=imetric,
-                     eps.final=tail(adapt$stepsize__,1),
+                     eps.final=NA,
                      Npar=dim(sims.admb.rwm)[3]-1,
                      time.warmup=fit.admb.rwm$time.warmup,
                      time.total=fit.admb.rwm$time.total,
@@ -217,7 +203,6 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
     rm(fit.tmb, sims.tmb, perf.tmb)
     rm(fit.admb, sims.admb, perf.admb)
     rm(fit.admb.rwm, sims.admb.rwm, perf.admb.rwm)
-
   }
   perf <- do.call(rbind.fill, perf.list)
   perf$efficiency <- perf$minESS/perf$time.total
@@ -369,26 +354,27 @@ plot.model.comparisons <- function(sims.stan, sims.tmb, sims.admb, perf.platform
 #' to verify the posteriors are the same, effectively checking for bugs
 #' between models before doing performance comparisons
 #'
-verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nthin,
-                          sink.console=TRUE){
+verify.models <- function(obj.stan, obj.tmb, model,  pars, inits, data, Nout, Nthin,
+                          sink.console=TRUE, dir=NULL){
   message('Starting independent runs')
-  if(sink.console){
-    sink(file='trash.txt', append=FALSE, type='output')
-    on.exit(sink())
-  }
+  ## if(sink.console){
+  ##   sink(file='trash.txt', append=FALSE, type='output')
+  ##   on.exit(sink())
+  ## }
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
   fit.stan <- stan(fit=obj.stan, data=data, iter=Niter, chains=1,
                    thin=Nthin, init=inits)
   sims.stan <- extract(fit.stan, permuted=FALSE)
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
-  fit.tmb <- run_mcmc(obj=obj.tmb, iter=Niter,
+  fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
                init=inits[[1]])
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
-  fit.admb <- run_admb_mcmc('admb', model.name=model, iter=Niter, thin=Nthin,
-               warmup=Nwarmup, chains=1, init=inits[[1]])
+  fit.admb <- sample_admb(dir=dir, model=model, iter=Niter,
+               warmup=Nwarmup, chains=1, thin=Nthin,
+               init=inits[[1]])
   sims.admb <- fit.admb$samples[-(1:fit.admb$warmup),,,drop=FALSE]
   perf.admb <- data.frame(rstan::monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
 

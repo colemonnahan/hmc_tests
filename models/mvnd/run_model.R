@@ -16,43 +16,44 @@ obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100,
                    control=list(adapt_engaged=FALSE))
 
 ## Build TMB object
-compile(paste0(m, '_tmb.cpp'))
-dyn.load(paste0(m,"_tmb"))
+compile(paste0(m, '.cpp'))
+dyn.load(paste0(m))
 obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
 ## Rerun ADMB
 setwd('admb')
 write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE,
             col.names=FALSE )
-system('admb_hmc mvnd')
+system('admb mvnd')
 system('mvnd')
 setwd('..')
 
-seeds <- 1:7
-inits2 <- rep(inits, length(seeds))
-Nout <- 2000
-temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
-                   inits=inits2, pars=pars, data=data,
-                   metric=c('unit', 'diag', 'dense')[-3], covar=covar,
-                   seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
-perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
-                                            'minESS', 'efficiency', 'Rhat.min'))
-adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
-                                              'max_treedepths',
-                                              'ndivergent',
-                                              'nsteps.median', 'nsteps.mean'))
+## seeds <- 1:7
+## inits2 <- rep(inits, length(seeds))
+## Nout <- 2000
+## temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
+##                    inits=inits2, pars=pars, data=data,
+##                    metric=c('unit', 'diag', 'dense')[-3], covar=covar,
+##                    seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
+## perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
+##                                             'minESS', 'efficiency', 'Rhat.min'))
+## adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
+##                                               'max_treedepths',
+##                                               'ndivergent',
+##                                               'nsteps.median', 'nsteps.mean'))
 
-ggplot(perf.long, aes(platform, value, color=metric)) + geom_point() +
-  facet_wrap('variable', scales='free')
-ggplot(adapt.long, aes(platform, value, color=metric)) + geom_point() +
-  facet_wrap('variable', scales='free')
+## ggplot(perf.long, aes(platform, value, color=metric)) + geom_point() +
+##   facet_wrap('variable', scales='free')
+## ggplot(adapt.long, aes(platform, value, color=metric)) + geom_point() +
+##   facet_wrap('variable', scales='free')
 
 
 
 ## Get independent samples from each model to make sure they are coded the
 ## same
 if(verify)
-    verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars,
-                  inits=inits, data=data, Nout=Nout.ind, Nthin=Nthin.ind)
+  verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
+                pars=pars, inits=inits, data=data, Nout=Nout.ind,
+                Nthin=Nthin.ind)
 
 sims.ind <- readRDS(file='sims.ind.RDS')
 sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
