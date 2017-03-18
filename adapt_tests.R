@@ -40,13 +40,15 @@ write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
 system('admb mvnd')
 system('mvnd')
 setwd('..')
-iter <- 2000
+devtools::load_all('C:/Users/Cole/adnuts')
+iter <- 1000
 chains <- 1
-td <- 12
-eps <- 1.312/3
+td <- 4
+eps <- 1.312/10
 rm(admb, tmb, stan2)
-init <- lapply(1:chains, function(x) rnorm(2, sd=se*10))
+init <- sapply(1:chains, function(x) list(mu=c(0,0)))
 stan2 <- stan(fit=stan.fit, data=data, chains=chains, iter=iter,
+              init=list(init),
               control=list(metric='unit_e', stepsize=eps,
                            adapt_engaged=FALSE, max_treedepth=td))
 admb <- sample_admb(dir=dir, model=model, iter=iter, init=init,
@@ -61,7 +63,6 @@ nevals <- cbind(rbind(x1,x2,x3),i=1:iter)
 ## ggplot(nevals, aes(i, log2(n_leapfrog__), color=platform)) + geom_jitter(alpha=.5)
 ## ggplot(nevals, aes(log2(n_leapfrog__))) +
 ##   geom_histogram() + facet_wrap('platform')
-
 par(mfrow=c(2,2))
 plot(sort(x1[,4])+.1, ylim=c(0,1+max(nevals$n_leapfrog__)), ylab='n_leapfrog')
 points(sort(x2[,4]), col=2)
@@ -77,10 +78,21 @@ admb.samples <- extract_samples(admb)
 tmb.samples <- extract_samples(tmb)
 stan.samples <- data.frame(extract(stan2, permuted=FALSE)[,1,])
 qqplot(stan.samples[,1], admb.samples[,1])
+x <- qqplot(stan.samples[,1], tmb.samples[,1], plot=FALSE)
+points(x[[1]], x[[2]], col=2)
 
-launch_shinystan_admb(admb)
-launch_shinystan_admb(tmb)
-launch_shinystan(stan2)
+
+ggplot(nevals, aes(treedepth__, n_leapfrog__, color=platform)) + geom_jitter()
+sum(!2^(x1$treedepth__-1)-1 < x1$n_leapfrog__ &
+ x1$n_leapfrog__ <= 2^(x1$treedepth__)-1)
+sum(!2^(x2$treedepth__-1)-1 < x2$n_leapfrog__ &
+ x2$n_leapfrog__ <= 2^(x2$treedepth__)-1)
+sum(!2^(x3$treedepth__-1)-1 < x3$n_leapfrog__ &
+ x3$n_leapfrog__ <= 2^(x3$treedepth__)-1)
+
+## launch_shinystan_admb(admb)
+## launch_shinystan_admb(tmb)
+## launch_shinystan(stan2)
 
 
 chains <- 6
