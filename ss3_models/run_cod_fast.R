@@ -6,25 +6,29 @@ library(shinystan)
 ## Run model if needed
 m <- 'cod_fast'
 setwd(m)
-system("ss3")
-mle <- r4ss::read.admbFit('ss3')
-replist <- r4ss::SS_output(getwd(), covar=TRUE)
-unlink('plots', TRUE)
-r4ss::SS_plots(replist)
-par.names <- mle$names[1:mle$nopar]
+## system("ss3")
+## replist <- r4ss::SS_output(getwd(), covar=TRUE)
+## unlink('plots', TRUE)
+## r4ss::SS_plots(replist)
 setwd('..')
 
 
 sfStop()
-reps <- 5
-sfInit(parallel=TRUE, cpus=reps)
-inits <- rep(list(mle$est[1:mle$nopar]), reps)
+mle <- r4ss::read.admbFit('cod_fast/ss3')
+covar <- get.admb.cov(m)$cov.bounded
+N <- mle$nopar
+par.names <- mle$names[1:N]
+reps <- 3                        # chains/reps to run
+## Draw inits from MVN using MLE and covar
+inits <- rep(list(as.vector(mvtnorm::rmvnorm(n=1, mean=mle$est[1:N], sigma=covar))),reps)
+inits <- rep(list(mle$est[1:N]), reps)
 td <- 12
-warmup <- 50
-iter <- 1000
-hh <- .1                           # hours to run
-eps <- .1
+warmup <- 1
+iter <- 150
+hh <- .5                           # hours to run
+eps <- NULL
 mm <- diag(length(par.names))
+sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
 
 fit.nuts <-
