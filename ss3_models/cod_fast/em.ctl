@@ -37,11 +37,11 @@
 #_growth_parms
 #_LO HI INIT PRIOR PR_type SD PHASE env-var use_dev dev_minyr dev_maxyr dev_stddev Block Block_Fxn
  0.01 1.8 0.2 0.1 -1 0.8 -3 0 0 0 0 0 0 0 # NatM_p_1_Fem_GP_1
- 1 100 20 30.8 -1 0.2 4 0 0 0 0 0 0 0 # L_at_Amin_Fem_GP_1
- 6.6 660 132 120.1 -1 0.2 4 0 0 0 0 0 0 0 # L_at_Amax_Fem_GP_1
- 0.01 1 0.2 0.25 -1 0.8 4 0 0 0 0 0 0 0 # VonBert_K_Fem_GP_1
- 0.01 0.5 0.1 0.1 -1 0.8 5 0 0 0 0 0 0 0 # CV_young_Fem_GP_1
- 0.01 0.5 0.1 0.1 -1 0.8 5 0 0 0 0 0 0 0 # CV_old_Fem_GP_1
+ 1 100 20 30.8 -1 0.2 -4 0 0 0 0 0 0 0 # L_at_Amin_Fem_GP_1
+ 6.6 660 132 120.1 -1 0.2 -4 0 0 0 0 0 0 0 # L_at_Amax_Fem_GP_1
+ 0.01 1 0.2 0.25 -1 0.8 -4 0 0 0 0 0 0 0 # VonBert_K_Fem_GP_1
+ 0.01 0.5 0.1 0.1 -1 0.8 -5 0 0 0 0 0 0 0 # CV_young_Fem_GP_1
+ 0.01 0.5 0.1 0.1 -1 0.8 -5 0 0 0 0 0 0 0 # CV_old_Fem_GP_1
  0 3 6.8e-006 6.8e-006 -1 0 -1 0 0 0 0 0 0 0 # Wtlen_1_Fem
  2.5 3.5 3.101 3.101 -1 0.2 -3 0 0 0 0 0 0 0 # Wtlen_2_Fem
  10 50 38.18 0 -1 0 -3 0 0 0 0 0 0 0 # Mat50%_Fem
