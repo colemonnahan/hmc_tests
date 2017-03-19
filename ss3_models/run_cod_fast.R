@@ -3,11 +3,18 @@ library(adnuts)
 library(snowfall)
 library(shinystan)
 
+## Run model if needed
 m <- 'cod_fast'
 setwd(m)
+system("ss3")
 mle <- r4ss::read.admbFit('ss3')
+replist <- r4ss::SS_output(getwd(), covar=TRUE)
+unlink('plots', TRUE)
+r4ss::SS_plots(replist)
 par.names <- mle$names[1:mle$nopar]
 setwd('..')
+
+
 sfStop()
 reps <- 5
 sfInit(parallel=TRUE, cpus=reps)
