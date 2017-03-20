@@ -104,7 +104,7 @@ run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, de
         k <- k+1
         ## Start of TMB run
         fit.tmb <-
-          sample_tmb(obj=obj.tmb, iter=Niter, warmup=Nwarmup, chains=1,
+          sample_tmb(obj=obj.tmb, iter=Niter, warmup=Nwarmup, chains=1, thin=Nthin,
                      init=inits.seed[[1]], control=list(metric=M,
           adapt_delta=idelta, max_treedepth=max_treedepth))
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
@@ -139,7 +139,7 @@ run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, de
                      Rhat.tmb)
         k <- k+1
         fit.admb <- sample_admb(dir='admb', model=model, iter=Niter, warmup=Nwarmup,
-                                   init=inits.seed[[1]],
+                                   init=inits.seed[[1]], thin=Nthin,
           control=list(metric=M, max_treedepth=max_treedepth, adapt_delta=idelta))
         sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
@@ -173,8 +173,8 @@ run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, de
         k <- k+1
         ## ADMB default RWM algorithm
         fit.admb.rwm <-
-          sample_admb(dir='admb', model=model, iter=Niter, warmup=Nwarmup,
-                      init=inits.seed[[1]], chains=1,
+          sample_admb(dir='admb', model=model, iter=10*Niter, warmup=Nwarmup,
+                      init=inits.seed[[1]], chains=1, thin=10*Nthin,
                       control=list(metric=M,algorithm='RWM'))
         sims.admb.rwm <- fit.admb.rwm$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb.rwm <- data.frame(monitor(sims=sims.admb.rwm, warmup=0, print=FALSE, probs=.5))
