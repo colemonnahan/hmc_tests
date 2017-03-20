@@ -31,9 +31,9 @@ ggheight <- 5
 #' be one of c("unit_e", "diag_e", "dense_e").
 #' @return A list of two data frames. adapt is the adaptive results from
 #' Stan, and perf is the performance metrics for each run.
-run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
-                       metric='diag', data, inits, pars, max_treedepth=12,
-                       sink.console=FALSE, covar=NULL){
+run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, delta=.8,
+                       metric='diag', data, inits, pars,
+                       sink.console=FALSE, max_treedepth=12){
   if(Nthin!=1) stop('this probably breaks if Nthin!=1')
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
@@ -47,7 +47,6 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
   ##   on.exit(sink())
   ## }
 
-  max_treedepth <- 10
   for(seed in seeds){
     message(paste('==== Starting seed',seed, 'at', Sys.time()))
     inits.seed <- list(inits[[which(seed==seeds)]])
@@ -104,10 +103,10 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                      Rhat.stan)
         k <- k+1
         ## Start of TMB run
-        fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
-                                 warmup=Nwarmup, chains=1,
-                                 init=inits.seed[[1]], control=list(metric=M, adapt_delta=idelta,
-                                 max_treedepth=max_treedepth))
+        fit.tmb <-
+          sample_tmb(obj=obj.tmb, iter=Niter, warmup=Nwarmup, chains=1,
+                     init=inits.seed[[1]], control=list(metric=M,
+          adapt_delta=idelta, max_treedepth=max_treedepth))
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
         sims.tmb <- fit.tmb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.tmb <- data.frame(monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
@@ -177,7 +176,6 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
           sample_admb(dir='admb', model=model, iter=Niter, warmup=Nwarmup,
                       init=inits.seed[[1]], chains=1,
                       control=list(metric=M,algorithm='RWM'))
-
         sims.admb.rwm <- fit.admb.rwm$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb.rwm <- data.frame(monitor(sims=sims.admb.rwm, warmup=0, print=FALSE, probs=.5))
         Rhat.admb.rwm <- with(perf.admb.rwm, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
@@ -211,14 +209,16 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
 }
 
 #' Verify models and then run empirical tests across delta
-fit.empirical <- function(obj.stan, obj.tmb, model, pars, covar=NULL, inits, data, seeds,
+fit.empirical <- function(obj.stan, obj.tmb, model, pars, covar, inits, data, seeds,
                           delta, model.stan, Nout,  metric,
                           Nthin=1, sink.console=FALSE, ...){
     ## Now rerun across gradient of acceptance rates and compare to JAGS
-    message('Starting empirical runs')
+  message('Starting empirical runs')
+  ## For now using diagonal to more closely match what Stan is doing.
+  covar2 <- diag(x=diag(covar))
     results.empirical <-
       run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=model, seeds=seeds,
-                 Nout=Nout, covar=covar,
+                 Nout=Nout, covar=covar2,
                  metric=metric, delta=delta, data=data,
                  Nthin=Nthin, inits=inits, pars=pars,
                  sink.console=sink.console, ...)
@@ -353,7 +353,7 @@ plot.model.comparisons <- function(sims.stan, sims.tmb, sims.admb, perf.platform
 #' to verify the posteriors are the same, effectively checking for bugs
 #' between models before doing performance comparisons
 #'
-verify.models <- function(obj.stan, obj.tmb, model,  pars, inits, data, Nout, Nthin,
+verify.models <- function(obj.stan, obj.tmb, model, covar, pars, inits, data, Nout, Nthin,
                           sink.console=TRUE, dir=NULL){
   message('Starting independent runs')
   ## if(sink.console){
@@ -368,12 +368,12 @@ verify.models <- function(obj.stan, obj.tmb, model,  pars, inits, data, Nout, Nt
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
   fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits[[1]])
+               init=inits[[1]], control=list(metric=covar))
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
   fit.admb <- sample_admb(dir=dir, model=model, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits[[1]])
+               init=inits[[1]], control=list(metric=covar))
   sims.admb <- fit.admb$samples[-(1:fit.admb$warmup),,,drop=FALSE]
   perf.admb <- data.frame(rstan::monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
 
