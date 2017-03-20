@@ -1,9 +1,11 @@
-## Sourcing this file will run everything for this model, given the MCMC
-## arguments are in the global workspace.
+### Template file to run a single model. Copy this over and modify below
+### for the specific model (update data, inits, etc.).
+
+## Then sourcing this file will run everything for this model, given the
+## MCMC arguments are in the global workspace.
 setwd(paste0('models/',m))
 
-## Load empirical data and inits
-## The true values used for empirical and simulated data
+## Setup data, inits and pars
 logLinf.mean <- log(50)
 logk.mean <- log(.1)
 t0 <- 6
@@ -28,28 +30,38 @@ inits <- list(list(logLinf_mean=logLinf.mean, logLinf_sigma=logLinf.sigma,
 pars <-
     c("logLinf_mean", "logLinf_sigma", "logk_mean", "logk_sigma", "logk", "logLinf",
       "sigma_obs", "delta")
+Npar <- length(pars)
 
-## Precompile Stan model so it isn't done repeatedly and isn't in the
-## timings
-obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100, par=pars,
-                   warmup=50, chains=1, thin=1, algorithm='NUTS',
-                   init=list(inits[[1]]), seed=1, verbose=FALSE,
-                   control=list(adapt_engaged=FALSE))
-## Build TMB object
-compile(paste0(m, '_tmb.cpp'))
-dyn.load(paste0(m,"_tmb"))
+## Compile Stan, TMB and ADMB models
+obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=5000,
+                   chains=1, init=list(inits[[1]]),
+                   control=list(adapt_engaged=TRUE))
+## Use these samples to get an estimated covariance to use in TMB and ADMB
+## since no adapation of M yet.
+samples <- extract(obj.stan, permuted=FALSE)[,1,1:Npar]
+covar.est <- cov(samples)               # estimated mass matrix
+compile(paste0(m, '.cpp'))
+dyn.load(paste0(m))
 obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
+setwd('admb')
+write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
+            col.names=FALSE )
+system(paste('admb',m))
+system(m)
+setwd('..')
 
-out <- run_mcmc(obj.tmb, nsim=500, alg='NUTS')
-
-## Get independent samples from each model to make sure they are coded the
-## same
+## Get independent samples from each model to ensure identical
+## posteriors. For now I am using covar.est since do not care about fair
+## comparisons, and it should make TMB and ADMB run faster.
 if(verify)
-verify.models(model=m, pars=pars, inits=inits, data=data,
-              Nout=Nout.ind, Nthin=Nthin.ind, sink=sink)
-
+  verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
+                pars=pars, inits=inits, data=data, Nout=Nout.ind,
+                Nthin=Nthin.ind, covar=covar.est)
+## Load initial values from those sampled above.
 sims.ind <- readRDS(file='sims.ind.RDS')
 sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
+## Setup inits for efficiency tests (fit.empirical). You need to adjust the
+## named arguments for each model.
 inits <- lapply(1:length(seeds), function(i)
     list(
         logLinf_mean=sims.ind$logLinf_mean[i],
@@ -61,33 +73,18 @@ inits <- lapply(1:length(seeds), function(i)
         logk=as.numeric(sims.ind[i, grep('logk\\.', x=names(sims.ind))]),
         logLinf=as.numeric(sims.ind[i, grep('logLinf\\.', x=names(sims.ind))])))
 
-## Fit empirical data with no thinning for efficiency tests
-fit.empirical(model=m, params.jag=pars, inits=inits, data=data,
-              lambda=lambda.vec, delta=delta, metric=metric, seeds=seeds,
-              Nout=Nout)
 
-## Now loop through model sizes and run for default parameters, using JAGS
-## and NUTS only.
-adapt.list <- perf.list <- list()
-for(i in seq_along(Npar.vec)){
-    Npar <- Npar.vec[i]
-    ## Reproducible data since seed set inside the function
-    message(paste("======== Starting Npar=", Npar))
-    set.seed(115)
-    source("generate_data.R")
-    temp <- run.chains(model=m, inits=inits, pars=pars, data=data,
-                       seeds=seeds, Nout=Nout, Nthin=1, lambda=NULL, delta=delta)
-    adapt.list[[i]] <- temp$adapt
-    perf.list[[i]] <- temp$perf
-    ## Save them as we go in case it fails
-    perf <- do.call(rbind, perf.list)
-    adapt <- do.call(rbind, adapt.list)
-    plot.simulated.results(perf, adapt)
-    write.csv(x=perf, file=results.file(paste0(m,'_perf_simulated.csv')))
-    write.csv(x=adapt, file=results.file(paste0(m,'_adapt_simulated.csv')))
-    rm(temp)
-}
+## Fit empirical data with no thinning for efficiency tests. Since mass
+## matrix adapataion is not working for TMB/ADMB, approximate it with the
+## diagonal of that estimated from Stan.
+covar2 <- diag(x=diag(covar.est))
+fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
+              delta=delta, metric='unit', seeds=seeds, covar=covar2,
+              Nout=Nout, max_treedepth=12)
+
+## If there is a simulation component put it in this file
+if(FALSE)
+  source("simulation.R")
+
 message(paste('Finished with model:', m))
-
 setwd('../..')
-
