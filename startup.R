@@ -7,7 +7,7 @@ library(reshape2)
 library(TMB)
 library(R2admb)
 library(shinystan)
-devtools::load_all('C:/Users/Cole/adnuts')
+devtools::document('C:/Users/Cole/adnuts')
 ggwidth <- 8
 ggheight <- 5
 
@@ -254,14 +254,15 @@ plot.simulated.results <- function(perf, adapt){
     adapt$pct.divergent <- with(adapt, ndivergent/Nsims)
     adapt$pct.max.treedepths <- with(adapt, max_treedepths/Nsims)
     adapt.long <- melt(adapt,
-                      id.vars=c('model', 'platform', 'seed', 'Npar', 'Nsims'),
+                      id.vars=c('model', 'platform', 'seed', 'Npar',
+                                'Nsims', 'cor'),
                       measure.vars=c('delta.mean', 'eps.final',
-                                     'pct.divergent', 'pct.max.treedepths'))
-    adapt.long <- ddply(adapt.long, .(platform, Npar, variable), mutate,
+                                     'pct.divergent', 'nsteps.mean'))
+    adapt.long <- ddply(adapt.long, .(platform, cor, Npar, variable), mutate,
                        mean.value=mean(value))
     g <- ggplot(adapt.long, aes(Npar, value, group=platform, color=platform)) +
         geom_point() + geom_line(data=adapt.long, aes(Npar, mean.value)) +
-                facet_wrap('variable') + ggtitle("Performance Comparison")
+                facet_grid(variable~cor, scales='free_y') + ggtitle("Adaptation Comparison")
     ggsave(paste0('plots/',model.name, '_adapt_simulated.png'), g, width=ggwidth, height=ggheight)
 }
 

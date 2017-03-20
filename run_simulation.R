@@ -7,22 +7,18 @@
 ### variables
 main.dir <- 'C:/Users/Cole/hmc_tests/'
 setwd(main.dir)
+devtools::install('C:/Users/Cole/adnuts')
 source("startup.R")
 Nreps <- 3                 # number of replicates
 Nout.ind <- 1000            # number of independent samples if verify==TRUE
 set.seed(241)
 seeds <- 1:Nreps#sample(1:1e5, size=Nreps)         #
-metric <- c('unit_e', 'diag_e', 'dense_e')[1]
+metric <- 'diag'#c('unit_e', 'diag_e', 'dense_e')[1]
 ## Suppress output to file via sink? Useful after debugging to clean up
 ## console and judge progress.
 sink <- FALSE
 ### End of Step 1.
 ### ------------------------------------------------------------
-
-devtools::document('C:/Users/Cole/adnuts')
-devtools::install('C:/Users/Cole/adnuts')
-devtools::load_all('C:/Users/Cole/adnuts')
-
 
 ### ------------------------------------------------------------
 ### Step 2: Run the models.
@@ -37,27 +33,8 @@ Nthin.ind <- 1                          # thin rate for verify mode
 ## from wishart (1) (see paper). Npar is how many parameters.
 cor.vec <- c(0,1)
 ## Npar.vec <- c(5, 15, 25, 50, 100, 200, 300, 400)
-Npar.vec <- c(2,4,8,16,32)[1:3]
+Npar.vec <- c(2,4,8,16,32,64)
 source(paste0('models/',m,'/run_model.R'))
-
-## Quick exploration of mvnd plots
-setwd(main.dir)
-adapt <- read.csv('results/mvnd_adapt_simulated.csv')[,-1]
-ggplot(adapt, aes(Npar, eps.final, group=platform, color=platform)) +
-  geom_point() + facet_wrap('cor')
-adapt.long <- melt(adapt, id.vars=c('platform', 'seed', 'Npar', 'cor', 'Nsims'),
-                   measure.vars=c('delta.mean', 'eps.final',
-                                  'max_treedepths', 'nsteps.mean'))
-ggplot(adapt.long, aes(Npar, value, group=platform, color=platform)) + geom_point() +
-  facet_grid(variable~cor, scales='free')
-
-perf <- read.csv('results/mvnd_perf_simulated.csv')[,-1]
-ggplot(perf, aes(Npar, samples.per.time, group=platform, color=platform)) +
-  geom_point() + facet_wrap('cor') + scale_y_log10()
-ggplot(perf, aes(Npar, minESS/Nsims, group=platform, color=platform)) +
-  geom_point() + facet_wrap('cor') + ylim(0,1)
-ggplot(perf, aes(Npar, time.total, group=platform, color=platform)) +
-  geom_point() + facet_wrap('cor') + scale_y_log10()
 
 ## Run multivariate normal, empirical and simulated
 m <- 'growth'

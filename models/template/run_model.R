@@ -23,7 +23,7 @@ compile(paste0(m, '.cpp'))
 dyn.load(paste0(m))
 obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
 setwd('admb')
-write.table(x=unlist(data), file=paste0(m,'.dat', row.names=FALSE,
+write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
             col.names=FALSE )
 system(paste('admb',m))
 system(m)
@@ -48,7 +48,7 @@ inits <- lapply(1:length(seeds), function(i) list(mu=as.numeric(sims.ind[i,])))
 ## diagonal of that estimated from Stan.
 covar2 <- diag(x=diag(covar.est))
 fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
-              delta=delta, metric='unit', seeds=seeds, covar=covar.est,
+              delta=delta, metric='unit', seeds=seeds, covar=covar2,
               Nout=Nout, max_treedepth=12)
 
 ## If there is a simulation component put it in this file

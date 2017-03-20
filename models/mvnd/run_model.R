@@ -1,105 +1,62 @@
-## Sourcing this file will run everything for this model, given the MCMC
-## arguments are in the global workspace.
+### Template file to run a single model. Copy this over and modify below
+### for the specific model (update data, inits, etc.).
+
+## Then sourcing this file will run everything for this model, given the
+## MCMC arguments are in the global workspace.
 setwd(paste0('models/',m))
 
-## Load empirical data and inits
-Npar <- 15
+## Setup data, inits and pars
+Npar <- 5
 covar <- rWishart(n=1, df=Npar, Sigma=diag(Npar))[,,1]
 covar <- diag(Npar)
-data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
+data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
 inits <- list(list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar)))/2))
 pars <- 'mu'
 
-## Compile Stan and TMB models. ADMB precompiled.
-obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100,
-                   warmup=50, chains=1, init=list(inits[[1]]),
-                   control=list(adapt_engaged=FALSE))
 
-## Build TMB object
+## Compile Stan, TMB and ADMB models
+obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=5000,
+                   chains=1, init=list(inits[[1]]),
+                   control=list(adapt_engaged=TRUE))
+## Use these samples to get an estimated covariance to use in TMB and ADMB
+## since no adapation of M yet.
+samples <- extract(obj.stan, permuted=FALSE)[,1,1:Npar]
+covar.est <- cov(samples)               # estimated mass matrix
 compile(paste0(m, '.cpp'))
 dyn.load(paste0(m))
 obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
-## Rerun ADMB
 setwd('admb')
-write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE,
+write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
             col.names=FALSE )
-system('admb mvnd')
-system('mvnd')
+system(paste('admb',m))
+system(m)
 setwd('..')
 
-## seeds <- 1:7
-## inits2 <- rep(inits, length(seeds))
-## Nout <- 2000
-## temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
-##                    inits=inits2, pars=pars, data=data,
-##                    metric=c('unit', 'diag', 'dense')[-3], covar=covar,
-##                    seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
-## perf.long <- melt(temp$perf, measure.vars=c('eps.final', 'time.total',
-##                                             'minESS', 'efficiency', 'Rhat.min'))
-## adapt.long <- melt(temp$adapt, measure.vars=c('delta.mean', 'eps.final',
-##                                               'max_treedepths',
-##                                               'ndivergent',
-##                                               'nsteps.median', 'nsteps.mean'))
-
-## ggplot(perf.long, aes(platform, value, color=metric)) + geom_point() +
-##   facet_wrap('variable', scales='free')
-## ggplot(adapt.long, aes(platform, value, color=metric)) + geom_point() +
-##   facet_wrap('variable', scales='free')
-
-
-
-## Get independent samples from each model to make sure they are coded the
-## same
+## Get independent samples from each model to ensure identical
+## posteriors. For now I am using covar.est since do not care about fair
+## comparisons, and it should make TMB and ADMB run faster.
 if(verify)
   verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
                 pars=pars, inits=inits, data=data, Nout=Nout.ind,
-                Nthin=Nthin.ind)
-
+                Nthin=Nthin.ind, covar=covar.est)
+## Load initial values from those sampled above.
 sims.ind <- readRDS(file='sims.ind.RDS')
 sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
+## Setup inits for efficiency tests (fit.empirical). You need to adjust the
+## named arguments for each model.
 inits <- lapply(1:length(seeds), function(i) list(mu=as.numeric(sims.ind[i,])))
 
-## Fit empirical data with no thinning for efficiency tests
+## Fit empirical data with no thinning for efficiency tests. Since mass
+## matrix adapataion is not working for TMB/ADMB, approximate it with the
+## diagonal of that estimated from Stan.
+covar2 <- diag(x=diag(covar.est))
 fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
-              lambda=lambda.vec, delta=delta, metric=metric, seeds=seeds,
-              Nout=Nout)
+              delta=delta, metric='unit', seeds=seeds, covar=covar2,
+              Nout=Nout, max_treedepth=12)
 
-## Now loop through model sizes and run for default parameters, using JAGS
-## and NUTS only.
-adapt.list <- perf.list <- list()
-k <- 1
-for(i in seq_along(Npar.vec)){
-  Npar <- Npar.vec[i]
-  message(paste("======== Starting Npar=", Npar))
-  for(j in cor.vec){
-    ## Reproducible data since seed set inside the function
-    message(paste("======== Starting cor=", j))
-    set.seed(115)
-    source("generate_data.R")
-    ## Data changes so need to rebuild when Npar changes
-    obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=100,
-                     chains=1, init=list(inits[[1]]), verbose=FALSE)
-    obj.tmb <- MakeADFun(data=data, parameters=list(mu=rep(0,Npar)))
-    setwd('admb')
-    write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE,
-                col.names=FALSE )
-    system('mvnd'); setwd('..')
-    temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
-                       inits=inits, pars=pars, data=data, metric='diag',
-                       covar=covar,
-                       seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
-    adapt.list[[k]] <- cbind(temp$adapt, cor=j)
-    perf.list[[k]] <- cbind(temp$perf, cor=j)
-    ## Save them as we go in case it fails
-    perf <- do.call(rbind, perf.list)
-    adapt <- do.call(rbind, adapt.list)
-    plot.simulated.results(perf, adapt)
-    write.csv(x=perf, file=paste0(m,'_perf_simulated.csv'))
-    write.csv(x=adapt, file=paste0(m,'_adapt_simulated.csv'))
-    rm(temp)
-    k <- k+1
-  }
-}
+## If there is a simulation component put it in this file
+if(TRUE)
+  source("simulation.R")
 
 message(paste('Finished with model:', m))
 setwd('../..')
