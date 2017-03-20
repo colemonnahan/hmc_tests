@@ -6,6 +6,7 @@ m <- 'cod_fast'
 
 ## Run model if needed
 setwd(m)
+system('admb ss3')
 system("ss3")
 replist <- r4ss::SS_output(getwd(), covar=TRUE)
 unlink('plots', TRUE)
@@ -22,10 +23,10 @@ reps <- 3                        # chains/reps to run
 ## Draw inits from MVN using MLE and covar
 inits <- rep(list(as.vector(mvtnorm::rmvnorm(n=1, mean=mle$est[1:N], sigma=covar))),reps)
 inits <- rep(list(mle$est[1:N]), reps)
-td <- 12
-warmup <- 1
-iter <- 1e6
-hh <- 1                           # hours to run
+td <- 8
+warmup <- 25
+iter <- 30
+hh <- .15                           # hours to run
 eps <- NULL
 mm <- NULL #diag(length(par.names))
 sfInit(parallel=TRUE, cpus=reps)
