@@ -21,7 +21,6 @@ ggheight <- 5
 #' values, of the same length as seeds
 #' @param Nout The number of resulting iterations after thinning and warmup
 #' @param Nthin The number to thin, defaults to 1.
-#' @param lambda A vector of integrated time for HMC (eps times L)
 #' @param delta A vector of target acceptance rates. Defaults to 0.8.
 #' @param sink.console Whether to sink console output to trash file to cleanup
 #' console output. Defaults to TRUE. Makes it easier to see the progress on
@@ -32,9 +31,9 @@ ggheight <- 5
 #' be one of c("unit_e", "diag_e", "dense_e").
 #' @return A list of two data frames. adapt is the adaptive results from
 #' Stan, and perf is the performance metrics for each run.
-run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, delta=.8,
-                       metric='diag', data, inits, pars, max_treedepth=10,
-                       sink.console=TRUE, covar=NULL){
+run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
+                       metric='diag', data, inits, pars, max_treedepth=12,
+                       sink.console=FALSE, covar=NULL){
   if(Nthin!=1) stop('this probably breaks if Nthin!=1')
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
@@ -212,20 +211,20 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, lambda, d
 }
 
 #' Verify models and then run empirical tests across delta
-fit.empirical <- function(obj.stan, obj.tmb, model, pars, model.jags, inits, data, seeds,
-                          delta, lambda, model.stan, Nout,  metric,
-                          Nthin=1, sink.console=TRUE, ...){
+fit.empirical <- function(obj.stan, obj.tmb, model, pars, covar=NULL, inits, data, seeds,
+                          delta, model.stan, Nout,  metric,
+                          Nthin=1, sink.console=FALSE, ...){
     ## Now rerun across gradient of acceptance rates and compare to JAGS
     message('Starting empirical runs')
     results.empirical <-
       run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=model, seeds=seeds,
-                 Nout=Nout, lambda=lambda,
+                 Nout=Nout, covar=covar,
                  metric=metric, delta=delta, data=data,
                  Nthin=Nthin, inits=inits, pars=pars,
                  sink.console=sink.console, ...)
     with(results.empirical, plot.empirical.results(perf, adapt))
-    write.csv(file=results.file(paste0(m, '_adapt_empirical.csv')), results.empirical$adapt)
-    write.csv(file=results.file(paste0(m, '_perf_empirical.csv')), results.empirical$perf)
+    write.csv(file=paste0(m, '_adapt_empirical.csv'), results.empirical$adapt)
+    write.csv(file=paste0(m, '_perf_empirical.csv'), results.empirical$perf)
 }
 
 #' Make plots comparing the performance of simulated data for a model.
@@ -278,21 +277,21 @@ plot.simulated.results <- function(perf, adapt){
 #' @return Nothing. Makes plots in local folder of performance comparisons
 #' and adaptation results
 plot.empirical.results <- function(perf, adapt){
-    model.name <- as.character(perf$model[1])
-    perf.long <-
-      melt(perf, id.vars=c('platform', 'seed', 'delta.target', 'metric'),
-           measure.vars=c('time', 'minESS', 'samples.per.time'))
-    perf.long$seed2 <- as.factor(with(perf.long, paste(seed, metric, sep="_")))
-    g <- ggplot(subset(perf.long, platform!='jags'), aes(delta.target, log(value), group=seed2, color=metric))+
-      geom_line() + geom_point() + facet_grid(variable~platform, scales='free_y') + xlim(0,1)
-    ggsave(paste0('plots/',model.name, '_perf_empirical.png'), g, width=ggwidth, height=ggheight)
-    adapt.long <- melt(adapt, id.vars=c('platform', 'seed', 'delta.target', 'metric'),
-                       measure.vars=c('eps.final', 'delta.mean', 'nsteps.mean'))
-    adapt.long$seed2 <- as.factor(with(adapt.long, paste(seed, metric, sep="_")))
-    g <- ggplot(adapt.long, aes(delta.target, value, group=seed2, color=metric))+
-      geom_line() + facet_grid(variable~platform, scales='free_y') + xlim(0,1)
-    ggsave(paste0('plots/',model.name, '_adapt_empirical.png'), g, width=ggwidth, height=ggheight)
-  }
+  model.name <- as.character(perf$model[1])
+  perf.long <-
+    melt(perf, id.vars=c('platform', 'seed', 'delta.target', 'metric'),
+         measure.vars=c('time.total', 'minESS', 'efficiency'))
+  perf.long$seed2 <- as.factor(with(perf.long, paste(seed, metric, sep="_")))
+  g <- ggplot(perf.long, aes(platform, log10(value), group=seed2, color=metric))+
+    geom_line() + geom_point() + facet_grid(variable~., scales='free_y')
+  ggsave(paste0('plots/',model.name, '_perf_empirical.png'), g, width=ggwidth, height=ggheight)
+  adapt.long <- melt(adapt, id.vars=c('platform', 'seed', 'delta.target', 'metric'),
+                     measure.vars=c('eps.final', 'delta.mean', 'nsteps.mean'))
+  adapt.long$seed2 <- as.factor(with(adapt.long, paste(seed, metric, sep="_")))
+  g <- ggplot(adapt.long, aes(platform, value, group=seed2, color=metric))+
+    geom_line() + facet_grid(variable~., scales='free_y')
+  ggsave(paste0('plots/',model.name, '_adapt_empirical.png'), g, width=ggwidth, height=ggheight)
+}
 
 
 #' Verify the models are the same (coding errors) by plotting QQ plots of
