@@ -13,7 +13,7 @@ logLinf.sigma <- .1
 logk.sigma <- .2
 Ntime <- 40
 sigma.obs <- .1
-Nfish <- 30
+Nfish <- 15
 set.seed(115)
 dat <- sample.lengths(Nfish=Nfish, n.ages=5, logLinf.mean=logLinf.mean,
                            logLinf.sigma=logLinf.sigma, logk.mean=logk.mean,
@@ -22,15 +22,16 @@ g <- ggplot(dat, aes(ages, loglengths, group=fish, color=fish)) +
     geom_point(alpha=.5) + geom_line()
 ggsave('plots/simulated_growth.png', g, width=9, height=5)
 data <- list(Nfish=Nfish, Nobs=nrow(dat), loglengths=dat$loglengths,
-                  fish=dat$fish-1, ages=dat$ages-1)
-inits <- list(list(logLinf_mean=logLinf.mean, logLinf_sigma=logLinf.sigma,
-                  logk_mean=logk.mean, logk_sigma=logk.sigma, sigma_obs=sigma.obs,
-                  logLinf=rep(logLinf.mean, len=Nfish),
-                  logk=rep(logk.mean, len=Nfish)))
+                  fish=dat$fish, ages=dat$ages)
+inits <- list(list(sigma_obs=sigma.obs, logLinf_mean=logLinf.mean+.1,
+                   logk_mean=logk.mean+.1, logLinf_sigma=logLinf.sigma,
+                   logk_sigma=logk.sigma, logLinf=rep(logLinf.mean, len=Nfish),
+                   logk=rep(logk.mean, len=Nfish) ))
 pars <-
     c("logLinf_mean", "logLinf_sigma", "logk_mean", "logk_sigma", "logk", "logLinf",
       "sigma_obs", "delta")
-Npar <- length(pars)
+par.names <- names(unlist(inits[[1]]))
+Npar <- length(unlist(inits[[1]]))
 
 ## Compile Stan, TMB and ADMB models
 obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=5000,
@@ -43,6 +44,16 @@ covar.est <- cov(samples)               # estimated mass matrix
 compile(paste0(m, '.cpp'))
 dyn.load(paste0(m))
 obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
+## Setup the bounds
+lower <- rep(-Inf, length(par.names))
+names(lower) <- par.names
+upper <- -1*lower
+lower['sigma_obs'] <- 0
+lower['logLinf_sigma'] <- 0
+lower['logk_sigma'] <- 0
+upper['sigma_obs'] <- 5
+upper['logLinf_sigma'] <- 5
+upper['logk_sigma'] <- 5
 setwd('admb')
 write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
             col.names=FALSE )
@@ -50,13 +61,23 @@ system(paste('admb',m))
 system(m)
 setwd('..')
 
+
+x1 <- sample_admb('growth', dir='admb', iter=1000, init=inits,
+                  par.names=names(unlist(inits[[1]])),
+                  control=list(metric=covar.est, stepsize=NULL))
+launch_shinystan_admb(x1)
+
+x2 <- sample_tmb(obj.tmb, iter=1000, init=inits, lower=lower, upper=upper,
+                  control=list(metric=covar.est, stepsize=NULL))
+launch_shinystan_tmb(x2)
+
 ## Get independent samples from each model to ensure identical
 ## posteriors. For now I am using covar.est since do not care about fair
 ## comparisons, and it should make TMB and ADMB run faster.
 if(verify)
   verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
                 pars=pars, inits=inits, data=data, Nout=Nout.ind,
-                Nthin=Nthin.ind, covar=covar.est)
+                Nthin=Nthin.ind, covar=covar.est, upper=upper, lower=lower)
 ## Load initial values from those sampled above.
 sims.ind <- readRDS(file='sims.ind.RDS')
 sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]

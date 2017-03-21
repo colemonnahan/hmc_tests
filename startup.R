@@ -1,4 +1,7 @@
 ## Load libraries, functions, and global variables
+devtools::install('C:/Users/Cole/adnuts')
+## devtools::document('C:/Users/Cole/adnuts')
+library(adnuts)
 library(coda)
 library(ggplot2)
 library(plyr)
@@ -7,7 +10,6 @@ library(reshape2)
 library(TMB)
 library(R2admb)
 library(shinystan)
-devtools::document('C:/Users/Cole/adnuts')
 ggwidth <- 8
 ggheight <- 5
 
@@ -355,7 +357,7 @@ plot.model.comparisons <- function(sims.stan, sims.tmb, sims.admb, perf.platform
 #' between models before doing performance comparisons
 #'
 verify.models <- function(obj.stan, obj.tmb, model, covar, pars, inits, data, Nout, Nthin,
-                          sink.console=TRUE, dir=NULL){
+                          sink.console=TRUE, dir=NULL, ...){
   message('Starting independent runs')
   ## if(sink.console){
   ##   sink(file='trash.txt', append=FALSE, type='output')
@@ -369,12 +371,12 @@ verify.models <- function(obj.stan, obj.tmb, model, covar, pars, inits, data, No
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
   fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits[[1]], control=list(metric=covar))
+               init=inits, control=list(metric=covar), ...)
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
   fit.admb <- sample_admb(dir=dir, model=model, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits[[1]], control=list(metric=covar))
+               init=inits, control=list(metric=covar))
   sims.admb <- fit.admb$samples[-(1:fit.admb$warmup),,,drop=FALSE]
   perf.admb <- data.frame(rstan::monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
 

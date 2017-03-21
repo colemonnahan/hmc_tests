@@ -7,7 +7,7 @@ Type objective_function<Type>::operator() ()
   DATA_VECTOR(loglengths);
   DATA_IVECTOR(fish);
   DATA_IVECTOR(ages);
-  // PARAMETER(delta);
+  //  PARAMETER(delta);
   PARAMETER(sigma_obs);
   PARAMETER(logLinf_mean);
   PARAMETER(logk_mean);
@@ -23,21 +23,22 @@ Type objective_function<Type>::operator() ()
   Type nll=0; 			// negative log likelihood
 
   // Priors
-  nll-= dnorm(sigma_obs, Type(0), Type(5), true);
-  nll-= dnorm(logLinf_sigma, Type(0), Type(5), true);
-  nll-= dnorm(logk_sigma, Type(0), Type(5), true);
+  nll-= dnorm(sigma_obs, Type(.1), Type(.1), true);
+  nll-= dnorm(logLinf_sigma, Type(.1), Type(.1), true);
+  nll-= dnorm(logk_sigma, Type(.2), Type(.1), true);
 
  // Random effects
-nll-= dnorm(logLinf_mean, logLinf, logLinf_sigma, true).sum();
-nll-= dnorm(logk_mean, logk, logk_sigma, true).sum();
+  nll-= dnorm(logLinf_mean, logLinf, logLinf_sigma, true).sum();
+  nll-= dnorm(logk_mean, logk, logk_sigma, true).sum();
 
   // Calculate likelihood
   Type delta=1;
    for(int i=0; i<Nobs; i++){
+     // Indices passed as is, so need to offset by -1 to get 0-indexing for c++
     Linf = exp(logLinf(fish(i)-1));
     k = exp(logk(fish(i)-1));
     ypred(i) = log( Linf*pow(1-exp(-k*(ages(i)-Type(5))),delta));
-	nll-=dnorm(loglengths(i), ypred(i), sigma_obs, true);
+    nll-=dnorm(loglengths(i), ypred(i), sigma_obs, true);
    }
   return nll;
 }
