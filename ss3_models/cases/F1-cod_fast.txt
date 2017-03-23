@@ -4,4 +4,4 @@
 # Then decreasing to Fmsy (left limb) for 35years.
 years; 1:50
 years_alter; 1:50
-fvals; c(seq(0,.3, len=25), seq(.3, 0, len=25))
+fvals; c(seq(.05,.3, len=25), seq(.3, .05, len=25))
