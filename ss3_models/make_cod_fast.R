@@ -1,10 +1,5 @@
-## This file runs a vvery pared down ss3sim cod model. Few years and wide
-## bins so it hsould run really fast per iteration.
-
-## Recompile SS3 if needed
-setwd('cod_fast_dummy')
-system('admb ss3.tpl')
-setwd('..')
+## This file generates a very pared down ss3sim cod model. Few years and
+## wide bins so it hsould run really fast per iteration.
 
 ## devtools::install_github("ss3sim/ss3sim")
 ## devtools::install_github('r4ss/r4ss')
@@ -39,11 +34,29 @@ file.copy('cod_fast_dummy/ss3.exe', to=newdir)
 unlink(scenarios, TRUE)
 setwd(newdir)
 system('ss3')
+## !!!!! Manually set starter.ss to start from .par file and add .1 to
+## jitter. This gets rid of an ADMB optimizer error, which I'm not sure
+## whether it is important.
+
+system('ss3')
 ## Make plots to check it
 replist <- r4ss::SS_output(getwd(), covar=TRUE)
 r4ss::SS_plots(replist)
 setwd('..')
 ## DONE! Can now use it for testing
+
+
+### May want to use this code to turn off some parameters if they are being
+### difficult.
+## data.old <- r4ss::SS_readdat("cod_fast_dummy/om/ss3.dat")
+## change_e(ctl_file_in = 'cod_fast_dummy/om/ss3.ctl',
+##          ctl_file_out = "change_e.ctl",
+##          dat_list = data.old, for_file_in = "cod_fast_dummy/om/forecast.ss",
+##          natM_type = "1parm", natM_val=NA,
+##          par_name = c("_steep", "SizeSel_1P_1_Fishery"),
+##          par_int = c(NA,NA), par_phase = c(-5, -5),
+##          forecast_num = 0, run_change_e_full = TRUE )
+
 
 ## dat <- r4ss::SS_readdat(file='models/cod/om/ss3.dat')
 ## ## use ss3sim function to extend burn in for yellow model

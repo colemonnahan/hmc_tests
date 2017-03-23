@@ -6,7 +6,7 @@ m <- 'cod_fast'
 
 ## Run model if needed
 setwd(m)
-system('admb ss3')
+## system('admb ss3')
 system("ss3")
 replist <- r4ss::SS_output(getwd(), covar=TRUE)
 unlink('plots', TRUE)
