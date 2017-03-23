@@ -20,7 +20,7 @@ case_files <- list(F="F", B="em_binning", I="data",
                    D=c("index","lcomp","agecomp"))
 Nsim <- 1
 scenarios <-
-  expand_scenarios(cases=list(D=c(2), F=1, I=0, B=0), species=spp)
+  expand_scenarios(cases=list(D=0, F=1, I=0, B=0), species=spp)
 run_ss3sim(iterations=1:Nsim, scenarios=scenarios,
            parallel=FALSE, parallel_iterations=FALSE,
            case_folder=case_folder, om_dir=om.paths[spp],
