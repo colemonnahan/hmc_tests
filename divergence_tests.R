@@ -41,18 +41,19 @@ pars <- c('v', 'theta')
 obj <- MakeADFun(data=data, parameters=list(v=0, theta=0), DLL='funnel')
 ## admb model compiled manually
 
-eps <- 1
-iter <- 10000
-fit.tmb <- sample_tmb(obj, iter=iter, init=list(c(0,0)),
+eps <- .01
+iter <- 1000
+fit.tmb <- sample_tmb(obj, iter=iter, init=list(c(-5,0)),
                       control=list(metric=diag(2), stepsize=eps))
-fit.admb <- sample_admb(dir='admb', model='funnel', iter=iter, init=list(c(0,0)),
+fit.admb <- sample_admb(dir='admb', model='funnel', iter=iter, init=list(c(-5,0)),
                       control=list(metric=diag(2), stepsize=eps))
 fit.stan <- stan(file='funnel.stan', iter=iter,
-                 init=list(list(v=0, theta=0)), chains=1,
+                 init=list(list(v=-5, theta=0)), chains=1,
                  control=list(metric='unit_e', max_treedepth=10, stepsize=eps, adapt_engaged=FALSE))
 launch_shinystan_tmb(fit.tmb)
 launch_shinystan_admb(fit.admb)
 launch_shinystan(fit.stan)
+
 setwd('..')
 
 
