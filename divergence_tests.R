@@ -4,19 +4,34 @@ library(rstan)
 library(plyr)
 library(mvtnorm)
 library(shinystan)
+library(adnuts)
 
+
+## Rosenbrock is a classic difficult one to fit and useful for checking
+## divergences
+
+setwd('models/rosenbrock/')
 compile(file='rosenbrock.cpp')
 dyn.load(dynlib('rosenbrock'))
 data <- list()
 pars <- c('x1', 'x2')
 obj <- MakeADFun(data=data, parameters=list(x1=0, x2=0))
-nlminb(start=c(2,-1), objective=obj$fn, gradient=obj$gr)
-out <- run_mcmc(obj, nsim=500, alg='NUTS', eps=.1)
-sum(out$sampler_params[[1]][,5])
-plot(out$samples[,1,])
-sso.tmb <- with(out, as.shinystan(samples, burnin=warmup, max_treedepth=12,
-             sampler_params=sampler_params, algorithm='NUTS'))
-launch_shinystan(sso.tmb)
+## admb model compiled manually
+
+eps <- .025
+iter <- 10000
+fit.tmb <- sample_tmb(obj, iter=iter, init=list(c(0,0)),
+                      control=list(metric=diag(2), stepsize=eps))
+fit.admb <- sample_admb(dir='admb', model='rosenbrock', iter=iter, init=list(c(0,0)),
+                      control=list(metric=diag(2), stepsize=eps))
+fit.stan <- stan(file='rosenbrock.stan', iter=iter,
+                 init=list(list(x1=0, x2=0)), chains=1,
+                 control=list(metric='unit_e', stepsize=eps, adapt_engaged=FALSE))
+launch_shinystan_tmb(fit.tmb)
+launch_shinystan_admb(fit.admb)
+launch_shinystan(fit.stan)
+
+
 
 data <- list(Y = c(28,  8, -3,  7, -1,  1, 18, 12),
                     sigma = c(15, 10, 16, 11,  9, 11, 10, 18))
@@ -30,7 +45,7 @@ sso.tmb <- with(out, as.shinystan(samples, burnin=warmup, max_treedepth=12,
 launch_shinystan(sso.tmb)
 
 
-
+launch_shinystan_tmb(fit.tmb)
 
 
 plot(0,0, type='n', xlim=c(-1.5,1.5), ylim=c(-.5,3))
