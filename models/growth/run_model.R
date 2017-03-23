@@ -61,16 +61,6 @@ system(paste('admb',m))
 system(m)
 setwd('..')
 
-
-x1 <- sample_admb('growth', dir='admb', iter=1000, init=inits,
-                  par.names=names(unlist(inits[[1]])),
-                  control=list(metric=covar.est, stepsize=NULL))
-launch_shinystan_admb(x1)
-
-x2 <- sample_tmb(obj.tmb, iter=1000, init=inits, lower=lower, upper=upper,
-                  control=list(metric=covar.est, stepsize=NULL))
-launch_shinystan_tmb(x2)
-
 ## Get independent samples from each model to ensure identical
 ## posteriors. For now I am using covar.est since do not care about fair
 ## comparisons, and it should make TMB and ADMB run faster.
@@ -107,5 +97,7 @@ fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=init
 if(FALSE)
   source("simulation.R")
 
+rm(obj.stan, obj.tmb, data, inits, pars, lower, upper, covar.est)
+dyn.unload(m)
 message(paste('Finished with model:', m))
 setwd('../..')

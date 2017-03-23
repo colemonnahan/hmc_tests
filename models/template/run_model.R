@@ -55,5 +55,7 @@ fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=init
 if(FALSE)
   source("simulation.R")
 
+rm(obj.stan, obj.tmb, data, inits, pars, lower, upper, covar.est)
+dyn.unload(m)
 message(paste('Finished with model:', m))
 setwd('../..')

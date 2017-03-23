@@ -22,9 +22,19 @@ obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=5000,
 ## since no adapation of M yet.
 samples <- extract(obj.stan, permuted=FALSE)[,1,1:Npar]
 covar.est <- cov(samples)               # estimated mass matrix
+
+#covar[1,1] <- covar[1,1]*10
+data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
 compile(paste0(m, '.cpp'))
 dyn.load(paste0(m))
 obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
+devtools::install("c:/users/cole/adnuts")
+x1 <- sample_tmb(obj.tmb, iter=2000, init=inits[[1]], control=list(metric=diag(5)))
+x2 <- sample_tmb(obj.tmb, iter=2000, init=inits[[1]], control=list(metric=covar))
+
+launch_shinystan_tmb(x1)
+launch_shinystan_tmb(x2)
+
 setwd('admb')
 write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
             col.names=FALSE )
@@ -58,5 +68,7 @@ fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=init
 if(TRUE)
   source("simulation.R")
 
+rm(obj.stan, obj.tmb, data, inits, pars, lower, upper, covar.est)
+dyn.unload(m)
 message(paste('Finished with model:', m))
 setwd('../..')
