@@ -7,7 +7,6 @@
 ### variables
 main.dir <- 'C:/Users/Cole/hmc_tests/'
 setwd(main.dir)
-devtools::install('C:/Users/Cole/adnuts')
 source("startup.R")
 Nreps <- 3                 # number of replicates
 Nout.ind <- 1000            # number of independent samples if verify==TRUE
@@ -33,12 +32,24 @@ Nthin.ind <- 1                          # thin rate for verify mode
 ## from wishart (1) (see paper). Npar is how many parameters.
 cor.vec <- c(0,1)
 ## Npar.vec <- c(5, 15, 25, 50, 100, 200, 300, 400)
-Npar.vec <- c(2,4,8,16,32,64)
+Npar.vec <- c(2,4,8,16,32,64, 128)
+source(paste0('models/',m,'/run_model.R'))
+## Run multivariate normal, empirical and simulated
+
+## Bounded MVN to test parameter transformations. Has 3 parameters, one
+## bounded above and below, one bounded only below, and one unbounded. ADMB
+## has to do the second case manually. Hence some funky code.
+m <- 'mvnb'
+verify <- TRUE
+delta <- 0.8
+Nout <- 1000
+Nthin <- 1
+Nthin.ind <- 10
 source(paste0('models/',m,'/run_model.R'))
 
 ## Run multivariate normal, empirical and simulated
 m <- 'growth'
-verify <- FALSE
+verify <- TRUE
 delta <- 0.8
 Nout <- 500
 Nthin <- 1
