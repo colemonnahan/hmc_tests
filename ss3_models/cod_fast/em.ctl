@@ -37,11 +37,11 @@
 #_growth_parms
 #_LO HI INIT PRIOR PR_type SD PHASE env-var use_dev dev_minyr dev_maxyr dev_stddev Block Block_Fxn
  0.01 1.8 0.2 0.1 -1 0.8 -3 0 0 0 0 0 0 0 # NatM_p_1_Fem_GP_1
- 1 100 20 30.8 -1 0.2 -4 0 0 0 0 0 0 0 # L_at_Amin_Fem_GP_1
- 6.6 660 132 120.1 -1 0.2 -4 0 0 0 0 0 0 0 # L_at_Amax_Fem_GP_1
- 0.01 1 0.2 0.25 -1 0.8 -4 0 0 0 0 0 0 0 # VonBert_K_Fem_GP_1
- 0.01 0.5 0.1 0.1 -1 0.8 -5 0 0 0 0 0 0 0 # CV_young_Fem_GP_1
- 0.01 0.5 0.1 0.1 -1 0.8 -5 0 0 0 0 0 0 0 # CV_old_Fem_GP_1
+ 1 100 20 30.8 -1 0.2 4 0 0 0 0 0 0 0 # L_at_Amin_Fem_GP_1
+ 6.6 660 132 120.1 -1 0.2 4 0 0 0 0 0 0 0 # L_at_Amax_Fem_GP_1
+ 0.01 1 0.2 0.25 -1 0.8 4 0 0 0 0 0 0 0 # VonBert_K_Fem_GP_1
+ 0.01 0.5 0.1 0.1 -1 0.8 5 0 0 0 0 0 0 0 # CV_young_Fem_GP_1
+ 0.01 0.5 0.1 0.1 -1 0.8 5 0 0 0 0 0 0 0 # CV_old_Fem_GP_1
  0 3 6.8e-006 6.8e-006 -1 0 -1 0 0 0 0 0 0 0 # Wtlen_1_Fem
  2.5 3.5 3.101 3.101 -1 0.2 -3 0 0 0 0 0 0 0 # Wtlen_2_Fem
  10 50 38.18 0 -1 0 -3 0 0 0 0 0 0 0 # Mat50%_Fem
@@ -86,12 +86,11 @@
  -4 #_recdev_early_phase
  0 #_forecast_recruitment phase (incl. late recr) (0 value resets to maxphase+1)
  1 #_lambda for Fcast_recr_like occurring before endyr+1
-
- -18.4   #_last_early_yr_nobias_adj_in_MPD 
-1.2   #_first_yr_fullbias_adj_in_MPD 
-48.7   #_last_yr_fullbias_adj_in_MPD 
-50.3   #_first_recent_yr_nobias_adj_in_MPD 
-0.9717   #_max_bias_adj_in_MPD (1.0 to mimic pre-2009 models) 
+1 #_last_early_yr_nobias_adj_in_MPD
+26 #_first_yr_fullbias_adj_in_MPD
+99 #_last_yr_fullbias_adj_in_MPD
+100 #_first_recent_yr_nobias_adj_in_MPD
+ 0.9 #_max_bias_adj_in_MPD (-1 to override ramp and set biasadj=1.0 for all estimated recdevs)
  0 #_period of cycles in recruitment (N parms read below)
  -5 #min rec_dev
  5 #max rec_dev
@@ -144,15 +143,15 @@
  11 0 0 0 # 2 Survey
  11 0 0 0 # 3 CPUE
 #_LO HI INIT PRIOR PR_type SD PHASE env-var use_dev dev_minyr dev_maxyr dev_stddev Block Block_Fxn
-15 101.6 50.8 50.8 -1 0.05 -2 0 0 0 0 0 0 0 # SizeSel_1P_1_Fishery
+15 101.6 50.8 50.8 -1 0.05 2 0 0 0 0 0 0 0 # SizeSel_1P_1_Fishery
  -5 3 -3 -3 -1 0.05 -99 0 0 0 0 0 0 0 # SizeSel_1P_2_Fishery
- 0 25.5 5.1 5.1 -1 0.05 -3 0 0 0 0 0 0 0 # SizeSel_1P_3_Fishery
+ 0 25.5 5.1 5.1 -1 0.05 3 0 0 0 0 0 0 0 # SizeSel_1P_3_Fishery
  -2 16 15 15 -1 0.05 -99 0 0 0 0 0 0 0 # SizeSel_1P_4_Fishery
  -15 5 -999 -999 -1 0.05 -99 0 0 0 0 0 0 0 # SizeSel_1P_5_Fishery
  -5 1000 999 999 -1 0.05 -99 0 0 0 0 0 0 0 # SizeSel_1P_6_Fishery
- 15 83.6 41.8 41.8 -1 0.05 -2 0 0 0 0 0 0 0 # SizeSel_2P_1_Survey
+ 15 83.6 41.8 41.8 -1 0.05 2 0 0 0 0 0 0 0 # SizeSel_2P_1_Survey
  -5 3 -4 -4 -1 0.05 -99 0 0 0 0 0 0 0 # SizeSel_2P_2_Survey
- 0 26 5.2 5.2 -1 0.05 -3 0 0 0 0 0 0 0 # SizeSel_2P_3_Survey
+ 0 26 5.2 5.2 -1 0.05 3 0 0 0 0 0 0 0 # SizeSel_2P_3_Survey
  -2 15 14 14 -1 0.05 -99 0 0 0 0 0 0 0 # SizeSel_2P_4_Survey
  -100 100 -99 -99 -1 0.05 -99 0 0 0 0 0 0 0 # SizeSel_2P_5_Survey
  -100 100 99 99 -1 0.05 -99 0 0 0 0 0 0 0 # SizeSel_2P_6_Survey
