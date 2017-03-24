@@ -23,11 +23,12 @@ reps <- 6                        # chains/reps to run
 ## Draw inits from MVN using MLE and covar
 #inits <- rep(list(as.vector(mvtnorm::rmvnorm(n=1, mean=mle$est[1:N], sigma=covar))),reps)
 inits <- rep(list(mle$est[1:N]), reps)
-td <- 12
-iter <- 2000
-warmup <- 1000
+td <- 2
+iter <- 100
+warmup <- 1
+tt <- 1 # thin rate
 hh <- 10                           # hours to run
-eps <- NULL
+eps <- 1e10
 mm <- NULL #diag(length(par.names))
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
@@ -39,11 +40,11 @@ fit.nuts <-
 saveRDS(fit.nuts, file='fit.nuts.RDS')
 stats.nuts <- data.frame(rstan::monitor(fit.nuts$samples, warmup=warmup, probs=.5, print=FALSE))
 perf.nuts <- min(stats.nuts$n_eff)/sum(fit.nuts$time.total)
-tt <- 1000 # thin rate
 fit.rwm <-
   sample_admb('ss3', iter=iter*tt, duration=hh*60, init=inits, par.names=par.names,
               parallel=TRUE, chains=reps, warmup=warmup*tt, dir=m, cores=reps,
-              thin=tt, control=list(algorithm='RWM', metric=mm))
+              thin=tt, control=list(algorithm='RWM', metric=mm),
+  admb.args=' -mcmult 100000')
 fit.rwm$warmup <- fit.rwm$warmup/tt
 saveRDS(fit.rwm, file='fit.rwm.RDS')
 stats.rwm <- data.frame(rstan::monitor(fit.rwm$samples, warmup=warmup/tt, probs=.5, print=FALSE))
@@ -54,3 +55,12 @@ perf.nuts/perf.rwm
 
 launch_shinystan_admb(fit.nuts)
 launch_shinystan_admb(fit.rwm)
+
+fit.rwm$samples[1, 1, N+1]
+fit.rwm$samples[100, 1, N+1]
+fit.nuts$samples[1, 1, N+1]
+fit.rwm$samples[1, 1, N]
+fit.rwm$samples[100, 1, N]
+fit.nuts$samples[1, 1, N]
+
+inits=rep(list(fit.rwm$samples[100,1,1:N]+.1),reps)
