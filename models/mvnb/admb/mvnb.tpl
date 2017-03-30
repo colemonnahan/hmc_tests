@@ -27,3 +27,29 @@ PROCEDURE_SECTION
 
 TOP_OF_MAIN_SECTION
   arrmblsize=20000000;
+
+// // nuts hbf 0
+// old scale= 0.937504 1 1
+// current scale= 0.937504 1 1
+// S before= 0.995545 0.266671 0.399997
+//  0.266671 0.500024 0.250006
+//  0.399997 0.250006 0.875
+// Starting from theta= 0.510808 -2.49733e-005 0.499988
+// Starting from z= 0.509669 0.136506 0.613011
+// Starting from nll=3.34832
+// Starting from chd= 0.99777 0 0
+//  0.267267 0.65467 0
+//  0.400891 0.218218 0.816497
+
+// // nuts hbf 1
+// old scale= 0.937504 1 1
+// current scale= 0.937504 1 1
+// S before= 0.995545 0.266671 0.399997
+//  0.266671 0.500024 0.250006
+//  0.399997 0.250006 0.875
+// Starting from theta= 0.510808 -2.49733e-005 0.499988
+// Starting from z= 0.509669 0.136506 0.613011
+// Starting from nll=3.34832
+// Starting from chd= 0.99777 0 0
+//  0.267267 0.65467 0
+//  0.400891 0.218218 0.816497

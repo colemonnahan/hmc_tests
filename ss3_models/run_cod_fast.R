@@ -1,3 +1,20 @@
+psv <- adnuts:::get_psv('cod_fast/ss3')
+mle <- r4ss::read.admbFit('catage')
+
+
+rm(psv)
+psv <- adnuts:::get_psv('cod_fast/ss3')
+as.numeric(psv[1,1:5])
+mle$est[1:5]
+aa <- read.csv('cod_fast/adaptation.csv')
+file.remove('cod_fast/ss3.psv')
+file.remove('cod_fast/adaptation.csv')
+
+## hybrid
+
+## Nuts hbf=0
+## nuts hbf=1
+
 library(adnuts)
 library(snowfall)
 library(shinystan)
@@ -24,11 +41,11 @@ reps <- 1                        # chains/reps to run
 #inits <- rep(list(as.vector(mvtnorm::rmvnorm(n=1, mean=mle$est[1:N], sigma=covar))),reps)
 inits <- rep(list(mle$est[1:N]), reps)
 td <- 2
-iter <- 10
+iter <- 200
 warmup <- 1
 tt <- 1 # thin rate
 hh <- 10                           # hours to run
-eps <- 1e10
+eps <- 1e-10
 mm <- NULL #diag(length(par.names))
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
@@ -57,7 +74,7 @@ launch_shinystan_admb(fit.rwm)
 
 fit.rwm$samples[1, 1, N+1]
 fit.nuts$samples[1, 1, N+1]
-fit.rwm$samples[1, 1, N]
+as.vector(fit.rwm$samples[1, 1, -(N+1)])-inits[[1]]
 fit.nuts$samples[1, 1, N]
 
 inits=rep(list(fit.rwm$samples[100,1,1:N]+.1),reps)
