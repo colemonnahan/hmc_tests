@@ -17,6 +17,7 @@
 model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
 {
   covar.allocate(1,3,1,3,"covar");
+ cout << covar << endl;
 }
 
 model_parameters::model_parameters(int sz,int argc,char * argv[]) : 
@@ -24,7 +25,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
 {
   initializationfunction();
   mu1.allocate(-2,2,"mu1");
-  mu2.allocate("mu2");
+  mu2.allocate(0,5,"mu2");
   mu3.allocate("mu3");
   jnll.allocate("jnll");
   prior_function_value.allocate("prior_function_value");
@@ -48,12 +49,12 @@ void model_parameters::userfunction(void)
 {
   jnll =0.0;
   dvar_vector mu(1,3);
-  mu(1)=mu1;
+  mu(1)=mu1-.15;
   // Manually transform paramter
-  mu(2)=exp(mu2);
-  mu(3)=mu3;
+  mu(2)=mu2+.1;
+  mu(3)=mu3+.98;
   jnll=neg_log_density(mu);
-  jnll-=mu2;
+ // jnll-=mu2;
 }
 
 model_data::~model_data()

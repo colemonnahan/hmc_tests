@@ -4,10 +4,11 @@ GLOBALS_SECTION
 
 DATA_SECTION
   init_matrix covar(1,3,1,3);
+  !! cout << covar << endl;
 
 PARAMETER_SECTION
   init_bounded_number mu1(-2,2);
-  init_number mu2;
+  init_bounded_number mu2(0,5);
   init_number mu3;
   objective_function_value jnll;
 
@@ -18,12 +19,12 @@ PRELIMINARY_CALCS_SECTION
 
 PROCEDURE_SECTION
   dvar_vector mu(1,3);
-  mu(1)=mu1;
+  mu(1)=mu1-.15;
   // Manually transform paramter
-  mu(2)=exp(mu2);
-  mu(3)=mu3;
+  mu(2)=mu2+.1;
+  mu(3)=mu3+.98;
   jnll=neg_log_density(mu);
-  jnll-=mu2;
+ // jnll-=mu2;
 
 TOP_OF_MAIN_SECTION
   arrmblsize=20000000;

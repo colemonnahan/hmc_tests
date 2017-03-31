@@ -1,9 +1,16 @@
 psv <- adnuts:::get_psv('cod_fast/ss3')
-mle <- r4ss::read.admbFit('catage')
+mle <- r4ss::read.admbFit('ss3')
 
+
+setwd(m)
+system("admb ss3")
+system("ss3 -mcmc 10 -hyeps .0001 -nuts -max_treedepth 2")
+adnuts:::write.admb.cov(diag(mle$nopar))
+system("ss3 -mcmc 10 -hyeps .0001 -nuts -noest")
+setwd('..')
 
 rm(psv)
-psv <- adnuts:::get_psv('cod_fast/ss3')
+psv <- adnuts:::get_psv('ss3')
 as.numeric(psv[1,1:5])
 mle$est[1:5]
 aa <- read.csv('cod_fast/adaptation.csv')
@@ -36,23 +43,23 @@ covar <- get.admb.cov(m)$cov.unbounded
 N <- mle$nopar
 par.names <- mle$names[1:N]
 par.names <- paste0(1:N, "_", par.names)
-reps <- 1                        # chains/reps to run
+reps <- 4                        # chains/reps to run
 ## Draw inits from MVN using MLE and covar
 #inits <- rep(list(as.vector(mvtnorm::rmvnorm(n=1, mean=mle$est[1:N], sigma=covar))),reps)
-inits <- rep(list(mle$est[1:N]), reps)
-td <- 2
-iter <- 200
-warmup <- 1
+inits <- NULL#rep(list(mle$est[1:N]), reps)
+td <- 10
+iter <- 2000
+warmup <- 50
 tt <- 1 # thin rate
 hh <- 10                           # hours to run
-eps <- 1e-10
+eps <- .1
 mm <- NULL #diag(length(par.names))
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
 
 fit.nuts <-
   sample_admb('ss3', iter=iter, init=inits, par.names=par.names,
-              duration=hh*60, parallel=FALSE, chains=reps, warmup=warmup, dir=m, cores=reps,
+              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
               control=list(max_treedepth=td, stepsize=eps, metric=mm))
 saveRDS(fit.nuts, file='fit.nuts.RDS')
 stats.nuts <- data.frame(rstan::monitor(fit.nuts$samples, warmup=warmup, probs=.5, print=FALSE))

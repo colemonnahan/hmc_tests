@@ -10,9 +10,9 @@ parameters {
 
 transformed parameters{
   vector[3] mu;
-  mu[1]=mu1;
-  mu[2]=mu2;
-  mu[3]=mu3;
+  mu[1]=mu1-.15;
+  mu[2]=mu2+.1;
+  mu[3]=mu3+.98;
 }
 
 model {

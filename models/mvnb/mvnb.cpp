@@ -10,9 +10,9 @@ Type objective_function<Type>::operator() ()
 
   Type nll=0;
   vector<Type> mu(3);
-  mu(0)=mu1;
-  mu(1)=mu2;
-  mu(2)=mu3;
+  mu(0)=mu1-.15;
+  mu(1)=mu2+.1;
+  mu(2)=mu3+.98;
   using namespace density;
   MVNORM_t<Type> neg_log_density(covar);
   nll += neg_log_density(mu);
