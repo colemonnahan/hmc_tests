@@ -10,7 +10,7 @@ DATA_SECTION
   vector relwt(2,nages);
 INITIALIZATION_SECTION
   log_q -1
-  log_popscale 5
+  log_popscale 5.1
 PARAMETER_SECTION
   init_number log_q(1)
   init_number log_popscale(1)
@@ -48,6 +48,8 @@ PROCEDURE_SECTION
   get_catch_at_age();
 
   evaluate_the_objective_function();
+  // arbitrary prior on this since so correlated. just for testing purposes
+  f+= pow(log_popscale-5, .1);
 
 FUNCTION get_mortality_and_survivial_rates
   int i, j;
