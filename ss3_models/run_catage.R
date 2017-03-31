@@ -1,7 +1,7 @@
 library(adnuts)
 library(snowfall)
 library(shinystan)
-m <- 'cod_fast'
+m <- 'catage'
 
 ## ## Run model if needed
 ## setwd(m)
@@ -14,7 +14,7 @@ m <- 'cod_fast'
 ## temp <- get.admb.cov(m)
 
 sfStop()
-mle <- r4ss::read.admbFit('cod_fast/ss3')
+mle <- r4ss::read.admbFit('catage/ss3')
 covar <- get.admb.cov(m)$cov.unbounded
 N <- mle$nopar
 par.names <- mle$names[1:N]
