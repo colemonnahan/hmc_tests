@@ -1,8 +1,8 @@
-# Number of parameters = 2 Objective function value = 514.564695735650  Maximum gradient component = 2.32765222315523e-005
+# Number of parameters = 2 Objective function value = 515.488598963774  Maximum gradient component = 8.79829494482287e-006
 # log_q:
--3.92327075628
+-3.92381093110
 # log_popscale:
-9.02944315909
+9.04807109537
 # log_sel_coff:
  0.00000000000 0.00000000000 0.00000000000 0.00000000000 0.00000000000 0.00000000000
 # log_relpop:

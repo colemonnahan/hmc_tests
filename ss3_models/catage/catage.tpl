@@ -9,7 +9,7 @@ DATA_SECTION
   init_number M
   vector relwt(2,nages);
 INITIALIZATION_SECTION
-  log_q -1
+  log_q -6.7
   log_popscale 5.1
 PARAMETER_SECTION
   init_number log_q(1)
@@ -40,6 +40,7 @@ PRELIMINARY_CALCS_SECTION
   relwt=pow(relwt,.5);
   relwt/=max(relwt);
 PROCEDURE_SECTION
+ f=0;
   // example of using FUNCTION to structure the procedure section
   get_mortality_and_survivial_rates();
 
@@ -49,7 +50,7 @@ PROCEDURE_SECTION
 
   evaluate_the_objective_function();
   // arbitrary prior on this since so correlated. just for testing purposes
-  f+= pow(log_popscale-5, .1);
+  f+= pow((log_popscale-10)/1, 2);
 
 FUNCTION get_mortality_and_survivial_rates
   int i, j;

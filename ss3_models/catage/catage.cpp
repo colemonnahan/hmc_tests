@@ -24,8 +24,8 @@ model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
 
 void model_parameters::initializationfunction(void)
 {
-  log_q.set_initial_value(-1);
-  log_popscale.set_initial_value(5);
+  log_q.set_initial_value(-6.7);
+  log_popscale.set_initial_value(5.1);
 }
 
 model_parameters::model_parameters(int sz,int argc,char * argv[]) : 
@@ -100,11 +100,14 @@ void model_parameters::preliminary_calculations(void)
 void model_parameters::userfunction(void)
 {
   f =0.0;
+ f=0;
   // example of using FUNCTION to structure the procedure section
   get_mortality_and_survivial_rates();
   get_numbers_at_age();
   get_catch_at_age();
   evaluate_the_objective_function();
+  // arbitrary prior on this since so correlated. just for testing purposes
+  f+= pow((log_popscale-10)/1, 2);
 }
 
 void model_parameters::get_mortality_and_survivial_rates(void)
