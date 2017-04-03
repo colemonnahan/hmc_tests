@@ -12,7 +12,7 @@ INITIALIZATION_SECTION
   log_q -6.7
   log_popscale 5.1
 PARAMETER_SECTION
-  init_number log_q(1)
+  init_number log_q(-1)
   init_number log_popscale(1)
   init_bounded_dev_vector log_sel_coff(1,nages-1,-15.,15.,2)
   init_bounded_dev_vector log_relpop(1,nyrs+nages-1,-15.,15.,2)
