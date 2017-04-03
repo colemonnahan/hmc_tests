@@ -36,8 +36,8 @@ ss3.rep
 ss3.cpp
 *.tmp
 log.txt
-ss3_models/cod_fast/plots
-ss3_models/model*
+admb_models/cod_fast/plots
+admb_models/model*
 rwm_lp.txt
 fit.nuts.RDS
 fit.rwm.RDS
