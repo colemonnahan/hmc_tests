@@ -33,21 +33,21 @@ sfExportAll()
 fit.nuts.unit <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric='unit', adapt_delta=.8))
+              control=list(max_treedepth=td, stepsize=eps, metric='unit', adapt_delta=.9))
 fit.nuts.mle <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=NULL, adapt_delta=.8))
+              control=list(max_treedepth=td, stepsize=eps, metric=NULL, adapt_delta=.9))
 covar.diag <- diag(x=diag(fit.nuts.mle$covar.est))
 fit.nuts.diag <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=covar.diag, adapt_delta=.8))
+              control=list(max_treedepth=td, stepsize=eps, metric=covar.diag, adapt_delta=.9))
 covar.dense <- fit.nuts.mle$covar.est
 fit.nuts.dense <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=covar.dense, adapt_delta=.95))
+              control=list(max_treedepth=td, stepsize=eps, metric=covar.dense, adapt_delta=.9))
 
 ## Run RWM for different mass matrices
 fit.rwm.unit <-
