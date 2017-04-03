@@ -1,9 +1,7 @@
-devtools::install('C:/Users/Cole/adnuts')
 library(ggplot2)
 library(adnuts)
 library(snowfall)
 library(shinystan)
-m <- 'catage'
 
 ## Rerun model
 setwd(m)
@@ -118,3 +116,4 @@ perf.all <- rbind(perf.nuts.unit, perf.nuts.mle, perf.nuts.diag,
 ggplot(perf.all, aes(m, log10(efficiency), color=alg)) + geom_point()
 ggplot(stats.all, aes(m, Rhat, color=alg)) + geom_point()
 ggplot(stats.all, aes(m, n_eff, color=alg)) + geom_point()
+ggplot(stats.all, aes(m, time.total, color=alg)) + geom_point()
