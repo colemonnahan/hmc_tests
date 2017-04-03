@@ -4,21 +4,20 @@ library(snowfall)
 library(shinystan)
 
 ## Rerun model
-setwd(m)
+setwd(d)
 system(paste('admb', m))
 system(m)
 setwd('..')
-temp <- get.admb.cov(m)
 
 sfStop()
-mle <- r4ss::read.admbFit('catage/catage')
+mle <- r4ss::read.admbFit(paste0(d,'/',m))
 N <- mle$nopar
 par.names <- mle$names[1:N]
 par.names <- paste0(1:N, "_", par.names)
 reps <- 6                        # chains/reps to run
 ## Draw inits from MVN using MLE and covar
 inits <- NULL#rep(list(mle$est[1:N]), reps)
-covar <- get.admb.cov(m)$cov.unbounded
+covar <- get.admb.cov(d)$cov.unbounded
 inits <- lapply(1:reps, function(i) as.vector(mvtnorm::rmvnorm(n=1, mean=mle$est[1:N], sigma=covar)))
 inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, sigma=covar)))
 td <- 12
@@ -33,45 +32,45 @@ sfExportAll()
 ## Run NUTS for different mass matrices
 fit.nuts.unit <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
+              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
               control=list(max_treedepth=td, stepsize=eps, metric='unit', adapt_delta=.8))
 fit.nuts.mle <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
+              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
               control=list(max_treedepth=td, stepsize=eps, metric=NULL, adapt_delta=.8))
 covar.diag <- diag(x=diag(fit.nuts.mle$covar.est))
 fit.nuts.diag <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
+              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
               control=list(max_treedepth=td, stepsize=eps, metric=covar.diag, adapt_delta=.8))
 covar.dense <- fit.nuts.mle$covar.est
 fit.nuts.dense <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
+              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
               control=list(max_treedepth=td, stepsize=eps, metric=covar.dense, adapt_delta=.95))
 
 ## Run RWM for different mass matrices
 fit.rwm.unit <-
   sample_admb(m, iter=tt*iter, init=inits, par.names=par.names, thin=tt,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=tt*warmup,
-              dir=m, cores=reps, control=list(metric='unit'),
+              dir=d, cores=reps, control=list(metric='unit'),
               algorithm='RWM')
 fit.rwm.mle <-
   sample_admb(m, iter=tt*iter, init=inits, par.names=par.names, thin=tt,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=tt*warmup,
-              dir=m, cores=reps, control=list(metric=NULL),
+              dir=d, cores=reps, control=list(metric=NULL),
               algorithm='RWM')
 covar.diag <- diag(x=diag(fit.rwm.mle$covar.est))
 fit.rwm.diag <-
   sample_admb(m, iter=tt*iter, init=inits, par.names=par.names, thin=tt,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=tt*warmup,
-              dir=m, cores=reps, control=list(metric=covar.diag),
+              dir=d, cores=reps, control=list(metric=covar.diag),
               algorithm='RWM')
 covar.dense <- fit.rwm.mle$covar.est
 fit.rwm.dense <-
   sample_admb(m, iter=tt*iter, init=inits, par.names=par.names, thin=tt,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=tt*warmup,
-              dir=m, cores=reps, control=list(metric=covar.dense),
+              dir=d, cores=reps, control=list(metric=covar.dense),
               algorithm='RWM')
 
 ## Gather adaptation and performance metrics
