@@ -41,3 +41,6 @@ ss3_models/model*
 rwm_lp.txt
 fit.nuts.RDS
 fit.rwm.RDS
+*unbounded.csv
+*bounded
+*rotated.csv
