@@ -4,6 +4,7 @@ library(ggplot2)
 library(adnuts)
 library(snowfall)
 library(shinystan)
+library(plyr)
 
 ## Rerun model
 setwd(d)
@@ -16,15 +17,9 @@ mle <- r4ss::read.admbFit(paste0(d,'/',m))
 N <- mle$nopar
 par.names <- mle$names[1:N]
 par.names <- paste0(1:N, "_", par.names)
-reps <- 6                        # chains/reps to run
 ## Draw inits from MVT using MLE and covar
 covar <- get.admb.cov(d)$cov.unbounded
-inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, df=3 sigma=covar)))
-td <- 12
-iter <- 2000
-warmup <- iter/2
-tt <- 100 # thin rate
-hh <- 10                           # hours to run
+inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, df=3, sigma=covar)))
 eps <- NULL
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
@@ -33,17 +28,17 @@ sfExportAll()
 fit.nuts.mle <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=NULL, adapt_delta=.9))
+              control=list(max_treedepth=td, stepsize=eps, metric=NULL, adapt_delta=ad))
 covar.diag <- diag(x=diag(fit.nuts.mle$covar.est))
 fit.nuts.diag <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=covar.diag, adapt_delta=.9))
+              control=list(max_treedepth=td, stepsize=eps, metric=covar.diag, adapt_delta=ad))
 covar.dense <- fit.nuts.mle$covar.est
 fit.nuts.dense <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=covar.dense, adapt_delta=.9))
+              control=list(max_treedepth=td, stepsize=eps, metric=covar.dense, adapt_delta=ad))
 
 ## Run RWM for different mass matrices
 fit.rwm.mle <-
