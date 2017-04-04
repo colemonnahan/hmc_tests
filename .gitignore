@@ -42,5 +42,9 @@ rwm_lp.txt
 fit.nuts.RDS
 fit.rwm.RDS
 *unbounded.csv
-*bounded
+*bounded.csv
 *rotated.csv
+*.b0*
+*.p0*
+*.r0*
+*.rep
