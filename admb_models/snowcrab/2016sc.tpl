@@ -2643,10 +2643,9 @@ FUNCTION evaluate_the_objective_function
   Fout(22)= fpen;
   f+=fpen;
 
-  
   call_no += 1;
-  cout <<"Likes = "<< Fout << endl;
-  cout <<"phase = "<< current_phase() << " call = " << call_no << " Total Like = " << f << endl;
+  //cout <<"Likes = "<< Fout << endl;
+  //cout <<"phase = "<< current_phase() << " call = " << call_no << " Total Like = " << f << endl;
 
 // ========================y==================================================   
 FUNCTION get_fut_mortality  
