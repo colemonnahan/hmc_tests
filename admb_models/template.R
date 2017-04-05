@@ -1,5 +1,3 @@
-ggwidth <- 7
-ggheight <- 5
 library(ggplot2)
 library(adnuts)
 library(snowfall)
@@ -89,7 +87,6 @@ stats.rwm.diag <- with(fit.rwm.diag, data.frame(alg='rwm', m='diag', time.total=
 perf.rwm.diag <- data.frame(alg='rwm', m='diag', efficiency=min(stats.rwm.diag$n_eff)/sum(fit.rwm.diag$time.total))
 stats.rwm.dense <- with(fit.rwm.dense, data.frame(alg='rwm', m='dense', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
 perf.rwm.dense <- data.frame(alg='rwm', m='dense', efficiency=min(stats.rwm.dense$n_eff)/sum(fit.rwm.dense$time.total))
-
 stats.all <- rbind(stats.nuts.mle, stats.nuts.diag,
                    stats.nuts.dense, stats.rwm.mle,
                    stats.rwm.diag, stats.rwm.dense)
@@ -100,6 +97,10 @@ perf.all <- rbind(perf.nuts.mle, perf.nuts.diag,
                    perf.nuts.dense, perf.rwm.mle,
                    perf.rwm.diag, perf.rwm.dense)
 adaptation.long <- reshape2::melt(adaptation, c('m', 'chain'))
+
+## Quick plots
+ggwidth <- 7
+ggheight <- 5
 g <- ggplot(adaptation.long, aes(y=value, x=m)) + geom_point(alpha=.5) +
   facet_wrap('variable', scales='free')
 ggsave(paste0('plots/', d, '_adaptation.png'),g, width=ggwidth, height=ggheight, units='in')
