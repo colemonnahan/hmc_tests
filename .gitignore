@@ -48,6 +48,6 @@ fit.rwm.RDS
 *.p0*
 *.r0*
 *.rep
-*snowcrab/gradient*
-*snowcrab/eval.csv
-*snowcrab/Check.Out
+*/snowcrab/gradient*
+*/snowcrab/eval.csv
+*/snowcrab/Check.Out
