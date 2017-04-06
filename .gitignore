@@ -56,3 +56,4 @@ fit.rwm.RDS
 admb_models/*/*.cpp
 halibut.tpl
 hake.tpl
+cod_fast.tpl
