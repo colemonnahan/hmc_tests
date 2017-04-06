@@ -4,6 +4,14 @@ library(shinystan)
 library(adnuts)
 library(snowfall)
 
+
+
+
+
+
+
+## Investigate performance differences between algorithms and settings
+
 reps <- 6                        # chains/reps to run
 td <- 12
 iter <- 2000
