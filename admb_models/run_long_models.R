@@ -4,19 +4,19 @@ library(shinystan)
 library(adnuts)
 library(snowfall)
 
-reps <- 6 # chains to run in parallel
+reps <- 4 # chains to run in parallel
 hh <- 24 # hours to run
 
 sfStop()
 d <- m <- 'cod_fast'
 thin <- 100
-iter <- 5000
-warmup <- iter/2
+iter <- 4000
+warmup <- iter/4
 mle <- r4ss::read.admbFit(paste0(d,'/',m))
 N <- mle$nopar
 par.names <- paste0(1:N, "_", mle$names[1:N])
 ## Draw inits from MVT using MLE and covar
-covar <- get.admb.cov(d)$cov.unbounded
+covar <- get.admb.cov(d)$cov.bounded
 inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, df=50, sigma=covar)))
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
@@ -30,17 +30,16 @@ fit.nuts <- sample_admb(m, iter=iter, init=inits, par.names=par.names, thin=1,
 saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
 
 
-
 sfStop()
 d <- m <- 'hake'
 thin <- 1000
-iter <- 5000
-warmup <- iter/2
+iter <- 4000
+warmup <- iter/4
 mle <- r4ss::read.admbFit(paste0(d,'/',m))
 N <- mle$nopar
 par.names <- paste0(1:N, "_", mle$names[1:N])
 ## Draw inits from MVT using MLE and covar
-covar <- get.admb.cov(d)$cov.unbounded
+covar <- get.admb.cov(d)$cov.bounded
 inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, df=50, sigma=covar)))
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
