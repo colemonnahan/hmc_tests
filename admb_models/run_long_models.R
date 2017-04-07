@@ -22,11 +22,13 @@ sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, par.names=par.names, thin=thin,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup*thin,
-              dir=d, cores=reps, algorithm='RWM')
+              dir=d, cores=reps, algorithm='RWM', extra.args=' -ainp cod_fast.par')
+
 saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
 fit.nuts <- sample_admb(m, iter=iter, init=inits, par.names=par.names, thin=1,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup,
-              dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.9))
+              duration=hh*60, parallel=TRUE, chains=3, warmup=warmup,
+              dir=d, cores=reps, algorithm='NUTS',
+              control=list(adapt_delta=.9))
 saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
 
 

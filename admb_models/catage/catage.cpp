@@ -33,6 +33,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
 {
   initializationfunction();
   log_q.allocate(-1,"log_q");
+ cout << "test" << endl;
   log_popscale.allocate(1,"log_popscale");
   log_sel_coff.allocate(1,nages-1,-15.,15.,2,"log_sel_coff");
   log_relpop.allocate(1,nyrs+nages-1,-15.,15.,2,"log_relpop");
