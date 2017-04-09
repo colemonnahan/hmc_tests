@@ -90,7 +90,7 @@ par.names <- paste0(1:N, "_", mle$names[1:N])
 ## Draw inits from MVT using MLE and covar
 covar <- get.admb.cov(d)$cov.bounded
 inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, df=50, sigma=covar)))
-sfInit(parallel=TRUE, cpus=reps)
+sfInit(parallel=TRUE, cpus=2)
 sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, par.names=par.names, thin=thin,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup*thin,
