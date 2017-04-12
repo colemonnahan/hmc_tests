@@ -1,5 +1,5 @@
-// Modified packaged catage.tpl to have a prior on log_popscale so it's a
-// little more reasonable. Cole Monnahan; 3/31/2017.
+// Modified packaged catage.tpl to fix log_q and log_popscale so it runs better for testing
+// Cole Monnahan; 3/31/2017.
 
 DATA_SECTION
   init_int nyrs
@@ -10,11 +10,11 @@ DATA_SECTION
   vector relwt(2,nages);
 INITIALIZATION_SECTION
   log_q -6.7
-  log_popscale 5.1
+  log_popscale 9.98
 PARAMETER_SECTION
   init_number log_q(-1)
-  init_number log_popscale(1)
-  init_bounded_dev_vector log_sel_coff(1,nages-1,-15.,15.,2)
+  init_number log_popscale(-1)
+  init_bounded_dev_vector log_sel_coff(1,nages-1,-15.,15.,1)
   init_bounded_dev_vector log_relpop(1,nyrs+nages-1,-15.,15.,2)
   init_bounded_dev_vector effort_devs(1,nyrs,-5.,5.,3)
   vector log_sel(1,nages)

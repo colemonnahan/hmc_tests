@@ -25,7 +25,7 @@ model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
 void model_parameters::initializationfunction(void)
 {
   log_q.set_initial_value(-6.7);
-  log_popscale.set_initial_value(5.1);
+  log_popscale.set_initial_value(9.98);
 }
 
 model_parameters::model_parameters(int sz,int argc,char * argv[]) : 
@@ -33,9 +33,8 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
 {
   initializationfunction();
   log_q.allocate(-1,"log_q");
- cout << "test" << endl;
-  log_popscale.allocate(1,"log_popscale");
-  log_sel_coff.allocate(1,nages-1,-15.,15.,2,"log_sel_coff");
+  log_popscale.allocate(-1,"log_popscale");
+  log_sel_coff.allocate(1,nages-1,-15.,15.,1,"log_sel_coff");
   log_relpop.allocate(1,nyrs+nages-1,-15.,15.,2,"log_relpop");
   effort_devs.allocate(1,nyrs,-5.,5.,3,"effort_devs");
   log_sel.allocate(1,nages,"log_sel");

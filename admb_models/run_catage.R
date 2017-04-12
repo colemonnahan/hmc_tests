@@ -2,8 +2,8 @@ library(ggplot2)
 library(adnuts)
 library(snowfall)
 library(shinystan)
-
-## Rerun model
+#
+# Rerun model
 setwd(m)
 system(paste('admb', m))
 system(m)
@@ -21,10 +21,11 @@ inits <- NULL#rep(list(mle$est[1:N]), reps)
 covar <- get.admb.cov(m)$cov.unbounded
 inits <- lapply(1:reps, function(i) as.vector(mvtnorm::rmvnorm(n=1, mean=mle$est[1:N], sigma=covar)))
 inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, sigma=covar)))
+inits <- NULL
 td <- 10
-iter <- 2000
+iter <- 5000
 warmup <- iter/2
-tt <- 100 # thin rate
+tt <- 1000 # thin rate
 hh <- 10                           # hours to run
 eps <- NULL
 mm <- NULL #diag(length(par.names))
@@ -35,21 +36,21 @@ sfExportAll()
 fit.nuts.unit <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric='unit', adapt_delta=.8))
+              control=list(max_treedepth=td, stepsize=eps, metric='unit', adapt_delta=.9))
 fit.nuts.mle <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=NULL, adapt_delta=.8))
+              control=list(max_treedepth=td, stepsize=eps, metric=NULL, adapt_delta=.9))
 covar.diag <- diag(x=diag(fit.nuts.mle$covar.est))
 fit.nuts.diag <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=covar.diag, adapt_delta=.8))
+              control=list(max_treedepth=td, stepsize=eps, metric=covar.diag, adapt_delta=.9))
 covar.dense <- fit.nuts.mle$covar.est
 fit.nuts.dense <-
   sample_admb(m, iter=iter, init=inits, par.names=par.names,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=m, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=covar.dense, adapt_delta=.95))
+              control=list(max_treedepth=td, stepsize=eps, metric=covar.dense, adapt_delta=.9))
 
 ## Run RWM for different mass matrices
 fit.rwm.unit <-
@@ -113,7 +114,10 @@ perf.all <- rbind(perf.nuts.unit, perf.nuts.mle, perf.nuts.diag,
                    perf.nuts.dense, perf.rwm.unit, perf.rwm.mle,
                    perf.rwm.diag, perf.rwm.dense)
 
+ggplot(stats.all, aes(m, log(Rhat), color=alg)) + geom_jitter()
+ggplot(stats.all, aes(m, log(n_eff), color=alg)) + geom_point()
+ggplot(stats.all, aes(m, log(time.total), color=alg)) + geom_point()
 ggplot(perf.all, aes(m, log10(efficiency), color=alg)) + geom_point()
-ggplot(stats.all, aes(m, Rhat, color=alg)) + geom_point()
-ggplot(stats.all, aes(m, n_eff, color=alg)) + geom_point()
-ggplot(stats.all, aes(m, time.total, color=alg)) + geom_point()
+
+
+launch_shinyadmb(fit.nuts.dense)

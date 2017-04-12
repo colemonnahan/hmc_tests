@@ -21,7 +21,7 @@ plot.ess <- function(rwm, nuts){
   dev.off()
 }
 
-n.slow <- 10 # number of parameters to show in pairs plot
+n.slow <- 8 # number of parameters to show in pairs plot
 
 cod.rwm <- readRDS('results/long_rwm_cod_fast.RDS')
 cod.post <- extract_samples(cod.rwm, inc_lp=TRUE)
@@ -43,7 +43,7 @@ halibut.post <- extract_samples(halibut.rwm, inc_lp=TRUE)
 slow <- names(sort(halibut.rwm$ess))[1:n.slow]
 png('plots/pairs.halibut.rwm.png', width=7, height=5, units='in', res=500)
 pairs_admb(halibut.post, mle=halibut.rwm$mle, pars=slow);dev.off()
-devhalibut.nuts <- readRDS('results/long_nuts_halibut.RDS')
+halibut.nuts <- readRDS('results/long_nuts_halibut.RDS')
 halibut.post <- extract_samples(halibut.nuts, inc_lp=TRUE)
 divs <- extract_sampler_params(halibut.nuts)$divergent__
 slow <- names(sort(halibut.nuts$ess))[1:n.slow]
@@ -51,7 +51,7 @@ png('plots/pairs.halibut.nuts.png', width=7, height=5, units='in', res=500)
 pairs_admb(halibut.post, mle=halibut.nuts$mle, pars=slow, divergences=divs);dev.off()
 plot.ess(halibut.rwm, halibut.nuts)
 ## launch_shinyadmb(halibut.rwm)
-## launch_shinyadmb(halibut.nuts)
+ launch_shinyadmb(halibut.nuts)
 
 hake.rwm <- readRDS('results/long_rwm_hake.RDS')
 hake.post <- extract_samples(hake.rwm, inc_lp=TRUE)
