@@ -122,7 +122,31 @@ fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, par.names=par.names, thin=
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
 saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+
+## This model has all sorts of bounds issues which derails NUTS b/c the
+## initial value is inf due to differences in bound functions. So pick a
+## more reasonable place to start and bootstrap up to a good mass matrix.
+mle.adjusted <- mle$est
+## selsmo10ind(6) and (22) are right at upper bound of -0.001
+mle.adjusted[c(293,309)] <- -.01
+## selsmo09ind(1) (2) and (3) are gith at lower bound of -4
+mle.adjusted[310:312] <- -3.9
+#selsmo09ind (14) and (15) and (22)  at upper bound of -.001
+mle.adjusted[c(323, 324,331)] <- -.01
+mle.adjusted[6] <- 1.1
+mle.adjusted[268:269] <- .9
+mle.adjusted[284] <- 57
+mle.adjusted[286:287] <- .9
+inits <- lapply(1:reps, function(i) mle.adjusted)
+temp <- sample_admb(m, iter=200, init=inits, par.names=par.names, thin=1,
+               parallel=TRUE, chains=reps, warmup=100,
+              dir=d, cores=reps, algorithm='NUTS', control=list(metric=NULL))
+launch_shinyadmb(temp)
+temp2 <- sample_admb(m, iter=200, init=inits, par.names=par.names, thin=1,
+               parallel=TRUE, chains=reps, warmup=100,
+              dir=d, cores=reps, algorithm='NUTS', control=list(metric=temp$covar.est))
+
 fit.nuts <- sample_admb(m, iter=iter, init=inits, par.names=par.names, thin=1,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup,
+              parallel=TRUE, chains=reps, warmup=warmup,
               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.9))
 saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
