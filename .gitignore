@@ -55,6 +55,7 @@ fit.rwm.RDS
 */snowcrab/2016sc.cpp
 admb_models/*/*.cpp
 halibut.tpl
+halibut2.tpl
 hake.tpl
 cod_fast.tpl
 tanner.tpl
