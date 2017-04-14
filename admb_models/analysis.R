@@ -51,7 +51,22 @@ png('plots/pairs.halibut.nuts.png', width=7, height=5, units='in', res=500)
 pairs_admb(halibut.post, mle=halibut.nuts$mle, pars=slow, divergences=divs);dev.off()
 plot.ess(halibut.rwm, halibut.nuts)
 ## launch_shinyadmb(halibut.rwm)
- launch_shinyadmb(halibut.nuts)
+## launch_shinyadmb(halibut.nuts)
+##
+halibut2.rwm <- readRDS('results/long_rwm_halibut2.RDS')
+halibut2.post <- extract_samples(halibut2.rwm, inc_lp=TRUE)
+slow <- names(sort(halibut2.rwm$ess))[1:n.slow]
+png('plots/pairs.halibut2.rwm.png', width=7, height=5, units='in', res=500)
+pairs_admb(halibut2.post, mle=halibut2.rwm$mle, pars=slow);dev.off()
+halibut2.nuts <- readRDS('results/long_nuts_halibut2.RDS')
+halibut2.post <- extract_samples(halibut2.nuts, inc_lp=TRUE)
+divs <- extract_sampler_params(halibut2.nuts)$divergent__
+slow <- names(sort(halibut2.nuts$ess))[1:n.slow]
+png('plots/pairs.halibut2.nuts.png', width=7, height=5, units='in', res=500)
+pairs_admb(halibut2.post, mle=halibut2.nuts$mle, pars=slow, divergences=divs);dev.off()
+plot.ess(halibut2.rwm, halibut2.nuts)
+## launch_shinyadmb(halibut2.rwm)
+## launch_shinyadmb(halibut2.nuts)
 
 hake.rwm <- readRDS('results/long_rwm_hake.RDS')
 hake.post <- extract_samples(hake.rwm, inc_lp=TRUE)
