@@ -69,6 +69,43 @@ plot.ess(hake.rwm, hake.nuts)
 ## launch_shinyadmb(hake.nuts)
 
 
+snowcrab.rwm <- readRDS('results/long_rwm_2016sc.RDS')
+snowcrab.post <- extract_samples(snowcrab.rwm, inc_lp=TRUE)
+chain <- rep(1:dim(snowcrab.rwm$samples)[2], each=dim(snowcrab.rwm$samples)[1]-snowcrab.rwm$warmup)
+slow <- names(sort(snowcrab.rwm$ess, FALSE))[1:n.slow]
+png('plots/pairs.snowcrab.rwm.slow.png', width=7, height=5, units='in', res=500)
+pairs_admb(snowcrab.post, mle=snowcrab.rwm$mle, chain=chain, diag='trace', pars=slow);dev.off()
+## I found this manually by looking at par file
+hitbounds <- sort(c(293,309, 310:312, 323, 324,331,6,268, 269, 284, 286, 287))
+png('plots/pairs.snowcrab.rwm.hitbounds.png', width=7, height=5, units='in', res=500)
+pairs_admb(snowcrab.post, mle=snowcrab.rwm$mle, chain=chain, diag='trace', pars=hitbounds);dev.off()
+Rhat <- names(sort(snowcrab.rwm$Rhat, TRUE))[1:n.slow]
+png('plots/pairs.snowcrab.rwm.Rhat.png', width=7, height=5, units='in', res=500)
+pairs_admb(snowcrab.post, mle=snowcrab.rwm$mle, chain=chain, diag='trace', pars=Rhat);dev.off()
+## launch_shinyadmb(snowcrab.rwm)
+## launch_shinyadmb(snowcrab.nuts)
+
+tanner.rwm <- readRDS('results/long_rwm_tanner.RDS')
+tanner.post <- extract_samples(tanner.rwm, inc_lp=TRUE)
+chain <- rep(1:dim(tanner.rwm$samples)[2], each=dim(tanner.rwm$samples)[1]-tanner.rwm$warmup)
+slow <- names(sort(tanner.rwm$ess, FALSE))[1:n.slow]
+png('plots/pairs.tanner.rwm.slow.png', width=7, height=5, units='in', res=500)
+pairs_admb(tanner.post, mle=tanner.rwm$mle, chain=chain, diag='trace', pars=slow);dev.off()
+## I found this manually by looking at par file
+hitbounds <- c(1,7,33, 67,70)
+png('plots/pairs.tanner.rwm.hitbounds.png', width=7, height=5, units='in', res=500)
+pairs_admb(tanner.post, mle=tanner.rwm$mle, chain=chain, diag='trace', pars=hitbounds);dev.off()
+Rhat <- names(sort(tanner.rwm$Rhat, TRUE))[1:n.slow]
+png('plots/pairs.tanner.rwm.Rhat.png', width=7, height=5, units='in', res=500)
+pairs_admb(tanner.post, mle=tanner.rwm$mle, chain=chain, diag='trace', pars=Rhat);dev.off()
+plot.ess(tanner.rwm, tanner.nuts)
+
+
+## Look at which parameter MLE vs posterior variances are different
+var.poster <- apply(extract_samples(snowcrab.rwm),2, var)
+var.mle <- diag(snowcrab.rwm$mle$cov)[1:snowcrab.rwm$mle$nopar]
+plot(log10(var.mle), log10(var.poster)); abline(0,1)
+
 all.fits <- list(cod.rwm, cod.nuts, halibut.rwm, halibut.nuts, hake.rwm,
                  hake.nuts)
 perf.wide <- ldply(all.fits, function(x){
