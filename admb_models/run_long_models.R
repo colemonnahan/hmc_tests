@@ -227,8 +227,8 @@ sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, thin=thin,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-launch_shinyadmb(fit.rwm)
 saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+launch_shinyadmb(fit.rwm)
 ## fit.nuts <- sample_admb(m, iter=iter, init=inits,  thin=1,
 ##               parallel=TRUE, chains=reps, warmup=warmup,
 ##               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.95))
