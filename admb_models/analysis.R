@@ -25,15 +25,16 @@ n.slow <- 8 # number of parameters to show in pairs plot
 
 cod.rwm <- readRDS('results/long_rwm_cod_fast.RDS')
 cod.post <- extract_samples(cod.rwm, inc_lp=TRUE)
+chain <- rep(1:dim(cod.rwm$samples)[2], each=dim(cod.rwm$samples)[1]-cod.rwm$warmup)
 slow <- names(sort(cod.rwm$ess))[1:n.slow]
 png('plots/pairs.cod.rwm.png', width=7, height=5, units='in', res=500)
-pairs_admb(cod.post, mle=cod.rwm$mle, pars=slow);dev.off()
+pairs_admb(cod.post, mle=cod.rwm$mle, chains=chain, pars=slow);dev.off()
 cod.nuts <- readRDS('results/long_nuts_cod_fast.RDS')
 cod.post <- extract_samples(cod.nuts, inc_lp=TRUE)
 divs <- extract_sampler_params(cod.nuts)$divergent__
 slow <- names(sort(cod.nuts$ess))[1:n.slow]
 png('plots/pairs.cod.nuts.png', width=7, height=5, units='in', res=500)
-pairs_admb(cod.post, mle=cod.nuts$mle, pars=slow, divergences=divs, diag='trace');dev.off()
+pairs_admb(cod.post, mle=cod.nuts$mle, pars=slow, chains=chain, divergences=divs);dev.off()
 plot.ess(cod.rwm, cod.nuts)
 ## launch_shinyadmb(cod.rwm)
 ## launch_shinyadmb(cod.nuts)

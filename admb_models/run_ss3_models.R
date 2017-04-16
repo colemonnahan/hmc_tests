@@ -1,4 +1,3 @@
-setwd('admb_models/')
 devtools::install('C:/Users/Cole/adnuts')
 library(shinystan)
 library(adnuts)
@@ -7,17 +6,17 @@ library(snowfall)
 ## Investigate performance differences between algorithms and settings
 
 reps <- 6                        # chains/reps to run
-tt <- 100 # thin rate
-td <- 10
-iter <- 200*tt
+tt <- 100 # thin rate for RWM
+td <- 5
+iter <- 100
 warmup <- (iter/2)
 hh <- 10                           # hours to run
-d <- 'snowcrab'
-m <- '2016sc'
+d <- 'cod_fast'
+m <- 'cod_fast'
 ad <- .9                                # adapt_delta
 #source('template.R')
 
-
+cov0 <- get.admb.cov(d)
 
 sfStop()
 mle <- r4ss::read.admbFit(paste0(d,'/',m))

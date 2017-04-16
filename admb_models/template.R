@@ -4,56 +4,60 @@ library(snowfall)
 library(shinystan)
 library(plyr)
 
-## Rerun model
+## Run model with hbf=1
 setwd(d)
 system(paste('admb', m))
-system(m)
+system(paste(m, '-hbf 1'))
 setwd('..')
 
 sfStop()
-mle <- r4ss::read.admbFit(paste0(d,'/',m))
-N <- mle$nopar
-par.names <- mle$names[1:N]
-par.names <- paste0(1:N, "_", par.names)
 ## Draw inits from MVT using MLE and covar
-covar <- get.admb.cov(d)$cov.unbounded
-inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, df=3, sigma=covar)))
+inits <- NULL
 eps <- NULL
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
 
+
 ## Run NUTS for different mass matrices
 fit.nuts.mle <-
-  sample_admb(m, iter=iter, init=inits, par.names=par.names,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=NULL, adapt_delta=ad))
+  sample_admb(m, iter=iter, init=inits, algorithm='NUTS',
+               parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
+              control=list(max_treedepth=td, stepsize=eps, metric=NULL,
+                           adapt_delta=ad))
 covar.diag <- diag(x=diag(fit.nuts.mle$covar.est))
 fit.nuts.diag <-
-  sample_admb(m, iter=iter, init=inits, par.names=par.names,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=covar.diag, adapt_delta=ad))
+  sample_admb(m, iter=iter, init=inits, algorithm='NUTS',
+              parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
+              control=list(max_treedepth=td, stepsize=eps,
+                           metric=covar.diag, adapt_delta=ad))
 covar.dense <- fit.nuts.mle$covar.est
 fit.nuts.dense <-
-  sample_admb(m, iter=iter, init=inits, par.names=par.names,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps, metric=covar.dense, adapt_delta=ad))
+  sample_admb(m, iter=iter, init=inits, algorithm='NUTS',
+               parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
+              control=list(max_treedepth=td, stepsize=eps, extra.args='-noest',
+                           metric=covar.dense, adapt_delta=ad))
 
 ## Run RWM for different mass matrices
+## Rerun model with hbf=0
+setwd(d)
+system(m)
+setwd('..')
+
 fit.rwm.mle <-
-  sample_admb(m, iter=tt*iter, init=inits, par.names=par.names, thin=tt,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=tt*warmup,
+  sample_admb(m, iter=tt*iter, init=inits, thin=tt,
+              parallel=TRUE, chains=reps, warmup=tt*warmup,
               dir=d, cores=reps, control=list(metric=NULL),
               algorithm='RWM')
 covar.diag <- diag(x=diag(fit.rwm.mle$covar.est))
 fit.rwm.diag <-
-  sample_admb(m, iter=tt*iter, init=inits, par.names=par.names, thin=tt,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=tt*warmup,
+  sample_admb(m, iter=tt*iter, init=inits,  thin=tt,
+              parallel=TRUE, chains=reps, warmup=tt*warmup,
               dir=d, cores=reps, control=list(metric=covar.diag),
               algorithm='RWM')
 covar.dense <- fit.rwm.mle$covar.est
 fit.rwm.dense <-
-  sample_admb(m, iter=tt*iter, init=inits, par.names=par.names, thin=tt,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=tt*warmup,
+  sample_admb(m, iter=tt*iter, init=inits, thin=tt,
+              parallel=TRUE, chains=reps, warmup=tt*warmup,
               dir=d, cores=reps, control=list(metric=covar.dense),
               algorithm='RWM')
 
@@ -70,9 +74,7 @@ ff <- function(labels, ...){
                           function(l) mean(l[-(1:fits[[i]]$warmup),1])))),
                nsteps=as.numeric(do.call(rbind, lapply(x,
                           function(l) mean(l[-(1:fits[[i]]$warmup),4])))))
-
-  }))
-}
+  }))}
 adaptation <- ff(c("mle", "diag", "dense"), fit.nuts.mle,
                  fit.nuts.diag, fit.nuts.dense)
 stats.nuts.mle <- with(fit.nuts.mle, data.frame(alg='nuts', m='mle', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
