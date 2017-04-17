@@ -5,10 +5,10 @@ library(snowfall)
 
 ## Investigate performance differences between algorithms and settings
 
-reps <- 4                        # chains/reps to run
-tt <- 100 # thin rate for RWM
+reps <- 6                        # chains/reps to run
+tt <- 300 # thin rate for RWM
 td <- 10
-iter <- 500
+iter <- 1000
 warmup <- (iter/2)
 hh <- 10                           # hours to run
 d <- 'cod_fast'
