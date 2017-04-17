@@ -4,7 +4,7 @@ library(shinystan)
 library(adnuts)
 library(snowfall)
 
-reps <- 4 # chains to run in parallel
+reps <- 6 # chains to run in parallel
 hh <- 24 # hours to run
 
 sfStop()
@@ -97,12 +97,11 @@ fit.nuts <- sample_admb(m, iter=iter, init=inits,  thin=1,
               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.95))
 saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
 d <- m <- 'halibut2'
-mle <- r4ss::read.admbFit(paste0(d,'/',m))
-N <- mle$nopar
-inits <- lapply(1:reps, function(i) mle$est[1:N])
+inits <- NULL
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, thin=thin,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
+saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
 i <- 2
 temp <- sample_admb(m, iter=100*(2^i), init=inits, par.names=par.names, thin=1,
                parallel=TRUE, chains=reps, warmup=25*(2^i),
@@ -227,8 +226,8 @@ sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, thin=thin,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
 launch_shinyadmb(fit.rwm)
+saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
 ## fit.nuts <- sample_admb(m, iter=iter, init=inits,  thin=1,
 ##               parallel=TRUE, chains=reps, warmup=warmup,
 ##               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.95))
