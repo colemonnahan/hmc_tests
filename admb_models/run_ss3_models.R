@@ -8,13 +8,13 @@ library(snowfall)
 reps <- 4                        # chains/reps to run
 tt <- 100 # thin rate for RWM
 td <- 10
-iter <- 1000
+iter <- 500
 warmup <- (iter/2)
 hh <- 10                           # hours to run
 d <- 'cod_fast'
 m <- 'cod_fast'
 ad <- .9                                # adapt_delta
-#source('template.R')
+source('template.R')
 
 cov0 <- get.admb.cov(d)
 
