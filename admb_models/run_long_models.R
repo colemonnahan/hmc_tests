@@ -234,3 +234,26 @@ launch_shinyadmb(fit.rwm)
 ##               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.95))
 ## saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
 
+
+
+sfStop()
+d <- m <- 'canary2'
+thin <- 1000
+iter <- 1000
+warmup <- iter/4
+mle <- read_mle_fit(paste0(d,'/',m))
+N <- mle$nopar
+inits <- lapply(1:reps, function(i) mle$est[1:N])
+inits <- NULL
+sfInit(parallel=TRUE, cpus=reps)
+sfExportAll()
+fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, thin=thin,
+              parallel=TRUE, chains=reps, warmup=warmup*thin,
+              dir=d, cores=reps, algorithm='RWM')
+saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+launch_shinyadmb(fit.rwm)
+## fit.nuts <- sample_admb(m, iter=iter, init=inits,  thin=1,
+##               parallel=TRUE, chains=reps, warmup=warmup,
+##               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.95))
+## saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
+
