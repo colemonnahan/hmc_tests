@@ -37,7 +37,6 @@ ss3.cpp
 *.tmp
 log.txt
 admb_models/cod_fast/plots
-admb_models/model*
 rwm_lp.txt
 fit.nuts.RDS
 fit.rwm.RDS
@@ -52,7 +51,12 @@ fit.rwm.RDS
 */snowcrab/eval.csv
 */snowcrab/Check.Out
 */snowcrab/R_input.txt
-*/snowcrab/2016sc.cpp
+*/snowcrab/snowcrab.cpp
+*/snowcrab2/gradient*
+*/snowcrab2/eval.csv
+*/snowcrab2/Check.Out
+*/snowcrab2/R_input.txt
+*/snowcrab2/snowcrab2.cpp
 admb_models/*/*.cpp
 halibut.tpl
 halibut2.tpl
