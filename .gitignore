@@ -36,7 +36,7 @@ ss3.rep
 ss3.cpp
 *.tmp
 log.txt
-admb_models/cod_fast/plots
+admb_models/cod/plots
 rwm_lp.txt
 fit.nuts.RDS
 fit.rwm.RDS
@@ -61,7 +61,7 @@ admb_models/*/*.cpp
 halibut.tpl
 halibut2.tpl
 hake.tpl
-cod_fast.tpl
+cod.tpl
 tanner.tpl
 canary.tpl
 canary2.tpl

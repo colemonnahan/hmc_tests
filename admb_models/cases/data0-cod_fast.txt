@@ -1,7 +1,0 @@
-age_bins; NULL
-len_bins; seq(10, 190, by=1)
-pop_binwidth; 1
-pop_minimum_size; 3
-pop_maximum_size; 190
-lcomp_constant; 1e-10
-tail_compression; -1
