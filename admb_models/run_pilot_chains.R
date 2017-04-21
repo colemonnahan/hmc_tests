@@ -1,38 +1,38 @@
-## Run long chains for individual models using RWM.
-devtools::install('C:/Users/Cole/adnuts')
+## Run pilot chains for individual models using RWM, and then the "fixed"
+## version of the model
+## devtools::install('C:/Users/Cole/adnuts')
 library(shinystan)
 library(adnuts)
 library(snowfall)
+library(r4ss)
 
-reps <- 6 # chains to run in parallel
-hh <- 24 # hours to run
+reps <- 4 # chains to run in parallel
 
 sfStop()
 d <- m <- 'cod'
+dq.names <- c("SSB_MSY", "SSB_Unfished")
 thin <- 100
-iter <- 4000
+iter <- 1000
 warmup <- iter/4
-mle <- r4ss::read.admbFit(paste0(d,'/',m))
-N <- mle$nopar
-par.names <- paste0(1:N, "_", mle$names[1:N])
-## Draw inits from MVT using MLE and covar
-covar <- get.admb.cov(d)$cov.bounded
-inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, df=50, sigma=covar)))
+inits <- NULL
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
-fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, par.names=par.names, thin=thin,
-              duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup*thin,
-              dir=d, cores=reps, algorithm='RWM', extra.args=' -ainp cod.par')
-
+fit.rwm <-
+  sample_admb(m, iter=iter*thin, init=inits, thin=thin, mceval=TRUE,
+              parallel=TRUE, chains=reps, warmup=warmup*thin,
+              dir=d, cores=reps, algorithm='RWM')
+test <- r4ss::SSgetMCMC(dir='cod')[[1]]
+fit.rwm$dq <- r4ss::SSgetMCMC(dir='cod')[[1]][,dq.names]
+##test2 <- SSgetoutput(dirvec='cod')[
+test2 <- read.table('cod/covar.sso', header=TRUE, sep=' ', skip=6, na.strings=' _ ')
 saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
-fit.nuts <- sample_admb(m, iter=iter, init=inits, par.names=par.names, thin=1,
-              duration=hh*60, parallel=TRUE, chains=3, warmup=warmup,
-              dir=d, cores=reps, algorithm='NUTS',
-              control=list(adapt_delta=.9))
-saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
+## mcmc.out("cod", run="", numparams=3, closeall=F)
+## plot(dq$SSB_MSY)
+## plot(dq$Main_RecrDev_38, type='l')
+## plot(0,0, xlim=c(0,50), ylim=c(0,exp(22.5)))
+## for(i in seq(1, nrow(dq), len=500)) lines(x=1:50,y=(dq[i,66:115]),col=rgb(0,0,0,.1))
 
 
-sfStop()
 d <- m <- 'hake'
 thin <- 1000
 iter <- 4000
@@ -43,6 +43,7 @@ par.names <- paste0(1:N, "_", mle$names[1:N])
 ## Draw inits from MVT using MLE and covar
 covar <- get.admb.cov(d)$cov.bounded
 inits <- lapply(1:reps, function(i) mle$est[1:N]+as.vector(mvtnorm::rmvt(n=1, df=50, sigma=covar)))
+sfStop()
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, par.names=par.names, thin=thin,

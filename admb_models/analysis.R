@@ -25,10 +25,16 @@ n.slow <- 8 # number of parameters to show in pairs plot
 
 cod.rwm <- readRDS('results/long_rwm_cod.RDS')
 cod.post <- extract_samples(cod.rwm, inc_lp=TRUE)
+cod.post <- cbind(cod.rwm$dq, cod.post)
+mle <- cod.rwm$mle
+match(names(cod.post), mle$names.all)
+## Run mcsave and get generated quantities
+
 chain <- rep(1:dim(cod.rwm$samples)[2], each=dim(cod.rwm$samples)[1]-cod.rwm$warmup)
-slow <- names(sort(cod.rwm$ess))[1:n.slow]
+slow <- c(names(sort(cod.rwm$ess))[1:n.slow]
 png('plots/pairs.cod.rwm.png', width=7, height=5, units='in', res=500)
-pairs_admb(cod.post, mle=cod.rwm$mle, chains=chain, pars=slow);dev.off()
+pairs_admb(cod.post, mle=NULL, chains=chain, pars=slow)
+dev.off()
 cod.nuts <- readRDS('results/long_nuts_cod.RDS')
 cod.post <- extract_samples(cod.nuts, inc_lp=TRUE)
 divs <- extract_sampler_params(cod.nuts)$divergent__
@@ -55,10 +61,14 @@ plot.ess(halibut.rwm, halibut.nuts)
 ## launch_shinyadmb(halibut.nuts)
 ##
 halibut2.rwm <- readRDS('results/long_rwm_halibut2.RDS')
+chain <- rep(1:dim(halibut.rwm$samples)[2], each=dim(halibut.rwm$samples)[1]-halibut.rwm$warmup)
 halibut2.post <- extract_samples(halibut2.rwm, inc_lp=TRUE)
 slow <- names(sort(halibut2.rwm$ess))[1:n.slow]
 png('plots/pairs.halibut2.rwm.png', width=7, height=5, units='in', res=500)
 pairs_admb(halibut2.post, mle=halibut2.rwm$mle, pars=slow);dev.off()
+recdev2 <- names(halibut2.post)[4:34][1:15]
+png('plots/pairs.halibut2.rwm.recdev2.png', width=7, height=5, units='in', res=500)
+pairs_admb(halibut2.post, mle=halibut2.rwm$mle, diag='trace',chain=chain, pars=recdev2);dev.off()
 halibut2.nuts <- readRDS('results/long_nuts_halibut2.RDS')
 halibut2.post <- extract_samples(halibut2.nuts, inc_lp=TRUE)
 divs <- extract_sampler_params(halibut2.nuts)$divergent__
