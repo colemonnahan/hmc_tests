@@ -237,26 +237,32 @@
   -1	1    0      9      -1    99 	-50     0   0   0 	    0 	  0	    0 	    0       # Additive to final
   0.1	1.0  0.8    9      -1    99 	6       0   0   0 	    0 	  0		0 	    0       # Asymptote for females 
 #############################################################################################################################
+
+### XXXX !!!!!!!!!!!!! XXXXX
+## Cole fixed these parameters at MLEs by hand and turned of phase. 
 ### Bycatch: Double normal ###
 # Lo	Hi	 Init	Prior  Prior Prior	Param	Env	Use	Dev	  	Dev	  Dev	Block	Block
 # bnd	bnd  value  mean   type  SD		phase	var	dev	minyr	maxyr SD	design	switch
   2	    8	 3.6354	10	   -1    99 	-5 	    0   0   0 	    0     0	    0 	    0		# Age at peak selectivity
   -8    8	 -4     9      -1    99 	-5   	0   0   0 	    0     0 	0  	    0       # Top width
   -8	8	 0		100    -1    99 	-5 	    0   0   0 	    0 	  0		0	 	0    	# Ascending width
-  -6  	6    2.58	9      -1    99     -5 	    0   0   0 	    0 	  0		0       0    	# Descending width
+  -6  	6    2.5805	9      -1    99     -5 	    0   0   0 	    0 	  0		0       0    	# Descending width
   -1003	0	 -1002  100    -1    99 	-50 	0   0   0 	    0 	  0	    0	 	0       # Init (-999 to ignore)
   -8	8	-0.2808 9      -1    99     -5	 	0   0   0 	    0 	  0     0       0    	# Final
 #############################################################################################################################
 ### Sport: Double normal ###
 # Lo	Hi	 Init	Prior  Prior Prior	Param	Env	Use	Dev	  	Dev	  Dev	Block	Block
 # bnd	bnd  value  mean   type  SD		phase	var	dev	minyr	maxyr SD	design	switch
-  2	    14	 8		10	   -1    99 	5 	    0   0   0 	    0     0	    0 	    0		# Age at peak selectivity
+  2	    14	 8.485	10	   -1    99 	-5 	    0   0   0 	    0     0	    0 	    0		# Age at peak selectivity
   -8    8	 -4     9      -1    99 	-5   	0   0   0 	    0     0 	0  	    0       # Top width
-  -8	8	 2		100    -1    99 	5 	    0   0   0 	    0 	  0		0	 	0    	# Ascending width
-  -6  	6    3		9      -1    99     5 	    0   0   0 	    0 	  0		0       0    	# Descending width
+  -8	8	 1.6645	100    -1    99 	-5 	    0   0   0 	    0 	  0		0	 	0    	# Ascending width
+  -6  	6   1.40205 9      -1    99     -5 	    0   0   0 	    0 	  0		0       0    	# Descending width
   -1003	0	 -1002  100    -1    99 	-50 	0   0   0 	    0 	  0	    0	 	0       # Init (-999 to ignore)
-  -8	8	 4		9      -1    99     5	 	0   0   0 	    0 	  0     0       0    	# Final
+  -8	8	0.2571	9      -1    99     -5	 	0   0   0 	    0 	  0     0       0    	# Final
 #############################################################################################################################
+## END of changes by Cole
+
+
 ### Personal use: mirror sport ###
 #############################################################################################################################
 ### Survey: Simple double normal  (option 20) ###
