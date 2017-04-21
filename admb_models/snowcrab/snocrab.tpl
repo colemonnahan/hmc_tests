@@ -84,7 +84,7 @@ DATA_SECTION
 
   // End of reading normal data file 
  // Open control file....
- !! ad_comm::change_datafile_name("2016sc.ctl");
+ !! ad_comm::change_datafile_name("snowcrab.ctl");
 
   init_int styr_fut   																							  //start year of future projections
   init_int endyr_fut   																							  //end year of future projections
