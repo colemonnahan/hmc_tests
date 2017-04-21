@@ -240,12 +240,12 @@
 ### Bycatch: Double normal ###
 # Lo	Hi	 Init	Prior  Prior Prior	Param	Env	Use	Dev	  	Dev	  Dev	Block	Block
 # bnd	bnd  value  mean   type  SD		phase	var	dev	minyr	maxyr SD	design	switch
-  2	    8	 4.5	10	   -1    99 	5 	    0   0   0 	    0     0	    0 	    0		# Age at peak selectivity
+  2	    8	 3.6354	10	   -1    99 	-5 	    0   0   0 	    0     0	    0 	    0		# Age at peak selectivity
   -8    8	 -4     9      -1    99 	-5   	0   0   0 	    0     0 	0  	    0       # Top width
   -8	8	 0		100    -1    99 	-5 	    0   0   0 	    0 	  0		0	 	0    	# Ascending width
-  -6  	6    3		9      -1    99     5 	    0   0   0 	    0 	  0		0       0    	# Descending width
+  -6  	6    2.58	9      -1    99     -5 	    0   0   0 	    0 	  0		0       0    	# Descending width
   -1003	0	 -1002  100    -1    99 	-50 	0   0   0 	    0 	  0	    0	 	0       # Init (-999 to ignore)
-  -8	8	 4		9      -1    99     5	 	0   0   0 	    0 	  0     0       0    	# Final
+  -8	8	-0.2808 9      -1    99     -5	 	0   0   0 	    0 	  0     0       0    	# Final
 #############################################################################################################################
 ### Sport: Double normal ###
 # Lo	Hi	 Init	Prior  Prior Prior	Param	Env	Use	Dev	  	Dev	  Dev	Block	Block
