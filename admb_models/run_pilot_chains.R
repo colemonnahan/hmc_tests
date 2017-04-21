@@ -8,7 +8,7 @@ reps <- 6 # chains to run in parallel
 hh <- 24 # hours to run
 
 sfStop()
-d <- m <- 'cod_fast'
+d <- m <- 'cod'
 thin <- 100
 iter <- 4000
 warmup <- iter/4
@@ -22,7 +22,7 @@ sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, par.names=par.names, thin=thin,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup*thin,
-              dir=d, cores=reps, algorithm='RWM', extra.args=' -ainp cod_fast.par')
+              dir=d, cores=reps, algorithm='RWM', extra.args=' -ainp cod.par')
 
 saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
 fit.nuts <- sample_admb(m, iter=iter, init=inits, par.names=par.names, thin=1,

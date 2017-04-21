@@ -11,8 +11,8 @@ td <- 10
 iter <- 1000
 warmup <- (iter/2)
 hh <- 10                           # hours to run
-d <- 'cod_fast'
-m <- 'cod_fast'
+d <- 'cod'
+m <- 'cod'
 ad <- .9                                # adapt_delta
 source('template.R')
 
