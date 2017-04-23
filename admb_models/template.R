@@ -4,7 +4,7 @@ library(snowfall)
 library(shinystan)
 library(plyr)
 
-## Run model with hbf=1
+## Run model with hbf=1 to get right covariance matrix and MLEs
 setwd(d)
 system(paste('admb', m))
 system(paste(m, '-hbf 1'))
@@ -24,12 +24,12 @@ fit.nuts.mle <-
                parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
               control=list(max_treedepth=td, stepsize=eps, metric=NULL,
                            adapt_delta=ad))
-covar.diag <- diag(x=diag(fit.nuts.mle$covar.est))
-fit.nuts.diag <-
-  sample_admb(m, iter=iter, init=inits, algorithm='NUTS',
-              parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
-              control=list(max_treedepth=td, stepsize=eps,
-                           metric=covar.diag, adapt_delta=ad))
+## covar.diag <- diag(x=diag(fit.nuts.mle$covar.est))
+## fit.nuts.diag <-
+##   sample_admb(m, iter=iter, init=inits, algorithm='NUTS',
+##               parallel=TRUE, chains=reps, warmup=warmup, dir=d, cores=reps,
+##               control=list(max_treedepth=td, stepsize=eps,
+##                            metric=covar.diag, adapt_delta=ad))
 covar.dense <- fit.nuts.mle$covar.est
 fit.nuts.dense <-
   sample_admb(m, iter=iter, init=inits, algorithm='NUTS',
@@ -37,7 +37,9 @@ fit.nuts.dense <-
               control=list(max_treedepth=td, stepsize=eps, extra.args='-noest',
                            metric=covar.dense, adapt_delta=ad))
 
-## Run RWM for different mass matrices
+## Now run RWM but using a thinning rate similar to NUTS so the time is
+## roughly equivalent.
+tt <- 2*floor(mean(extract_sampler_params( fit.nuts.mle)$n_leapfrog__))
 ## Rerun model with hbf=0
 setwd(d)
 system(m)
@@ -49,11 +51,11 @@ fit.rwm.mle <-
               dir=d, cores=reps, control=list(metric=NULL),
               algorithm='RWM')
 covar.diag <- diag(x=diag(fit.rwm.mle$covar.est))
-fit.rwm.diag <-
-  sample_admb(m, iter=tt*iter, init=inits,  thin=tt,
-              parallel=TRUE, chains=reps, warmup=tt*warmup,
-              dir=d, cores=reps, control=list(metric=covar.diag),
-              algorithm='RWM')
+## fit.rwm.diag <-
+##   sample_admb(m, iter=tt*iter, init=inits,  thin=tt,
+##               parallel=TRUE, chains=reps, warmup=tt*warmup,
+##               dir=d, cores=reps, control=list(metric=covar.diag),
+##               algorithm='RWM')
 covar.dense <- fit.rwm.mle$covar.est
 fit.rwm.dense <-
   sample_admb(m, iter=tt*iter, init=inits, thin=tt,
@@ -75,29 +77,24 @@ ff <- function(labels, ...){
                nsteps=as.numeric(do.call(rbind, lapply(x,
                           function(l) mean(l[-(1:fits[[i]]$warmup),4])))))
   }))}
-adaptation <- ff(c("mle", "diag", "dense"), fit.nuts.mle,
-                 fit.nuts.diag, fit.nuts.dense)
+adaptation <- ff(c("mle", "dense"), fit.nuts.mle, fit.nuts.dense)
 stats.nuts.mle <- with(fit.nuts.mle, data.frame(alg='nuts', m='mle', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
 perf.nuts.mle <- data.frame(alg='nuts', m='mle', efficiency=min(stats.nuts.mle$n_eff)/sum(fit.nuts.mle$time.total))
-stats.nuts.diag <- with(fit.nuts.diag, data.frame(alg='nuts', m='diag', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
-perf.nuts.diag <- data.frame(alg='nuts', m='diag', efficiency=min(stats.nuts.diag$n_eff)/sum(fit.nuts.diag$time.total))
+## stats.nuts.diag <- with(fit.nuts.diag, data.frame(alg='nuts', m='diag', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
+## perf.nuts.diag <- data.frame(alg='nuts', m='diag', efficiency=min(stats.nuts.diag$n_eff)/sum(fit.nuts.diag$time.total))
 stats.nuts.dense <- with(fit.nuts.dense, data.frame(alg='nuts', m='dense', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
 perf.nuts.dense <- data.frame(alg='nuts', m='dense', efficiency=min(stats.nuts.dense$n_eff)/sum(fit.nuts.dense$time.total))
 stats.rwm.mle <- with(fit.rwm.mle, data.frame(alg='rwm', m='mle', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
 perf.rwm.mle <- data.frame(alg='rwm', m='mle', efficiency=min(stats.rwm.mle$n_eff)/sum(fit.rwm.mle$time.total))
-stats.rwm.diag <- with(fit.rwm.diag, data.frame(alg='rwm', m='diag', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
-perf.rwm.diag <- data.frame(alg='rwm', m='diag', efficiency=min(stats.rwm.diag$n_eff)/sum(fit.rwm.diag$time.total))
+## stats.rwm.diag <- with(fit.rwm.diag, data.frame(alg='rwm', m='diag', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
+## perf.rwm.diag <- data.frame(alg='rwm', m='diag', efficiency=min(stats.rwm.diag$n_eff)/sum(fit.rwm.diag$time.total))
 stats.rwm.dense <- with(fit.rwm.dense, data.frame(alg='rwm', m='dense', time.total=sum(time.total), rstan::monitor(samples, warmup=warmup, probs=.5, print=FALSE)))
 perf.rwm.dense <- data.frame(alg='rwm', m='dense', efficiency=min(stats.rwm.dense$n_eff)/sum(fit.rwm.dense$time.total))
-stats.all <- rbind(stats.nuts.mle, stats.nuts.diag,
-                   stats.nuts.dense, stats.rwm.mle,
-                   stats.rwm.diag, stats.rwm.dense)
+stats.all <- rbind(stats.nuts.mle, stats.nuts.dense, stats.rwm.mle, stats.rwm.dense)
 stats.all[,c('mean', 'se_mean', 'sd', 'X50.')] <- NULL
 stats.all <- ddply(stats.all, .(alg, m), mutate, perf=(n_eff)/time.total)
 stats.long <- reshape2::melt(stats.all, c('alg', 'm'))
-perf.all <- rbind(perf.nuts.mle, perf.nuts.diag,
-                   perf.nuts.dense, perf.rwm.mle,
-                   perf.rwm.diag, perf.rwm.dense)
+perf.all <- rbind(perf.nuts.mle, perf.nuts.dense, perf.rwm.mle, perf.rwm.dense)
 adaptation.long <- reshape2::melt(adaptation, c('m', 'chain'))
 
 ## Quick plots
@@ -113,7 +110,8 @@ g <- ggplot(perf.all, aes(m, efficiency, color=alg)) + geom_point() + scale_y_lo
 ggsave(paste0('plots/', d, '_perf.png'),g, width=ggwidth, height=ggheight, units='in')
 
 ## Save fits
-saveRDS(list(fit.nuts.mle=fit.nuts.mle, fit.nuts.diag=fit.nuts.diag,
+saveRDS(list(fit.nuts.mle=fit.nuts.mle, #fit.nuts.diag=fit.nuts.diag,
              fit.nuts.dense=fit.nuts.dense, fit.rwm.mle=fit.rwm.mle,
-             fit.rwm.diag=fit.rwm.diag, fit.rwm.dense=fit.rwm.dense),
+             #fit.rwm.diag=fit.rwm.diag,
+             fit.rwm.dense=fit.rwm.dense),
         file=paste0('results/', d,'_fits.RDS'))
