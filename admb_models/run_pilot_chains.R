@@ -10,7 +10,7 @@ reps <- 4 # chains to run in parallel
 
 sfStop()
 d <- m <- 'cod'
-dq.names <- c("SSB_MSY", "SSB_Unfished")
+dq.names <- c("SSB_MSY", "SSB_Unfished", "CV_young_Fem_GP_1")
 thin <- 100
 iter <- 1000
 warmup <- iter/4
@@ -21,11 +21,21 @@ fit.rwm <-
   sample_admb(m, iter=iter*thin, init=inits, thin=thin, mceval=TRUE,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
+
+fit.rwm <- readRDS('results/long_rwm_cod.RDS')
 test <- r4ss::SSgetMCMC(dir='cod')[[1]]
 fit.rwm$dq <- r4ss::SSgetMCMC(dir='cod')[[1]][,dq.names]
 ##test2 <- SSgetoutput(dirvec='cod')[
-test2 <- read.table('cod/covar.sso', header=TRUE, sep=' ', skip=6, na.strings=' _ ')
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+test2 <- SS_output('cod', model='cod')
+xx <- test2$CoVar[test2$CoVar$label.i %in% dq.names &
+                   test2$CoVar$label.j %in% dq.names,7:9]
+
+xx <- test2$CoVar
+names(xx)[5:6] <- c("i", "j")
+xxx <- subset(xx, active.i>0 & (i=='Par' | label.i %in% dq.names))
+
+
+|saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
 ## mcmc.out("cod", run="", numparams=3, closeall=F)
 ## plot(dq$SSB_MSY)
 ## plot(dq$Main_RecrDev_38, type='l')

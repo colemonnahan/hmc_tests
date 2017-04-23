@@ -95,7 +95,7 @@ plot.ess(hake.rwm, hake.nuts)
 ## launch_shinyadmb(hake.nuts)
 
 
-snowcrab.rwm <- readRDS('results/long_rwm_2016sc.RDS')
+snowcrab.rwm <- readRDS('results/long_rwm_snowcrab.RDS')
 snowcrab.post <- extract_samples(snowcrab.rwm, inc_lp=TRUE)
 chain <- rep(1:dim(snowcrab.rwm$samples)[2], each=dim(snowcrab.rwm$samples)[1]-snowcrab.rwm$warmup)
 slow <- names(sort(snowcrab.rwm$ess, FALSE))[1:n.slow]
