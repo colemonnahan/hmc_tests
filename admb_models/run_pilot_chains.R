@@ -10,10 +10,9 @@ reps <- 4 # chains to run in parallel
 
 sfStop()
 d <- m <- 'cod'
-dq.names <- c("SSB_MSY", "SSB_Unfished", "CV_young_Fem_GP_1")
-thin <- 100
+thin <- 1000
 iter <- 1000
-warmup <- iter/4
+warmup <- iter/3
 inits <- NULL
 sfInit(parallel=TRUE, cpus=reps)
 sfExportAll()
@@ -21,31 +20,20 @@ fit.rwm <-
   sample_admb(m, iter=iter*thin, init=inits, thin=thin, mceval=TRUE,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-
-fit.rwm <- readRDS('results/long_rwm_cod.RDS')
-test <- r4ss::SSgetMCMC(dir='cod')[[1]]
-fit.rwm$dq <- r4ss::SSgetMCMC(dir='cod')[[1]][,dq.names]
-##test2 <- SSgetoutput(dirvec='cod')[
-test2 <- SS_output('cod', model='cod')
-xx <- test2$CoVar[test2$CoVar$label.i %in% dq.names &
-                   test2$CoVar$label.j %in% dq.names,7:9]
-
-xx <- test2$CoVar
-names(xx)[5:6] <- c("i", "j")
-xxx <- subset(xx, active.i>0 & (i=='Par' | label.i %in% dq.names))
-
-
-|saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
-## mcmc.out("cod", run="", numparams=3, closeall=F)
-## plot(dq$SSB_MSY)
-## plot(dq$Main_RecrDev_38, type='l')
-## plot(0,0, xlim=c(0,50), ylim=c(0,exp(22.5)))
-## for(i in seq(1, nrow(dq), len=500)) lines(x=1:50,y=(dq[i,66:115]),col=rgb(0,0,0,.1))
+## Get posterior draws of dqs to cbind onto parameter draws later
+dq.names <- c("SSB_MSY", "SPB_45")
+fit.rwm$dq.post <- r4ss::SSgetMCMC(dir='cod')[[1]][,dq.names]
+xx <- SS_output('cod', model='cod', verbose=TRUE, covar=T)
+## Get estimates for derived quantitiesd
+dq <- subset(xx$derived_quants, LABEL %in% dq.names)[,1:3]
+names(dq) <- c('dq','mle', 'se'); rownames(dq) <- NULL
+fit.rwm$dq <- dq
+saveRDS(fit.rwm, file=paste0("results/pilot_rwm_", m, ".RDS"))
 
 
 d <- m <- 'hake'
 thin <- 1000
-iter <- 4000
+iter <- 1000
 warmup <- iter/4
 mle <- r4ss::read.admbFit(paste0(d,'/',m))
 N <- mle$nopar
@@ -59,11 +47,11 @@ sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, par.names=par.names, thin=thin,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+saveRDS(fit.rwm, file=paste0("results/pilot_rwm_", m, ".RDS"))
 fit.nuts <- sample_admb(m, iter=iter, init=inits, par.names=par.names, thin=1,
               duration=hh*60, parallel=TRUE, chains=reps, warmup=warmup,
               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.9))
-saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
+saveRDS(fit.nuts, file=paste0("results/pilot_nuts_", m, ".RDS"))
 
 sfStop()
 d <- m <- 'tanner'
@@ -82,11 +70,11 @@ sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, par.names=par.names, thin=thin,
              parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+saveRDS(fit.rwm, file=paste0("results/pilot_rwm_", m, ".RDS"))
 fit.nuts <- sample_admb(m, iter=iter, init=inits, par.names=par.names, thin=1,
                parallel=TRUE, chains=reps, warmup=warmup,
               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.9))
-saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
+saveRDS(fit.nuts, file=paste0("results/pilot_nuts_", m, ".RDS"))
 
 
 sfStop()
@@ -102,13 +90,13 @@ sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, thin=thin,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+saveRDS(fit.rwm, file=paste0("results/pilot_rwm_", m, ".RDS"))
 d <- m <- 'halibut2'
 inits <- NULL
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, thin=thin,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+saveRDS(fit.rwm, file=paste0("results/pilot_rwm_", m, ".RDS"))
 
 
 
@@ -126,9 +114,9 @@ sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits,  thin=thin,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+saveRDS(fit.rwm, file=paste0("results/pilot_rwm_", m, ".RDS"))
 
-## fit.rwm <- readRDS('results/long_rwm_snowcrab.RDS')
+## fit.rwm <- readRDS('results/pilot_rwm_snowcrab.RDS')
 ## ## This model has all sorts of bounds issues which derails NUTS b/c the
 ## ## initial value is inf due to differences in bound functions. So pick a
 ## ## more reasonable place to start and bootstrap up to a good mass matrix.
@@ -155,7 +143,7 @@ saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
 ##               parallel=TRUE, chains=reps, warmup=warmup,
 ##               dir=d, cores=reps, algorithm='NUTS',
 ##               control=list(metric=temp$covar.est, adapt_delta=.9))
-## saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
+## saveRDS(fit.nuts, file=paste0("results/pilot_nuts_", m, ".RDS"))
 
 
 sfStop()
@@ -220,11 +208,11 @@ fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, thin=thin,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
 launch_shinyadmb(fit.rwm)
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+saveRDS(fit.rwm, file=paste0("results/pilot_rwm_", m, ".RDS"))
 ## fit.nuts <- sample_admb(m, iter=iter, init=inits,  thin=1,
 ##               parallel=TRUE, chains=reps, warmup=warmup,
 ##               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.95))
-## saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
+## saveRDS(fit.nuts, file=paste0("results/pilot_nuts_", m, ".RDS"))
 
 
 
@@ -242,10 +230,10 @@ sfExportAll()
 fit.rwm <- sample_admb(m, iter=iter*thin, init=inits, thin=thin,
               parallel=TRUE, chains=reps, warmup=warmup*thin,
               dir=d, cores=reps, algorithm='RWM')
-saveRDS(fit.rwm, file=paste0("results/long_rwm_", m, ".RDS"))
+saveRDS(fit.rwm, file=paste0("results/pilot_rwm_", m, ".RDS"))
 launch_shinyadmb(fit.rwm)
 ## fit.nuts <- sample_admb(m, iter=iter, init=inits,  thin=1,
 ##               parallel=TRUE, chains=reps, warmup=warmup,
 ##               dir=d, cores=reps, algorithm='NUTS', control=list(adapt_delta=.95))
-## saveRDS(fit.nuts, file=paste0("results/long_nuts_", m, ".RDS"))
+## saveRDS(fit.nuts, file=paste0("results/pilot_nuts_", m, ".RDS"))
 
