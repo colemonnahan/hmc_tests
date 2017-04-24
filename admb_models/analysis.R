@@ -154,11 +154,21 @@ pairs_admb(halibut.post, mle=halibut.rwm$mle, pars=slow);dev.off()
 halibut2.rwm <- readRDS('results/long_rwm_halibut2.RDS')
 chain <- rep(1:dim(halibut.rwm$samples)[2], each=dim(halibut.rwm$samples)[1]-halibut.rwm$warmup)
 halibut2.post <- extract_samples(halibut2.rwm, inc_lp=TRUE)
+slow <- names(sort(halibut2.rwm$ess))[1:n.slow]
 png('plots/pairs.halibut2.rwm.png', width=7, height=5, units='in', res=500)
-pairs_admb(halibut2.post, mle=halibut2.rwm$mle, pars=slow);dev.off()
+pairs_admb(halibut2.post, mle=halibut2.rwm$mle, diag='trace', pars=slow);dev.off()
 recdev2 <- names(halibut2.post)[4:34][1:15]
 png('plots/pairs.halibut2.rwm.recdev2.png', width=7, height=5, units='in', res=500)
 pairs_admb(halibut2.post, mle=halibut2.rwm$mle, diag='trace',chain=chain, pars=recdev2);dev.off()
+halibut2.nuts <- readRDS('results/halibut2_fits.RDS')[[2]]
+chain <- rep(1:dim(halibut2.nuts$samples)[2], each=dim(halibut2.nuts$samples)[1]-halibut2.nuts$warmup)
+halibut2.post <- extract_samples(halibut2.nuts, inc_lp=TRUE)
+#slow <- names(sort(halibut2.nuts$ess))[1:n.slow]
+png('plots/pairs.halibut2.nuts.png', width=7, height=5, units='in', res=500)
+divs <- extract_sampler_params(halibut2.nuts)$divergent__
+pairs_admb(halibut2.post, mle=halibut2.nuts$mle, diag='trace',
+           divergences=divs, pars=slow);dev.off()
+
 plot.improvement(halibut.rwm, halibut2.rwm)
 ## launch_shinyadmb(halibut2.rwm)
 ## launch_shinyadmb(halibut2.nuts)
