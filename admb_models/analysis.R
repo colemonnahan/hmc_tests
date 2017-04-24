@@ -5,13 +5,29 @@ library(shinystan)
 library(rstan)
 library(plyr)
 
+plot.uncertainties <- function(fit1, fit2=NULL, xlims, ylims){
+  n <- NROW(fit1$dq)
+  png(paste0('plots/uncertainties_', fit1$model, '.png'), units='in', width=7,
+             height=3, res=300)
+  par(mfrow=c(1,n), mar=c(5,1,1,1 ), oma=c(0,0, 0, 0))
+  for(i in 1:n){
+    ii <- fit1$dq$dq[i]
+    xx <- fit1$dq.post[,ii]
+    hist(xx, freq=FALSE, xlim=xlims[[i]], ylim=ylims[[i]], col=gray(.8),
+  border=gray(.8), breaks=50, xlab=fit1$dq$dq[i], main=NA, ylab=NA)
+    abline(v=mean(xx), col=2)
+    lines(x <- seq(min(xlims[[i]]), max(xlims[[i]]), len=10000), y=dnorm(x, fit1$dq[i, 'mle'], fit1$dq[i,'se']))
+    abline(v=fit1$dq[i, 'mle'], col=1)
+  }
+  dev.off()
+}
 plot.ess <- function(rwm, nuts){
   model <- rwm$model
   x <- rwm$ess/sum(rwm$time.total);
   y <- nuts$ess/sum(nuts$time.total)
   temp <- range(c(x, y,0))
   png(paste0('plots/ess_comparison_',model, '.png'), width=7, height=3,
-  units='in', res=500)
+      units='in', res=500)
   par(mfrow=c(1,3))
   plot(x=x, y=y, xlim=temp, ylim=temp, xlab='RWM', ylab='NUTS')
   abline(0,1)
@@ -21,29 +37,53 @@ plot.ess <- function(rwm, nuts){
   dev.off()
 }
 
-n.slow <- 8 # number of parameters to show in pairs plot
+n.slow <- 5 # number of parameters to show in pairs plot
 
-cod.rwm <- readRDS('results/long_rwm_cod.RDS')
+cod.rwm <- readRDS('results/pilot_rwm_cod.RDS')
 cod.post <- extract_samples(cod.rwm, inc_lp=TRUE)
-cod.post <- cbind(cod.rwm$dq, cod.post)
+cod.post <- cbind(cod.post, cod.rwm$dq.post)
 mle <- cod.rwm$mle
-match(names(cod.post), mle$names.all)
 ## Run mcsave and get generated quantities
-
 chain <- rep(1:dim(cod.rwm$samples)[2], each=dim(cod.rwm$samples)[1]-cod.rwm$warmup)
-slow <- c(names(sort(cod.rwm$ess))[1:n.slow]
-png('plots/pairs.cod.rwm.png', width=7, height=5, units='in', res=500)
-pairs_admb(cod.post, mle=NULL, chains=chain, pars=slow)
+slow <- c(names(sort(cod.rwm$ess))[1:n.slow], names(cod.rwm$dq.post), 'lp__')
+png('plots/pairs.cod.slow.png', width=7, height=5, units='in', res=500)
+pairs_admb(cod.post, mle=mle, chains=chain, pars=slow, diag='trace')
 dev.off()
-cod.nuts <- readRDS('results/long_nuts_cod.RDS')
-cod.post <- extract_samples(cod.nuts, inc_lp=TRUE)
-divs <- extract_sampler_params(cod.nuts)$divergent__
-slow <- names(sort(cod.nuts$ess))[1:n.slow]
-png('plots/pairs.cod.nuts.png', width=7, height=5, units='in', res=500)
-pairs_admb(cod.post, mle=cod.nuts$mle, pars=slow, chains=chain, divergences=divs);dev.off()
-plot.ess(cod.rwm, cod.nuts)
-## launch_shinyadmb(cod.rwm)
-## launch_shinyadmb(cod.nuts)
+## Look at which parameter MLE vs posterior variances are different
+var.post <- apply(extract_samples(cod.rwm),2, var)
+var.mle <- diag(cod.rwm$mle$cov)[1:cod.rwm$mle$nopar]
+vars <- data.frame(post=var.post, mle=var.mle)
+g <- ggplot(vars, aes(x=log10(mle), log10(post))) + geom_point(alpha=.7) +
+  geom_abline(slope=1) + xlab("MLE Variance") + ylab("Posterior Variance")
+ggsave(paste0('plots/vars.', m, '.png'), g, width=7, height=5)
+## Compare estimates of DQs
+xlims <- list(c(0, 2e9), c(0, 1.5e09))
+ylims <- list(c(0, 2.5e-9), c(0, 3.5e-08))
+plot.uncertainties(cod.rwm, xlims=xlims, ylims=ylims)
+
+
+hake.rwm <- readRDS('results/pilot_rwm_hake.RDS')
+hake.post <- extract_samples(hake.rwm, inc_lp=TRUE)
+hake.post <- cbind(hake.post, hake.rwm$dq.post)
+mle <- hake.rwm$mle
+## Run mcsave and get generated quantities
+chain <- rep(1:dim(hake.rwm$samples)[2], each=dim(hake.rwm$samples)[1]-hake.rwm$warmup)
+slow <- c(names(sort(hake.rwm$ess))[1:n.slow], names(hake.rwm$dq.post), 'lp__')
+png('plots/pairs.hake.slow.png', width=7, height=5, units='in', res=500)
+pairs_admb(hake.post, mle=mle, chains=chain, pars=slow, diag='trace')
+dev.off()
+## Look at which parameter MLE vs posterior variances are different
+var.post <- apply(extract_samples(hake.rwm),2, var)
+var.mle <- diag(hake.rwm$mle$cov)[1:hake.rwm$mle$nopar]
+vars <- data.frame(post=var.post, mle=var.mle)
+g <- ggplot(vars, aes(x=log10(mle), log10(post))) + geom_point(alpha=.7) +
+  geom_abline(slope=1) + xlab("MLE Variance") + ylab("Posterior Variance")
+ggsave(paste0('plots/vars.', m, '.png'), g, width=7, height=5)
+## Compare estimates of DQs
+xlims <- list(c(0, 7e6), c(0, 1.5), c(0, 3e6))
+ylims <- list(c(0, 6e-7), c(0, 3),c(0, 2e-6))
+plot.uncertainties(hake.rwm, xlims=xlims, ylims=ylims)
+
 
 halibut.rwm <- readRDS('results/long_rwm_halibut.RDS')
 halibut.post <- extract_samples(halibut.rwm, inc_lp=TRUE)
@@ -79,21 +119,6 @@ plot.ess(halibut2.rwm, halibut2.nuts)
 ## launch_shinyadmb(halibut2.rwm)
 ## launch_shinyadmb(halibut2.nuts)
 
-hake.rwm <- readRDS('results/long_rwm_hake.RDS')
-hake.post <- extract_samples(hake.rwm, inc_lp=TRUE)
-slow <- names(sort(hake.rwm$ess))[1:n.slow]
-png('plots/pairs.hake.rwm.png', width=7, height=5, units='in', res=500)
-pairs_admb(hake.post, mle=hake.rwm$mle, pars=slow);dev.off()
-hake.nuts <- readRDS('results/long_nuts_hake.RDS')
-hake.post <- extract_samples(hake.nuts, inc_lp=TRUE)
-divs <- extract_sampler_params(hake.nuts)$divergent__
-slow <- names(sort(hake.nuts$ess))[1:n.slow]
-png('plots/pairs.hake.nuts.png', width=7, height=5, units='in', res=500)
-pairs_admb(hake.post, mle=hake.nuts$mle, pars=slow, divergences=divs);dev.off()
-plot.ess(hake.rwm, hake.nuts)
-## launch_shinyadmb(hake.rwm)
-## launch_shinyadmb(hake.nuts)
-
 
 snowcrab.rwm <- readRDS('results/long_rwm_snowcrab.RDS')
 snowcrab.post <- extract_samples(snowcrab.rwm, inc_lp=TRUE)
@@ -105,9 +130,13 @@ pairs_admb(snowcrab.post, mle=snowcrab.rwm$mle, chain=chain, diag='trace', pars=
 hitbounds <- sort(c(293,309, 310:312, 323, 324,331,6,268, 269, 284, 286, 287))
 png('plots/pairs.snowcrab.rwm.hitbounds.png', width=7, height=5, units='in', res=500)
 pairs_admb(snowcrab.post, mle=snowcrab.rwm$mle, chain=chain, diag='trace', pars=hitbounds);dev.off()
-Rhat <- names(sort(snowcrab.rwm$Rhat, TRUE))[1:n.slow]
-png('plots/pairs.snowcrab.rwm.Rhat.png', width=7, height=5, units='in', res=500)
-pairs_admb(snowcrab.post, mle=snowcrab.rwm$mle, chain=chain, diag='trace', pars=Rhat);dev.off()
+snowcrab2.rwm <- readRDS('results/long_rwm_snowcrab2.RDS')
+snowcrab2.post <- extract_samples(snowcrab2.rwm, inc_lp=TRUE)
+chain <- rep(1:dim(snowcrab2.rwm$samples)[2], each=dim(snowcrab2.rwm$samples)[1]-snowcrab2.rwm$warmup)
+slow <- names(sort(snowcrab2.rwm$ess, FALSE))[1:n.slow]
+png('plots/pairs.snowcrab2.rwm.slow.png', width=7, height=5, units='in', res=500)
+pairs_admb(snowcrab2.post, mle=snowcrab2.rwm$mle, chain=chain, diag='trace', pars=slow);dev.off()
+
 ## launch_shinyadmb(snowcrab.rwm)
 ## launch_shinyadmb(snowcrab.nuts)
 
