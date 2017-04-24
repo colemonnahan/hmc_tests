@@ -1,20 +1,33 @@
-devtools::install('C:/Users/Cole/adnuts')
+## devtools::install('C:/Users/Cole/adnuts')
 library(shinystan)
+library(rstan)
 library(adnuts)
 library(snowfall)
 
 ## Investigate performance differences between algorithms and settings
 
-reps <- 6                        # chains/reps to run
-tt <- 300 # thin rate for RWM
+reps <- 4                        # chains/reps to run
 td <- 10
-iter <- 1000
-warmup <- (iter/2)
-hh <- 10                           # hours to run
-d <- 'cod'
-m <- 'cod'
+iter <- 2000
+warmup <- (iter/4)
+d <- 'halibut2'
+m <- 'halibut2'
 ad <- .9                                # adapt_delta
 source('template.R')
+
+reps <- 4                        # chains/reps to run
+td <- 10
+iter <- 2000
+warmup <- (iter/4)
+d <- 'cod'
+m <- 'cod'
+ad <- .8                                # adapt_delta
+source('template.R')
+
+slow <- names(sort(fit.nuts.mle$ess))[1:10]
+post <- extract_samples(fit.nuts.mle, inc_lp=TRUE)
+divs <- extract_sampler_params(fit.nuts.mle)$divergent__
+pairs_admb(posterior=post, mle=fit.nuts.mle$mle, pars=slow, divergences=divs)
 
 cov0 <- get.admb.cov(d)
 

@@ -7,7 +7,7 @@
 halibut2.dat
 halibut2.ctl
 
-0 		# Initial values: 0 = control file, 1 = ss3.par
+1 		# Initial values: 0 = control file, 1 = ss3.par
 0 		# Run display detail (0,1,2)
 1 		# Include age-structured reports: 0 = yes, 1 = no
 0 		# Write detailed checkup.sso file (0,1)

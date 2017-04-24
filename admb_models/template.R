@@ -7,7 +7,7 @@ library(plyr)
 ## Run model with hbf=1 to get right covariance matrix and MLEs
 setwd(d)
 system(paste('admb', m))
-system(paste(m, '-hbf 1'))
+system(paste(m, '-hbf 1 -nox'))
 setwd('..')
 
 sfStop()
@@ -39,10 +39,10 @@ fit.nuts.dense <-
 
 ## Now run RWM but using a thinning rate similar to NUTS so the time is
 ## roughly equivalent.
-tt <- 2*floor(mean(extract_sampler_params( fit.nuts.mle)$n_leapfrog__))
+tt <- 4*floor(mean(extract_sampler_params( fit.nuts.mle)$n_leapfrog__))
 ## Rerun model with hbf=0
 setwd(d)
-system(m)
+system(paste(m, '-nox'))
 setwd('..')
 
 fit.rwm.mle <-
