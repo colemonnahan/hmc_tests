@@ -36,6 +36,21 @@ plot.ess <- function(rwm, nuts){
   barplot(sort(y), ylim=temp, main='NUTS', col=col1, border=col1)
   dev.off()
 }
+plot.improvement <- function(fit1, fit2){
+  ## xx <- rbind(data.frame(model=fit1$model, ess=fit1$ess,
+  ##                  perf=fit1$ess/sum(fit1$time.total)),
+  ##       data.frame(model=fit2$model, ess=fit2$ess,
+  ##                  perf=fit2$ess/sum(fit2$time.total)) )
+  ## xx$par <- row.names(xx)
+  ## levels(xx$model) <- c("Original", "Fixed")
+  ## ggplot(xx, aes(x=model, y=ess)) +geom_violin() + scale_y_log10()
+  png(paste0('plots/ess_improvement_',fit1$model, '.png'), width=3, height=5,
+      units='in', res=500)
+  vioplot::vioplot(log10(fit1$ess), log10(fit2$ess), names=c("Original", "Fixed"))
+  mtext(fit1$model, line=1, cex=1.5)
+  mtext("log10(ESS)", side=2, line=2.5, cex=1.25)
+  dev.off()
+}
 
 n.slow <- 5 # number of parameters to show in pairs plot
 
@@ -85,42 +100,72 @@ ylims <- list(c(0, 6e-7), c(0, 3),c(0, 2e-6))
 plot.uncertainties(hake.rwm, xlims=xlims, ylims=ylims)
 
 
+n.slow <- 13
+canary.rwm <- readRDS('results/pilot_rwm_canary.RDS')
+canary.post <- extract_samples(canary.rwm, inc_lp=TRUE)
+#canary.post <- cbind(canary.post, canary.rwm$dq.post)
+mle <- canary.rwm$mle
+## Run mcsave and get generated quantities
+chain <- rep(1:dim(canary.rwm$samples)[2], each=dim(canary.rwm$samples)[1]-canary.rwm$warmup)
+slow <- c(names(sort(canary.rwm$ess))[1:n.slow], names(canary.rwm$dq.post), 'lp__')
+png('plots/pairs.canary.slow.png', width=7, height=5, units='in', res=500)
+pairs_admb(canary.post, mle=mle, chains=chain, pars=slow, diag='acf')
+dev.off()
+## Look at which parameter MLE vs posterior variances are different
+var.post <- apply(extract_samples(canary.rwm),2, var)
+var.mle <- diag(canary.rwm$mle$cov)[1:canary.rwm$mle$nopar]
+vars <- data.frame(post=var.post, mle=var.mle)
+g <- ggplot(vars, aes(x=log10(mle), log10(post))) + geom_point(alpha=.7) +
+  geom_abline(slope=1) + xlab("MLE Variance") + ylab("Posterior Variance")
+ggsave(paste0('plots/vars.canary.png'), g, width=7, height=5)
+## ## Compare estimates of DQs
+## xlims <- list(c(0, 7e6), c(0, 1.5), c(0, 3e6))
+## ylims <- list(c(0, 6e-7), c(0, 3),c(0, 2e-6))
+## plot.uncertainties(canary.rwm, xlims=xlims, ylims=ylims)
+canary2.rwm <- readRDS('results/pilot_rwm_canary2.RDS')
+canary2.post <- extract_samples(canary2.rwm, inc_lp=TRUE)
+#canary2.post <- cbind(canary2.post, canary2.rwm$dq.post)
+mle <- canary2.rwm$mle
+## Run mcsave and get generated quantities
+chain <- rep(1:dim(canary2.rwm$samples)[2], each=dim(canary2.rwm$samples)[1]-canary2.rwm$warmup)
+slow <- c(names(sort(canary2.rwm$ess))[1:n.slow], names(canary2.rwm$dq.post), 'lp__')
+png('plots/pairs.canary2.slow.png', width=7, height=5, units='in', res=500)
+pairs_admb(canary2.post, mle=mle, chains=chain, pars=slow, diag='acf')
+dev.off()
+## Look at which parameter MLE vs posterior variances are different
+var.post <- apply(extract_samples(canary2.rwm),2, var)
+var.mle <- diag(canary2.rwm$mle$cov)[1:canary2.rwm$mle$nopar]
+vars <- data.frame(post=var.post, mle=var.mle)
+g <- ggplot(vars, aes(x=log10(mle), log10(post))) + geom_point(alpha=.7) +
+  geom_abline(slope=1) + xlab("MLE Variance") + ylab("Posterior Variance")
+ggsave(paste0('plots/vars.canary2.png'), g, width=7, height=5)
+plot.improvement(canary.rwm, canary2.rwm)
+## ## Compare estimates of DQs
+## xlims <- list(c(0, 7e6), c(0, 1.5), c(0, 3e6))
+## ylims <- list(c(0, 6e-7), c(0, 3),c(0, 2e-6))
+## plot.uncertainties(canary2.rwm, xlims=xlims, ylims=ylims)
+
+
 halibut.rwm <- readRDS('results/long_rwm_halibut.RDS')
 halibut.post <- extract_samples(halibut.rwm, inc_lp=TRUE)
 slow <- names(sort(halibut.rwm$ess))[1:n.slow]
 png('plots/pairs.halibut.rwm.png', width=7, height=5, units='in', res=500)
 pairs_admb(halibut.post, mle=halibut.rwm$mle, pars=slow);dev.off()
-halibut.nuts <- readRDS('results/long_nuts_halibut.RDS')
-halibut.post <- extract_samples(halibut.nuts, inc_lp=TRUE)
-divs <- extract_sampler_params(halibut.nuts)$divergent__
-slow <- names(sort(halibut.nuts$ess))[1:n.slow]
-png('plots/pairs.halibut.nuts.png', width=7, height=5, units='in', res=500)
-pairs_admb(halibut.post, mle=halibut.nuts$mle, pars=slow, divergences=divs);dev.off()
-plot.ess(halibut.rwm, halibut.nuts)
-## launch_shinyadmb(halibut.rwm)
-## launch_shinyadmb(halibut.nuts)
-##
 halibut2.rwm <- readRDS('results/long_rwm_halibut2.RDS')
 chain <- rep(1:dim(halibut.rwm$samples)[2], each=dim(halibut.rwm$samples)[1]-halibut.rwm$warmup)
 halibut2.post <- extract_samples(halibut2.rwm, inc_lp=TRUE)
-slow <- names(sort(halibut2.rwm$ess))[1:n.slow]
 png('plots/pairs.halibut2.rwm.png', width=7, height=5, units='in', res=500)
 pairs_admb(halibut2.post, mle=halibut2.rwm$mle, pars=slow);dev.off()
 recdev2 <- names(halibut2.post)[4:34][1:15]
 png('plots/pairs.halibut2.rwm.recdev2.png', width=7, height=5, units='in', res=500)
 pairs_admb(halibut2.post, mle=halibut2.rwm$mle, diag='trace',chain=chain, pars=recdev2);dev.off()
-halibut2.nuts <- readRDS('results/long_nuts_halibut2.RDS')
-halibut2.post <- extract_samples(halibut2.nuts, inc_lp=TRUE)
-divs <- extract_sampler_params(halibut2.nuts)$divergent__
-slow <- names(sort(halibut2.nuts$ess))[1:n.slow]
-png('plots/pairs.halibut2.nuts.png', width=7, height=5, units='in', res=500)
-pairs_admb(halibut2.post, mle=halibut2.nuts$mle, pars=slow, divergences=divs);dev.off()
-plot.ess(halibut2.rwm, halibut2.nuts)
+plot.improvement(halibut.rwm, halibut2.rwm)
 ## launch_shinyadmb(halibut2.rwm)
 ## launch_shinyadmb(halibut2.nuts)
 
 
-snowcrab.rwm <- readRDS('results/long_rwm_snowcrab.RDS')
+n.slow <- 16
+snowcrab.rwm <- readRDS('results/pilot_rwm_snowcrab.RDS')
 snowcrab.post <- extract_samples(snowcrab.rwm, inc_lp=TRUE)
 chain <- rep(1:dim(snowcrab.rwm$samples)[2], each=dim(snowcrab.rwm$samples)[1]-snowcrab.rwm$warmup)
 slow <- names(sort(snowcrab.rwm$ess, FALSE))[1:n.slow]
@@ -130,13 +175,13 @@ pairs_admb(snowcrab.post, mle=snowcrab.rwm$mle, chain=chain, diag='trace', pars=
 hitbounds <- sort(c(293,309, 310:312, 323, 324,331,6,268, 269, 284, 286, 287))
 png('plots/pairs.snowcrab.rwm.hitbounds.png', width=7, height=5, units='in', res=500)
 pairs_admb(snowcrab.post, mle=snowcrab.rwm$mle, chain=chain, diag='trace', pars=hitbounds);dev.off()
-snowcrab2.rwm <- readRDS('results/long_rwm_snowcrab2.RDS')
+snowcrab2.rwm <- readRDS('results/pilot_rwm_snowcrab2.RDS')
 snowcrab2.post <- extract_samples(snowcrab2.rwm, inc_lp=TRUE)
 chain <- rep(1:dim(snowcrab2.rwm$samples)[2], each=dim(snowcrab2.rwm$samples)[1]-snowcrab2.rwm$warmup)
-slow <- names(sort(snowcrab2.rwm$ess, FALSE))[1:n.slow]
+#slow <- names(sort(snowcrab2.rwm$ess, FALSE))[1:n.slow]
 png('plots/pairs.snowcrab2.rwm.slow.png', width=7, height=5, units='in', res=500)
 pairs_admb(snowcrab2.post, mle=snowcrab2.rwm$mle, chain=chain, diag='trace', pars=slow);dev.off()
-
+plot.improvement(snowcrab.rwm, snowcrab2.rwm)
 ## launch_shinyadmb(snowcrab.rwm)
 ## launch_shinyadmb(snowcrab.nuts)
 
