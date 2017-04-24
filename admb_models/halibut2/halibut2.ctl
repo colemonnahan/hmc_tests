@@ -4,7 +4,7 @@
 ##################################
 
 1 # Number of growth morphs
-1 # Number of sub-morphs 
+1 # Number of sub-morphs
 0 # Number of time-varying block patterns
 
 ### Growth and mortality setup section ###
@@ -93,7 +93,7 @@
 2		# Deviation type do_recdev:  0=none; 1=devvector; 2=simple deviations
 1977 	# Start main rec devs
 2007 	# End main rec devs
-2		# Phase for main rec devs 
+2		# Phase for main rec devs
 1		# Read advanced options
 1976	# Start early rec devs
 -9		# Phase for early rec devs_recdev_early_phase
@@ -105,8 +105,8 @@
 2007 	# First_recent_yr_nobias_adj_in_MPD
 -1		# Max_bias_adj_in_MPD (-1 to override ramp and set to 1.0 for all deviations)
 0		# Period of cycles in recruitment
--4		# Recruitment deviation lower bound 
-6		# Recruitment deviation upper bound 
+-4		# Recruitment deviation lower bound
+6		# Recruitment deviation upper bound
 0		# Read initial values for recruitment deviations: 0 = no, 1 = yes
 
 ### Fishing mortality section ###
@@ -124,9 +124,9 @@
   -1  1  0    0.0   -1      99  -1    # Personal use
 
 ### Catchability section ###
-# A) Density dependence  
-# B) Environmental variable  
-# C) Extra standard error 
+# A) Density dependence
+# B) Environmental variable
+# C) Extra standard error
 # D) Type: <0=mirror, 0=median_float, 1=mean_float, 2=parameter, 3=parm_w_random_dev, 4=parm_w_randwalk, 5=mean_unbiased_float_assign_to_parm
 # A  B  C  D
   0  0  1  4    # 1 Commercial
@@ -135,7 +135,7 @@
   0  0  0  1    # 4 Sport
   0  0  0  1    # 5 Personal use
   0  0  1  1    # 6 Survey
-  
+
 1 # Q parameter detail for time-varying parameters (1=one line for each)
 
 # Q parameters
@@ -164,7 +164,7 @@
 
 ### Length-based selectivity ###
 # A) Pattern, B) Discard, C) Male, D) Special
-# A  B  C  D 
+# A  B  C  D
   0  0  0  0   # 1 Commercial
   0  2  0  0   # 2 Discards
   0  0  0  0   # 3 Bycatch
@@ -174,7 +174,7 @@
 
 ### Age-based selectivity ###
 # A) Pattern, B) ---, C) Male, D) Special
-# A  B  C  D 
+# A  B  C  D
   20 0  3  0   # 1 Commercial
   20 0  4  0   # 2 Discards
   20 0  0  0   # 3 Bycatch
@@ -191,12 +191,12 @@
 # Discard retention logistic (this corrects the input and sets the scale)
   0	    2	 1      100    -1	 99		-50	    0   0   0	 	0	  0		0		0		# Retention inflection
   0  	1	 0.1    100    -1    99 	-50   	0   0   0 	    0 	  0 	0		0    	# Retention slope
-  0	    2	 0.0016 100    -1    99 	-50	    0   0   0	 	0	  0		0		0    	# Asymptotic retention 
+  0	    2	 0.0016 100    -1    99 	-50	    0   0   0	 	0	  0		0		0    	# Asymptotic retention
   -1  	1    0      9      -1    99 	-50 	0   0   0 	    0 	  0     0		0    	# Male offset
 # Discard mortality logistic (interpreted as DMR, but 0.15864 = 16%)
   0	    2	 1      100    -1	 99		-50	    0   0   0	 	0	  0		0		0		# Mortality inflection
   0  	1	 0.1    100    -1    99 	-50   	0   0   0 	    0 	  0 	0		0    	# Mortality slope
-  0.01  0.99 0.15864 0.15864 0   0.03 	-10	    0   0   0	 	0	  0		0		0    	# Asymptotic mortality 
+  0.01  0.99 0.15864 0.15864 0   0.03 	-10	    0   0   0	 	0	  0		0		0    	# Asymptotic mortality
   -1  	1    0      9      -1    99 	-50 	0   0   0 	    0 	  0     0		0    	# Male offset
 #############################################################################################################################
 ### Age-based selectivity parameters ###
@@ -217,7 +217,7 @@
   -4  	5    0		9      -1    99     5       0   0   0       0     0 	0		0       # Additive to ascending width
   -10	0    0      9      -1    99     -50     0   0   0 	    0 	  0		0 	    0       # Additive to descending width
   -1	1    0      9      -1    99 	-50     0   0   0 	    0 	  0	    0 	    0       # Additive to final
-  0.1	1.00 0.7    9      -1    99 	5       0   3   1997 	2014  0.03	0 	    0       # Asymptote for males 
+  0.1	1.00 0.7    9      -1    99 	5       0   3   1997 	2014  0.03	0 	    0       # Asymptote for males
 #############################################################################################################################
 ### Discards: double normal ###
 # Lo	Hi	 Init	Prior  Prior Prior	Param	Env	Use	Dev	  	Dev	  Dev	Block	Block
@@ -227,7 +227,8 @@
   -4	5	 2		100    -1    99 	5 	    0   0   0 	    0 	  0		0	 	0    	# Ascending width
   -4  	5    3		9      -1    99     5 	    0   0   0 	    0 	  0		0       0    	# Descending width
   -1003	0	 -1002  100    -1    99 	-50 	0   0   0 	    0 	  0	    0	 	0       # Init (-999 to ignore)
-  -8	8	 4		9      -1    99     5	 	0   0   0 	    0 	  0     0       0    	# Final
+# selparm[25]: cole added prior N(-2.2372,1 )
+-8	8	 4		-2.2372    1    1     5	 	0   0   0 	    0 	  0     0       0    	# Final
 # Discards: female parameter offset to males
 # Lo	Hi	 Init	Prior  Prior Prior	Param	Env	Use	Dev	  	Dev	  Dev	Block	Block
 # bnd	bnd  value  mean   type  SD		phase	var	dev	minyr	maxyr SD	design	switch
@@ -235,18 +236,18 @@
   -5  	5    -1		9      -1    99     6       0   0   0 	    0 	  0		0		0       # Additive to ascending width
   -10	0    0      9      -1    99     -50     0   0   0 	    0 	  0		0 	    0       # Additive to descending width
   -1	1    0      9      -1    99 	-50     0   0   0 	    0 	  0	    0 	    0       # Additive to final
-  0.1	1.0  0.8    9      -1    99 	6       0   0   0 	    0 	  0		0 	    0       # Asymptote for females 
+  0.1	1.0  0.8    9      -1    99 	6       0   0   0 	    0 	  0		0 	    0       # Asymptote for females
 #############################################################################################################################
 
 ### XXXX !!!!!!!!!!!!! XXXXX
-## Cole fixed these parameters at MLEs by hand and turned of phase. 
+## Cole fixed these parameters at MLEs by hand and turned of phase.
 ### Bycatch: Double normal ###
 # Lo	Hi	 Init	Prior  Prior Prior	Param	Env	Use	Dev	  	Dev	  Dev	Block	Block
 # bnd	bnd  value  mean   type  SD		phase	var	dev	minyr	maxyr SD	design	switch
   2	    8	 3.6354	10	   -1    99 	-5 	    0   0   0 	    0     0	    0 	    0		# Age at peak selectivity
   -8    8	 -4     9      -1    99 	-5   	0   0   0 	    0     0 	0  	    0       # Top width
   -8	8	 0		100    -1    99 	-5 	    0   0   0 	    0 	  0		0	 	0    	# Ascending width
-  -6  	6    2.5805	9      -1    99     -5 	    0   0   0 	    0 	  0		0       0    	# Descending width
+-6  	6    2.5805	9      -1    99     -5 	    0   0   0 	    0 	  0		0       0    	# Descending width
   -1003	0	 -1002  100    -1    99 	-50 	0   0   0 	    0 	  0	    0	 	0       # Init (-999 to ignore)
   -8	8	-0.2808 9      -1    99     -5	 	0   0   0 	    0 	  0     0       0    	# Final
 #############################################################################################################################
@@ -292,8 +293,8 @@
 
 ### Variance adjustments ###
 1 # Variance_adjustments by fleet
-# 1		2     3	     4	   5	6    
-# Comm. Disc. Bycat. Sport Pers Survey 
+# 1		2     3	     4	   5	6
+# Comm. Disc. Bycat. Sport Pers Survey
   0		0     0      0     0    0       # Additive survey SE constant
   0		0     0      0     0    0       # Additive discard SE constant
   0		0     0      0	   0    0       # Additive mean body weight SE constant
