@@ -69,3 +69,5 @@ canary2.tpl
 */tanner/OutputFile1.Out
 */tanner/gradient*
 admb_models/hake/plots
+cod2.tpl
+*_chain_*

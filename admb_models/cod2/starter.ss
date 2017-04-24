@@ -3,7 +3,7 @@
 #C rerun model to get more complete formatting in starter.ss_new
 #C should work with SS version: SSv3.10b_or_later
 #C file write time: 2015-02-20 08:58:27
-cod.dat
+cod2.dat
 em.ctl
 1 # 0=use init values in control file; 1=use ss3.par
 0 # run display detail (0,1,2)
