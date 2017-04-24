@@ -4,7 +4,7 @@
 2017hake_data.SS        # Data file
 2017hake_control.SS     # Control file
 
-0       # Read initial values from .par file: 0=no,1=yes
+1       # Read initial values from .par file: 0=no,1=yes
 0       # DOS display detail: 0,1,2
 2       # Report file detail: 0,1,2
 0       # Detailed checkup.sso file (0,1)
@@ -14,7 +14,7 @@
 0       # Use Soft Boundaries to aid convergence (0,1) (recommended)
 1       # N bootstrap datafiles to create
 25      # Last phase for estimation
-201     # MCMC burn-in
+0       # MCMC burn-in
 1       # MCMC thinning interval
 0       # Jitter initial parameter values by this fraction
 -1      # Min year for spbio sd_report (neg val = styr-2, virgin state)
