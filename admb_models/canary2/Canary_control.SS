@@ -317,9 +317,11 @@
 13.1   65	   40	    50	  -1	50	  4	  0	0	0	0	0	2	2	# PEAK
 -9.0	 4.0	-4	   -4	    -1	50   -50	0	0	0	0	0	0	0	# TOP (logistic)
 0.0	   9.0	 4.3	  4.2	  -1	50	  5	  0	0	0	0	0	2	2	# Asc WIDTH exp
-0.0	   9.0	 0.001  2.6	  -1	50	  5	  0	0	0	0	0	2 2	# Desc WIDTH exp
+# selparm[4]; cole fixed at mle
+0.0	   9.0	 0.01018  2.6	  -1	50	  -5	  0	0	0	0	0	2 2	# Desc WIDTH exp
 -9.0	 5.0	-9.0	 -9.0	  -1	50	 -50	0	0	0	0	0	0	0	# INIT (logistic)
--5.0	 5.0	-1.0	  5	    -1	50  	5	  0	0	0	0	0	2	2	# FINAL (logistic)
+# selparm[6]; cole added informative prior N(2,.5^2)
+-5.0	 5.0	2	  2	    1	.5  	5	  0	0	0	0	0	2	2	# FINAL (logistic)
 
 #TWL retention  (i.e., 1-discard_rate)
 #_LO  HI    INIT  PRIOR PR_type SD   PHASE   env-var use_dev dev_min dev_max dev_std Block   Block_Fxn
@@ -355,9 +357,11 @@
 13.001 65	   40	    50	  -1	50	  4	  0	0	0	0	0	0	0	# PEAK
 -9.0	 4.0	-4	   -4	    -1	50   -50	0	0	0	0	0	0	0	# TOP (logistic)
 0.0	   9.0	 4.3	  4.2	  -1	50	  5	  0	0	0	0	0	0	0	# Asc WIDTH exp
-0.0	   9.0	 0.001  2.6	  -1	50	  5	  0	0	0	0	0	0	0	# Desc WIDTH exp
+# selparm[22]; cole fixed at mle
+0.0	   9.0	 0.0061214  2.6	  -1	50	  -5	  0	0	0	0	0	0	0	# Desc WIDTH exp
 -9.0	 5.0	-9.0	 -9.0	  -1	50	 -50	0	0	0	0	0	0	0	# INIT (logistic)
--5.0	 5.0	 5.0	  5	    -1	50    5	  0	0	0	0	0	0	0	# FINAL (logistic)
+# selparm[24]; cole fixed at mle
+-5.0	 5.0	 0.68067	  5	    -1	50    -5	  0	0	0	0	0	0	0	# FINAL (logistic)
 
 # 13_CA_FOR double normal
 #20	   80	   40	    50	  -1	50	  4	  0	0	0	0	0	0	0	# PEAK
@@ -368,7 +372,8 @@
 #-5.0	 5.0	-1.0	  5	    -1	50  	5	  0	0	0	0	0	0	0	# FINAL (logistic)
 #
 # 16_CA_NWFSC double normal
-13.001 65	   40	    50	  -1	50	  4	  0	0	0	0	0	0	0	# PEAK
+# selparm[25]; cole fixed at mle
+13.001 65	   13.022	    50	  -1	50	  -4  0	0	0	0	0	0	0	# PEAK
 -9.0	 4.0	-4	   -4	    -1	50   -50	0	0	0	0	0	0	0	# TOP (logistic)
 0.0	   9.0	 8.99	  4.2	  -1	50	  5	  0	0	0	0	0	0	0	# Asc WIDTH exp
 0.0	   9.0	 9.0	  2.6	  -1	50	  5	  0	0	0	0	0	0	0	# Desc WIDTH exp
@@ -376,9 +381,11 @@
 -5.0	 5.0	 5.0	  5	    -1	50    5	  0	0	0	0	0	0	0	# FINAL (logistic)
 
 # 19_CA_Tri_early double normal
-13.001 65	   40	    50	  -1	50	  4	  0	0	0	0	0	0	0	# PEAK
+# selparm[31]; cole added prior N(54.2563,5^2)
+13.001 65	   40	 54.2563  1	5	 4	  0	0	0	0	0	0	0	# PEAK
 -9.0	 4.0	-4	   -4	    -1	50   -50	0	0	0	0	0	0	0	# TOP (logistic)
-0.0	   9.0	 4.3	  4.2	  -1	50	  5	  0	0	0	0	0	0	0	# Asc WIDTH exp
+# selparm[33]; cole added prior N(6.594939,2^2)
+0.0	   9.0	 4.3	  6.594939	  1	2	  5	  0	0	0	0	0	0	0	# Asc WIDTH exp
 0.0	   9.0	 0.01	  2.6	  -1	50	  5	  0	0	0	0	0	0	0	# Desc WIDTH exp
 -9.0	 5.0	-9.0	 -9.0	  -1	50	 -50	0	0	0	0	0	0	0	# INIT (logistic)
 -5.0	 5.0	-1.0	  5	    -1	50  	5	  0	0	0	0	0	0	0	# FINAL (logistic)
@@ -400,7 +407,8 @@
 13.001 65	   40	    50	  -1	50	  4	  	# PEAK
 0.0	   9.0	 4.3	  4.2	  -1	50	  5	  	# Asc WIDTH exp
 0.0	   9.0	 4.3	  4.2	  -1	50	  5	  	# Asc WIDTH exp
-0.0	   9.0	 0.001  2.6	  -1	50	  5	  	# Desc WIDTH exp
+# selparm[47]; cole added N(1.548458, 1)
+0.0	   9.0	 0.001  1.548458	 1	1	  5	  	# Desc WIDTH exp
 0.0	   9.0	 0.001  2.6	  -1	50	  5	  	# Desc WIDTH exp
 -5.0	 5.0	-1.0	  5	    -1	50  	5	    # FINAL (logistic)
 -5.0	 5.0	-1.0	  5	    -1	50  	5	    # FINAL (logistic)
