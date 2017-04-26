@@ -31,8 +31,8 @@ void model_parameters::userfunction(void)
 {
   jnll =0.0;
   jnll=0;
-  jnll+= pow(v/3, 2);
-  jnll+= pow(theta/(exp(v)), 2);
+  jnll+= (v/3)*(v/3)/2;
+  jnll+= (theta/exp(v))*(theta/exp(v))/2;
 }
 
 void model_parameters::preliminary_calculations(void){
