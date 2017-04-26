@@ -44,16 +44,16 @@ plot.improvement <- function(fit1, fit2){
   ## xx$par <- row.names(xx)
   ## levels(xx$model) <- c("Original", "Fixed")
   ## ggplot(xx, aes(x=model, y=ess)) +geom_violin() + scale_y_log10()
+  library(vioplot)
   png(paste0('plots/ess_improvement_',fit1$model, '.png'), width=3, height=5,
       units='in', res=500)
-  vioplot::vioplot(log10(fit1$ess), log10(fit2$ess), names=c("Original", "Fixed"))
+  vioplot(log10(fit1$ess), log10(fit2$ess), names=c("Original", "Fixed"))
   mtext(fit1$model, line=1, cex=1.5)
   mtext("log10(ESS)", side=2, line=2.5, cex=1.25)
   dev.off()
 }
 
 n.slow <- 5 # number of parameters to show in pairs plot
-
 cod.rwm <- readRDS('results/pilot_rwm_cod.RDS')
 cod.post <- extract_samples(cod.rwm, inc_lp=TRUE)
 cod.post <- cbind(cod.post, cod.rwm$dq.post)
@@ -85,7 +85,7 @@ mle <- hake.rwm$mle
 chain <- rep(1:dim(hake.rwm$samples)[2], each=dim(hake.rwm$samples)[1]-hake.rwm$warmup)
 slow <- c(names(sort(hake.rwm$ess))[1:n.slow], names(hake.rwm$dq.post), 'lp__')
 png('plots/pairs.hake.slow.png', width=7, height=5, units='in', res=500)
-pairs_admb(hake.post, mle=mle, chains=chain, pars=slow, diag='trace')
+pairs_admb(hake.post, mle=mle, chains=chain, pars=slow, diag='acf')
 dev.off()
 ## Look at which parameter MLE vs posterior variances are different
 var.post <- apply(extract_samples(hake.rwm),2, var)
@@ -98,9 +98,13 @@ ggsave(paste0('plots/vars.', m, '.png'), g, width=7, height=5)
 xlims <- list(c(0, 7e6), c(0, 1.5), c(0, 3e6))
 ylims <- list(c(0, 6e-7), c(0, 3),c(0, 2e-6))
 plot.uncertainties(hake.rwm, xlims=xlims, ylims=ylims)
+hake.nuts <- readRDS('results/pilot_nuts_hake.RDS')
+divs <- extract_sampler_params(hake.nuts)$divergent__
+hake.post <- extract_samples(hake.nuts, inc_lp=TRUE)
+pairs_admb(hake.post, mle=mle, chains=chain, pars=slow, diag='acf', divergences=divs)
+plot.ess(rwm=hake.rwm, nuts=hake.nuts)
 
-
-n.slow <- 13
+n.slow <- 10
 canary.rwm <- readRDS('results/pilot_rwm_canary.RDS')
 canary.post <- extract_samples(canary.rwm, inc_lp=TRUE)
 #canary.post <- cbind(canary.post, canary.rwm$dq.post)
@@ -128,17 +132,17 @@ canary2.post <- extract_samples(canary2.rwm, inc_lp=TRUE)
 mle <- canary2.rwm$mle
 ## Run mcsave and get generated quantities
 chain <- rep(1:dim(canary2.rwm$samples)[2], each=dim(canary2.rwm$samples)[1]-canary2.rwm$warmup)
-slow <- c(names(sort(canary2.rwm$ess))[1:n.slow], names(canary2.rwm$dq.post), 'lp__')
+#slow <- c(names(sort(canary2.rwm$ess))[1:n.slow], names(canary2.rwm$dq.post), 'lp__')
 png('plots/pairs.canary2.slow.png', width=7, height=5, units='in', res=500)
 pairs_admb(canary2.post, mle=mle, chains=chain, pars=slow, diag='acf')
 dev.off()
 ## Look at which parameter MLE vs posterior variances are different
 var.post <- apply(extract_samples(canary2.rwm),2, var)
-var.mle <- diag(canary2.rwm$mle$cov)[1:canary2.rwm$mle$nopar]
+var.mle <- canary2.rwm$mle$est[1:canary2.rwm$mle$nopar]
 vars <- data.frame(post=var.post, mle=var.mle)
 g <- ggplot(vars, aes(x=log10(mle), log10(post))) + geom_point(alpha=.7) +
   geom_abline(slope=1) + xlab("MLE Variance") + ylab("Posterior Variance")
-ggsave(paste0('plots/vars.canary2.png'), g, width=7, height=5)
+gggsave(paste0('plots/vars.canary2.png'), g, width=7, height=5)
 plot.improvement(canary.rwm, canary2.rwm)
 ## ## Compare estimates of DQs
 ## xlims <- list(c(0, 7e6), c(0, 1.5), c(0, 3e6))
