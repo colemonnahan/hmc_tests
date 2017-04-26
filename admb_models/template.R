@@ -3,6 +3,7 @@ library(adnuts)
 library(snowfall)
 library(shinystan)
 library(plyr)
+source("functions.R")
 
 ## Run model with hbf=1 to get right covariance matrix and MLEs
 setwd(d)
@@ -108,6 +109,8 @@ g <- ggplot(stats.long, aes(y=value, x=m, color=alg)) + geom_jitter(alpha=.5) +
 ggsave(paste0('plots/', d, '_stats.png'),g, width=ggwidth, height=ggheight, units='in')
 g <- ggplot(perf.all, aes(m, efficiency, color=alg)) + geom_point() + scale_y_log10()
 ggsave(paste0('plots/', d, '_perf.png'),g, width=ggwidth, height=ggheight, units='in')
+
+plot.ess(rwm=fit.rwm.mle, nuts=fit.nuts.dense)
 
 ## Save fits
 saveRDS(list(fit.nuts.mle=fit.nuts.mle, #fit.nuts.diag=fit.nuts.diag,
