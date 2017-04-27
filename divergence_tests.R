@@ -7,29 +7,46 @@ library(shinystan)
 library(adnuts)
 
 
-## Rosenbrock is a classic difficult one to fit and useful for checking
-## divergences
+## ## Rosenbrock is a classic difficult one to fit and useful for checking
+## ## divergences. Turns out this one is too difficult!! Not really that
+## ## informative for these tests.
 
-setwd('models/rosenbrock/')
-compile(file='rosenbrock.cpp')
-dyn.load(dynlib('rosenbrock'))
-data <- list()
-pars <- c('x1', 'x2')
-obj <- MakeADFun(data=data, parameters=list(x1=0, x2=0))
-## admb model compiled manually
-eps <- .025
-iter <- 10000
-fit.tmb <- sample_tmb(obj, iter=iter, init=list(c(0,0)),
-                      control=list(metric=diag(2), stepsize=eps))
-fit.admb <- sample_admb(dir='admb', model='rosenbrock', iter=iter, init=list(c(0,0)),
-                      control=list(metric=diag(2), stepsize=eps))
-fit.stan <- stan(file='rosenbrock.stan', iter=iter,
-                 init=list(list(x1=0, x2=0)), chains=1,
-                 control=list(metric='unit_e', stepsize=eps, adapt_engaged=FALSE))
-launch_shinystan_tmb(fit.tmb)
-launch_shinystan_admb(fit.admb)
-launch_shinystan(fit.stan)
-setwd('../..')
+## ## ADMB wsa being weird with the psv file so I changed it's name
+## ## temporarily to rosen.
+## setwd('models/rosenbrock/')
+## compile(file='rosenbrock.cpp')
+## dyn.load(dynlib('rosenbrock'))
+## data <- list()
+## pars <- c('x1', 'x2')
+## obj <- MakeADFun(data=data, parameters=list(x1=0, x2=0))
+## ## admb model compiled manually
+## temp <- list()
+## k <- 1
+## for(eps in c(.05, .1)){
+##   iter <- 10000; warmup <- iter/2
+
+## fit.tmb <- sample_tmb(obj, iter=iter, init=list(c(0,0)), warmup=warmup,
+##                       control=list(metric=diag(2), stepsize=eps))
+## fit.admb <- sample_admb(dir='admb', model='rosen', iter=iter,
+##                         init=list(list(c(0,0))), warmup=warmup,
+##                       control=list(metric=diag(2), stepsize=eps))
+## fit.stan <- stan(file='rosenbrock.stan', iter=iter, warmup=warmup,
+##                  init=list(list(x1=0, x2=0)), chains=1,
+##                  control=list(metric='unit_e', stepsize=eps, adapt_engaged=FALSE))
+## ## Make pairs plots with divergences
+## x1 <- data.frame(m='tmb',eps=eps, extract_samples(fit.tmb), div=extract_sampler_params(fit.tmb)[,'divergent__'])
+## x2 <- data.frame(m='admb',eps=eps, extract_samples(fit.admb), div=extract_sampler_params(fit.admb)[,'divergent__'])
+## x3 <- data.frame(m='stan',eps=eps, extract(fit.stan), div=get_sampler_params(fit.stan)[[1]][-(1:warmup),'divergent__'])
+## temp[[k]] <- rbind.fill(x1, x2,x3)
+## k <- k +1
+## }
+## res <- do.call(rbind, temp)
+## ggplot(res, aes(x1, x2, col=div==1)) + geom_point(alpha=.1) + facet_grid(m~eps)
+## setwd('../..')
+
+
+
+
 
 ## Neal's funnel, copied from Betancourt and Girolami (2015) HMC for
 ## hierarchical models
@@ -40,21 +57,31 @@ data <- list()
 pars <- c('v', 'theta')
 obj <- MakeADFun(data=data, parameters=list(v=0, theta=0), DLL='funnel')
 ## admb model compiled manually
-
-eps <- .01
-iter <- 1000
-fit.tmb <- sample_tmb(obj, iter=iter, init=list(c(-5,0)),
+temp <- list(); k <- 1
+for(eps in c(.1, .3, .7)){
+iter <- 5000; warmup <- 50
+fit.tmb <- sample_tmb(obj, iter=iter, init=list(c(0,0)), warmup=warmup,
                       control=list(metric=diag(2), stepsize=eps))
-fit.admb <- sample_admb(dir='admb', model='funnel', iter=iter, init=list(c(-5,0)),
+fit.admb <- sample_admb(dir='admb', model='funnel', iter=iter,
+                        init=list(c(0,0)),
+                        warmup=warmup,
                       control=list(metric=diag(2), stepsize=eps))
-fit.stan <- stan(file='funnel.stan', iter=iter,
-                 init=list(list(v=-5, theta=0)), chains=1,
+fit.stan <- stan(file='funnel.stan', iter=iter, warmup=warmup,
+                 init=list(list(v=0, theta=0)), chains=1,
                  control=list(metric='unit_e', max_treedepth=10, stepsize=eps, adapt_engaged=FALSE))
-launch_shinystan_tmb(fit.tmb)
-launch_shinystan_admb(fit.admb)
-launch_shinystan(fit.stan)
-
-setwd('..')
+## Make pairs plots with divergences
+x1 <- data.frame(m='tmb',eps=eps, extract_samples(fit.tmb), div=extract_sampler_params(fit.tmb)[,'divergent__'])
+x2 <- data.frame(m='admb',eps=eps, extract_samples(fit.admb), div=extract_sampler_params(fit.admb)[,'divergent__'])
+x3 <- data.frame(m='stan',eps=eps, extract(fit.stan), div=get_sampler_params(fit.stan, inc_warmup=FALSE)[[1]][,'divergent__'])
+temp[[k]] <- rbind.fill(x1, x2,x3)
+k <- k +1
+}
+res <- do.call(rbind, temp)
+res$eps <- paste0("stepsize=",res$eps)
+res <- res[order(res$div),]
+setwd('../..')
+g <- ggplot(res, aes(v, theta, col=div==1)) + geom_point(alpha=.5, size=.2) + facet_grid(m~eps)
+ggsave('plots/divergence_tests.png',g, width=7, height=6)
 
 
 ### OLD code used during development of TMB. Probably not useful anymore

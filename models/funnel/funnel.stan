@@ -9,5 +9,5 @@ parameters {
 
 model {
   theta~normal(0, exp(v));
-  v~normal(0, 3);
+  v~normal(0, 1);
 }

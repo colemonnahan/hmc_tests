@@ -10,7 +10,7 @@
   extern "C"  {
     void ad_boundf(int i);
   }
-#include <rosenbrock.htp>
+#include <rosen.htp>
 
 model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
 {
@@ -33,7 +33,7 @@ void model_parameters::userfunction(void)
   jnll=0;
   jnll+= (pow(100*(x2-x1*x1),2)+pow(1-x1,2))/20;
   // Prior
-  jnll+= pow((x1)/2, 2);
+  jnll+= pow(x1/2, 2)/2;
 }
 
 void model_parameters::preliminary_calculations(void){

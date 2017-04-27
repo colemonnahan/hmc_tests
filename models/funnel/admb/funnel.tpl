@@ -1,4 +1,6 @@
 
+GLOBALS_SECTION
+ #include "statsLib.h"
 DATA_SECTION
 
 PARAMETER_SECTION
@@ -7,7 +9,8 @@ PARAMETER_SECTION
   objective_function_value jnll;
 
 PROCEDURE_SECTION
+ double v2=value(exp(v));
   jnll=0;
-  jnll+= (v/3)*(v/3)/2;
-  jnll+= (theta/exp(v))*(theta/exp(v))/2;
+  jnll+= dnorm(v,0,1);
+  jnll+= dnorm(theta,0, v2);
 

@@ -4,6 +4,7 @@
     #include <cstdlib>
   #endif
 #endif
+ #include "statsLib.h"
 #include <admodel.h>
 #include <contrib.h>
 
@@ -30,9 +31,10 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
 void model_parameters::userfunction(void)
 {
   jnll =0.0;
+ double v2=value(exp(v));
   jnll=0;
-  jnll+= (v/3)*(v/3)/2;
-  jnll+= (theta/exp(v))*(theta/exp(v))/2;
+  jnll+= dnorm(v,0,1);
+  jnll+= dnorm(theta,0, v2);
 }
 
 void model_parameters::preliminary_calculations(void){
