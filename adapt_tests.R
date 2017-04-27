@@ -33,7 +33,8 @@ extract_adapt <- function(fit){
           stepsize.final=head(xx[ind,2],1))})
 }
 
-## Run across fixed step size to see if matches
+## Run across fixed step size to see if matches, then with adaptation to
+## see if step size is similar
 set.seed(2115)
 dir <- 'admb'; model <- 'mvnd'
 setwd(dir)
@@ -66,7 +67,6 @@ nevals <- cbind(rbind(x1,x2,x3),i=1:iter)
 ##   geom_histogram() + facet_wrap('platform')
 os <- .3
 setwd('../../')
-
 png('plots/stan_tmb_admb_comparison.png', width=9, height=6.5, units='in', res=300)
 par(mfrow=c(2,2), mar=c(4,2.5,.5,.5), mgp=c(1.5,.5,0), oma=c(0,0,1.5,0))
 plot(sort(x1[,4])+2*os, ylim=c(0,1+max(nevals$n_leapfrog__)),
@@ -92,10 +92,40 @@ mtext("Trajectory info for MVN w/ fixed eps", line=0, outer=TRUE)
 dev.off()
 ##ggplot(nevals, aes(treedepth__, n_leapfrog__, color=platform)) + geom_jitter()
 
-
-## launch_shinystan_admb(admb)
-## launch_shinystan_admb(tmb)
-## launch_shinystan(stan2)
+## --------------- Same test but with step size adaptation
+set.seed(2115)
+setwd('C:/Users/Cole/hmc_tests/models/mvnd')
+dir <- 'admb'; model <- 'mvnd'
+setwd(dir)
+write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
+system('admb mvnd')
+system('mvnd')
+setwd('..')
+## devtools::load_all('C:/Users/Cole/adnuts')
+iter <- 500
+warmup <- 400
+chains <- 20
+td <- 14
+eps <- NULL
+rm(admb, tmb, stan2)
+init <- sapply(1:chains, function(x) list(mu=c(0,0)))
+stan2 <- stan(fit=stan.fit, data=data, chains=chains, iter=iter, warmup=warmup,
+              control=list(metric='unit_e',
+                            max_treedepth=td))
+admb <- sample_admb(dir=dir, model=model, iter=iter, init=init, warmup=warmup,
+                        chains=chains, control=list(stepsize=eps, max_treedepth=td,
+                                                    metric=diag(2)))
+tmb <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, warmup=warmup,
+                 control=list(stepsize=eps, metric=diag(2), max_treedepth=td))
+x1 <- data.frame(do.call(rbind, admb$sampler_params),platform='admb',i=1:iter)
+x2 <- data.frame(do.call(rbind, tmb$sampler_params),platform='tmb',i=1:iter)
+x3 <- data.frame(do.call(rbind, get_sampler_params(stan2)),platform='stan',i=1:iter)
+nevals <- cbind(rbind(x1,x2,x3))
+setwd('../../')
+g <- ggplot(subset(nevals, i>5), aes(i, stepsize__)) + ylab("Log10 Stepsize")+
+  geom_point(alpha=.1, size=.25) + facet_wrap('platform')+ scale_y_log10() +
+  ggtitle("Adaptation over 20 replicates for iid bivariate Normal") + xlab("Iteration")
+ggsave('plots/stepsize_adaptation.png', g, width=7, height=4)
 
 ## Compare effect of mass matrix on a MVN model. I can't pass a matrix to
 ## Stan so cannot compare easily here.
