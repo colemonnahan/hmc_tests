@@ -30,21 +30,22 @@ extract_adapt <- function(fit){
     cbind(chain=i, stepsize=tail(xx[ind,2],1), nsteps.median= median(xx[ind,4]),
           nsteps.mean=mean(xx[ind,4]),
           accept.prob=mean(xx[ind,1]),
-          stepsize0=head(xx[ind,2],1))})
+          stepsize.final=head(xx[ind,2],1))})
 }
 
 ## Run across fixed step size to see if matches
+set.seed(2115)
 dir <- 'admb'; model <- 'mvnd'
 setwd(dir)
 write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
 system('admb mvnd')
 system('mvnd')
 setwd('..')
-devtools::load_all('C:/Users/Cole/adnuts')
-iter <- 1000
+## devtools::load_all('C:/Users/Cole/adnuts')
+iter <- 5000
 chains <- 1
-td <- 4
-eps <- 1.312/10
+td <- 14
+eps <- 1.312/21
 rm(admb, tmb, stan2)
 init <- sapply(1:chains, function(x) list(mu=c(0,0)))
 stan2 <- stan(fit=stan.fit, data=data, chains=chains, iter=iter,
@@ -63,56 +64,73 @@ nevals <- cbind(rbind(x1,x2,x3),i=1:iter)
 ## ggplot(nevals, aes(i, log2(n_leapfrog__), color=platform)) + geom_jitter(alpha=.5)
 ## ggplot(nevals, aes(log2(n_leapfrog__))) +
 ##   geom_histogram() + facet_wrap('platform')
-par(mfrow=c(2,2))
-plot(sort(x1[,4])+.1, ylim=c(0,1+max(nevals$n_leapfrog__)), ylab='n_leapfrog')
+os <- .3
+setwd('../../')
+
+png('plots/stan_tmb_admb_comparison.png', width=9, height=6.5, units='in', res=300)
+par(mfrow=c(2,2), mar=c(4,2.5,.5,.5), mgp=c(1.5,.5,0), oma=c(0,0,1.5,0))
+plot(sort(x1[,4])+2*os, ylim=c(0,1+max(nevals$n_leapfrog__)),
+     ylab='n_leapfrog', xlab='Sorted iteration')
 points(sort(x2[,4]), col=2)
-points(sort(x3[,4])-.1, col=3)
-plot(sort(x1[,1]), ylab='acceptance probability')
+points(sort(x3[,4])-2*os, col=3)
+plot(sort(x1[,1]), ylab='acceptance probability', , xlab='Sorted iteration')
 points(sort(x2[,1]), col=2)
 points(sort(x3[,1]), col=3)
 legend('bottomright', legend=c('admb', 'tmb', 'stan'), pch=16, col=1:3)
-plot(sort(x1[,3])+.1, ylim=c(0, 1+max(nevals$treedepth__)), ylab='treedepths')
+plot(sort(x1[,3])+os, ylim=c(0, 1+max(nevals$treedepth__)),
+     ylab='treedepths', xlab='Sorted iteration')
 points(sort(x2[,3]), col=2)
-points(sort(x3[,3])-.1, col=3)
+points(sort(x3[,3])-os, col=3)
 admb.samples <- extract_samples(admb)
 tmb.samples <- extract_samples(tmb)
 stan.samples <- data.frame(extract(stan2, permuted=FALSE)[,1,])
-qqplot(stan.samples[,1], admb.samples[,1])
+qqplot(stan.samples[,1], admb.samples[,1], main=NA, ylab=NA, xlab='Stan')
+mtext("QQ Plot", line=-2)
 x <- qqplot(stan.samples[,1], tmb.samples[,1], plot=FALSE)
 points(x[[1]], x[[2]], col=2)
+mtext("Trajectory info for MVN w/ fixed eps", line=0, outer=TRUE)
+dev.off()
+##ggplot(nevals, aes(treedepth__, n_leapfrog__, color=platform)) + geom_jitter()
 
-
-ggplot(nevals, aes(treedepth__, n_leapfrog__, color=platform)) + geom_jitter()
-sum(!2^(x1$treedepth__-1)-1 < x1$n_leapfrog__ &
- x1$n_leapfrog__ <= 2^(x1$treedepth__)-1)
-sum(!2^(x2$treedepth__-1)-1 < x2$n_leapfrog__ &
- x2$n_leapfrog__ <= 2^(x2$treedepth__)-1)
-sum(!2^(x3$treedepth__-1)-1 < x3$n_leapfrog__ &
- x3$n_leapfrog__ <= 2^(x3$treedepth__)-1)
 
 ## launch_shinystan_admb(admb)
 ## launch_shinystan_admb(tmb)
 ## launch_shinystan(stan2)
 
-
-chains <- 6
-init <- lapply(1:chains, function(x) rnorm(2, sd=se*1))
-iter <- 500
-tmb1 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, control=list(metric=diag(2)))
+## Compare effect of mass matrix on a MVN model. I can't pass a matrix to
+## Stan so cannot compare easily here.
+setwd('C:/Users/Cole/hmc_tests/models/mvnd')
+Npar <- 5
+corr <- matrix(.98, nrow=Npar, ncol=Npar)
+diag(corr) <- 1
+se <- seq(.01, .5, len=Npar)
+covar <- corr * (se %o% se)
+covar2 <- diag(x=diag(covar))
+data <- list(covar=covar, Npar=Npar, x=rep(0, len=Npar))
+dir <- 'admb'; model <- 'mvnd'
+setwd(dir)
+write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
+system('admb mvnd')
+system('mvnd')
+setwd('..')
+mvnd.obj <- MakeADFun(data=data, parameters=list(mu=rep(0, Npar)), DLL='mvnd')
+chains <- 15
+init <- lapply(1:chains, function(x) rnorm(Npar, sd=se*5))
+iter <- 1000
+tmb1 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, control=list(metric=diag(Npar)))
 tmb2 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, control=list(metric=covar2))
 tmb3 <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, control=list(metric=covar))
 adapt.tmb1 <- cbind(form=1, extract_adapt(tmb1))
 adapt.tmb2 <- cbind(form=2, extract_adapt(tmb2))
 adapt.tmb3 <- cbind(form=3, extract_adapt(tmb3))
 adapt.tmb <- rbind(adapt.tmb1, adapt.tmb2, adapt.tmb3)
-admb1 <- sample_admb(dir=dir, model, iter=iter, init=init, chains=chains, control=list(metric=diag(2)))
+admb1 <- sample_admb(dir=dir, model, iter=iter, init=init, chains=chains, control=list(metric=diag(Npar)))
 admb2 <- sample_admb(dir=dir, model, iter=iter, init=init, chains=chains, control=list(metric=covar2))
 admb3 <- sample_admb(dir=dir, model, iter=iter, init=init, chains=chains, control=list(metric=covar))
 adapt.admb1 <- cbind(form=1, extract_adapt(admb1))
 adapt.admb2 <- cbind(form=2, extract_adapt(admb2))
 adapt.admb3 <- cbind(form=3, extract_adapt(admb3))
 adapt.admb <- rbind(adapt.admb1, adapt.admb2, adapt.admb3)
-
 yy1 <- ldply(1:chains, function(i)
   cbind(seed=i, iter=1:iter, covar='unit', m='admb', as.data.frame(admb1$sampler_params[[i]])))
 xx1 <- ldply(1:chains, function(i)
@@ -126,37 +144,34 @@ yy3 <- ldply(1:chains, function(i)
 xx3 <- ldply(1:chains, function(i)
   cbind(seed=i, iter=1:iter, covar='dense', m='tmb', as.data.frame(tmb3$sampler_params[[i]])))
 zz <- rbind(yy1,yy2,yy3, xx1,xx2,xx3)
-ggplot(subset(zz, iter>5), aes(iter, log10( stepsize__), group=seed, color=m)) +
-  facet_grid(covar~., scales='free') + geom_point(alpha=.15, size=.5)
-
+zz <- zz[sample(1:nrow(zz), size=nrow(zz)),]
 adapt <- rbind(cbind(name='tmb', adapt.tmb),
                cbind(name='admb', adapt.admb))
+adapt$nsteps.median <- NULL
 adapt.long <- reshape2::melt(adapt, c("name", "form", "chain"))
-ggplot(adapt.long, aes(form, value, color=name)) + geom_jitter() +
-  facet_wrap('variable', scales='free')
-ggplot(adapt, aes(form, stepsize, color=name)) + geom_jitter()
-ggplot(adapt, aes(form, nsteps.median, color=name)) + geom_jitter()
-ggplot(adapt, aes(form, accept.prob, color=name)) + geom_jitter()
-ggplot(adapt, aes(form, log(stepsize0), color=name)) + geom_jitter()
-launch_shinystan_tmb(tmb1)
-## launch_shinystan_tmb(tmb2)
-## launch_shinystan_tmb(tmb3)
-launch_shinystan_admb(admb1)
-launch_shinystan_admb(admb2)
-## launch_shinystan_admb(admb3)
+adapt.long$form <- factor(adapt.long$form)
+levels(adapt.long$form) <- c("Unit", "Diag", "Dense")
+## Effective sample sizes should be the same too
+x <- data.frame(m='admb', form='unit', ess=admb1$ess)
+y <- data.frame(m='admb', form='diag', ess=admb2$ess)
+z <- data.frame(m='admb', form='dense', ess=admb3$ess)
+library(rstan)
+xx <- data.frame(m='tmb', form='unit', ess=monitor(tmb1$samples, warmup=tmb1$warmup)[,'n_eff'])
+yy <- data.frame(m='tmb', form='diag', ess=monitor(tmb2$samples, warmup=tmb1$warmup)[,'n_eff'])
+zz <- data.frame(m='tmb', form='dense', ess=monitor(tmb3$samples, warmup=tmb1$warmup)[,'n_eff'])
+ess.all <- rbind(x,y,z,xx,yy,zz)
+ess.all$ess.par <- row.names(ess.all)
+ess.all <- ess.all[grep('mu', x=row.names(ess.all)),]
+setwd('../..')
 
+## Make final plots. These should match. YES!!!
+g <- ggplot(subset(zz, iter>5), aes(iter, log10( stepsize__), group=seed, color=m)) +
+  facet_grid(covar~., scales='free') + geom_point(alpha=.15, size=.5)
+ggsave("plots/adapt_tests_stepsize.png", g, width=7, height=4)
+g <- ggplot(adapt.long, aes(form, value, color=name)) + geom_point(alpha=.5, position = position_jitter(w = 0.3, h = 0)) +
+  facet_wrap('variable', scales='free') + scale_y_log10()
+ggsave("plots/adapt_tests.png", g, width=7, height=5)
+g <- ggplot(ess.all, aes(form, ess, color=m)) +
+  geom_point(alpha=.5, position=position_jitter(w = 0.3, h = 0)) #+ scale_y_log10
+ggsave("plots/adapt_tests_ess.png", g, width=7, height=5)
 
-
-dir="C:/Users/Cole/hmc_tests/models/catage"
-model='catage'
-x <- sample_admb(dir=dir, model=model, iter=20000,
-                   chains=1, eps=.2, max_treedepth=10, thin=100)
-x <- sample_admb(dir=dir, model=model, iter=20000,
-                   chains=1, eps=.2, max_treedepth=10, thin=100)
-launch_shinystan_admb(x)
-setwd(dir)
-system('admb catage')
-system('catage -nohess -mcmc 10 -nuts -mcseed 5')
-adapt <- read.csv("adaptation.csv")
-pars <- read_psv(model)
-fit <- read_admb(model)
