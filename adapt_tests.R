@@ -4,11 +4,11 @@
 source("startup.R")
 set.seed(235)
 Npar <- 2
-corr <- matrix(.98, nrow=2, ncol=2)
+corr <- matrix(.8, nrow=2, ncol=2)
 diag(corr) <- 1
 se <- c(1, .10)
 covar <- corr * (se %o% se)
-covar <- diag(2)
+#covar <- diag(2)
 covar2 <- diag(x=diag(covar))
 covar.inv <- solve(covar)
 setwd('C:/Users/Cole/hmc_tests/models/mvnd')
@@ -22,7 +22,7 @@ write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
 system('admb mvnd')
 system('mvnd')
 setwd('..')
-stan.fit <- stan(file='mvnd.stan', data=data, chains=1, iter=10)
+stan.fit <- stan(file='mvnd.stan', data=data, chains=1, iter=1000)
 extract_adapt <- function(fit){
   ldply(1:length(fit$sampler_params), function(i){
     ind <- -(1:fit$warmup)
@@ -42,11 +42,11 @@ write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
 system('admb mvnd')
 system('mvnd')
 setwd('..')
-## devtools::load_all('C:/Users/Cole/adnuts')
-iter <- 5000
+devtools::load_all('C:/Users/Cole/adnuts')
+iter <- 1100
 chains <- 1
-td <- 14
-eps <- 1.312/21
+td <- 12
+eps <- 1.21
 rm(admb, tmb, stan2)
 init <- sapply(1:chains, function(x) list(mu=c(0,0)))
 stan2 <- stan(fit=stan.fit, data=data, chains=chains, iter=iter,
@@ -56,11 +56,15 @@ stan2 <- stan(fit=stan.fit, data=data, chains=chains, iter=iter,
 admb <- sample_admb(dir=dir, model=model, iter=iter, init=init,
                         chains=chains, control=list(stepsize=eps, max_treedepth=td,
                                                     metric=diag(2)))
-tmb <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains,
+tmb <- sample_tmb(mvnd.obj, iter=iter, init=init, chains=chains, warmup=iter-100,
                  control=list(stepsize=eps, metric=diag(2), max_treedepth=td))
 x1 <- data.frame(admb$sampler_params[[1]],platform='admb')
 x2 <- data.frame(tmb$sampler_params[[1]], platform='tmb')
 x3 <- data.frame(get_sampler_params(stan2)[[1]],platform='stan')
+plot(x2$n_leapfrog__)
+plot(x2$accept_stat__)
+plot(x2$stepsize__)
+plot(tmb$samples[,1,2])
 nevals <- cbind(rbind(x1,x2,x3),i=1:iter)
 ## ggplot(nevals, aes(i, log2(n_leapfrog__), color=platform)) + geom_jitter(alpha=.5)
 ## ggplot(nevals, aes(log2(n_leapfrog__))) +
@@ -205,3 +209,33 @@ g <- ggplot(ess.all, aes(form, ess, color=m)) +
   geom_point(alpha=.5, position=position_jitter(w = 0.3, h = 0)) #+ scale_y_log10
 ggsave("plots/adapt_tests_ess.png", g, width=7, height=5)
 
+### --------------------------------------------------
+## Test mass matrix adaptation
+## Run across fixed step size to see if matches, then with adaptation to
+## see if step size is similar
+set.seed(2115)
+dir <- 'admb'; model <- 'mvnd'
+chains <- 1
+td <- 12
+eps <- NULL
+init <- sapply(1:chains, function(x) list(mu=c(0,0)))
+
+## Loop across warmup lengths and see how estmiated step size changes
+output <- ldply(100*2^(0:5), function(warmup){
+  ldply(c(TRUE, FALSE), function(am) {
+    ldply(1:15, function(seed){
+    tmb <- sample_tmb(mvnd.obj, iter=warmup+200, seeds=seed, init=init, chains=chains, warmup=warmup,
+                      control=list(stepsize=eps, max_treedepth=td, adapt_mass=am))
+    tmb.adapt <- data.frame(tmb$sampler_params[[1]], platform='tmb')
+    avg.steps <- mean(tmb.adapt$n_leapfrog[-(1:warmup)])
+    runtime <- tmb$time.total
+    return(data.frame(warmup=warmup, am=am, seed=seed, runtime=runtime,
+                      steps=avg.steps, eps=tail(tmb.adapt$stepsize__,1)))})
+  })})
+output.long <- melt(output, id.vars=c('warmup', 'am', 'seed'))
+
+g <- ggplot(output.long, aes(log2(warmup), y=value, color=am)) +
+  geom_point(alpha=.5) + facet_wrap('variable', scales='free')
+g <- g + scale_y_log10()
+setwd('C:/Users/Cole/hmc_tests/')
+ggsave('plots/mass_matrix_adaptation.png', g, width=7, height=3.5)
