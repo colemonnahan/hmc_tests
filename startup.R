@@ -1,5 +1,5 @@
 ## Load libraries, functions, and global variables
-devtools::install('C:/Users/Cole/adnuts')
+## devtools::install('C:/Users/Cole/adnuts')
 ## devtools::document('C:/Users/Cole/adnuts')
 library(adnuts)
 library(coda)

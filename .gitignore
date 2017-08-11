@@ -72,3 +72,4 @@ canary2.tpl
 admb_models/hake/plots
 cod2.tpl
 *_chain_*
+mcmc_progress
