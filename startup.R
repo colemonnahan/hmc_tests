@@ -33,10 +33,11 @@ ggheight <- 5
 #' be one of c("unit_e", "diag_e", "dense_e").
 #' @return A list of two data frames. adapt is the adaptive results from
 #' Stan, and perf is the performance metrics for each run.
-run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, delta=.8,
+run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                        metric='diag', data, inits, pars,
-                       sink.console=FALSE, max_treedepth=12){
+                       sink.console=FALSE, max_treedepth=12, useRWM=FALSE){
   if(Nthin!=1) stop('this probably breaks if Nthin!=1')
+  stopifnot(metric=='diag')
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
   ind.warmup <- 1:Nwarmup              # index of samples, excluding warmup
@@ -55,25 +56,13 @@ run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, de
     set.seed(seed)
     for(idelta in delta){
       for(imetric in metric){
-        ## Crazy way to convert imetric into arguments for the different
-        ## platforms.
-        N <- length(as.vector(unlist(inits.seed)))
-        if(imetric=='unit')
-          M <- diag(N)
-        else if(imetric=='diag'){
-          M <- matrix(0, N, N)
-          diag(M) <- diag(covar)
-          }
-        else if(imetric=='dense')
-          M <- covar
-        else stop("Invalid metric option supplied")
-
         fit.stan <-
-          stan(fit=obj.stan, data=data, iter=Niter,
+          stan(fit=obj.stan, iter=Niter, data=data,
                warmup=Nwarmup, chains=1, thin=Nthin, algorithm='NUTS',
-               init=inits.seed, seed=seed, par=pars,
+               init=inits.seed, seed=seed,
                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
-                            metric=paste0(imetric,'_e'), max_treedepth=max_treedepth))
+                            metric=paste0(imetric,'_e'),
+                            max_treedepth=max_treedepth))
         sims.stan <- extract(fit.stan, permuted=FALSE)
         perf.stan <- data.frame(monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
         Rhat.stan <- with(perf.stan, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
@@ -107,13 +96,13 @@ run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, de
         ## Start of TMB run
         fit.tmb <-
           sample_tmb(obj=obj.tmb, iter=Niter, warmup=Nwarmup, chains=1, thin=Nthin,
-                     init=inits.seed, control=list(metric=M,
-          adapt_delta=idelta, max_treedepth=max_treedepth))
+                     init=inits.seed[[1]], control=list(metric=NULL,
+                                                        adapt_delta=idelta, max_treedepth=max_treedepth, adapt_mass=TRUE))
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
         sims.tmb <- fit.tmb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.tmb <- data.frame(monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
         Rhat.tmb <- with(perf.tmb, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
-        adapt <- as.data.frame(fit.tmb$sampler_params[[1]])
+        adapt <- adnuts::extract_sampler_params(fit.tmb)
         adapt.list[[k]] <-
           data.frame(platform='tmb', seed=seed,
                      Npar=dim(sims.tmb)[3]-1,
@@ -141,12 +130,12 @@ run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, de
                      Rhat.tmb)
         k <- k+1
         fit.admb <- sample_admb(dir='admb', model=model, iter=Niter, warmup=Nwarmup,
-                                   init=inits.seed, thin=Nthin,
-          control=list(metric=M, max_treedepth=max_treedepth, adapt_delta=idelta))
+                                init=inits.seed, thin=Nthin,
+                                control=list(metric=NULL, max_treedepth=max_treedepth, adapt_delta=idelta))
         sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
         Rhat.admb <- with(perf.admb, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
-        adapt <- as.data.frame(fit.admb$sampler_params[[1]])
+        adapt <- adnuts::extract_sampler_params(fit.admb)
         adapt.list[[k]] <-
           data.frame(platform='admb', seed=seed,
                      Npar=dim(sims.admb)[3]-1,
@@ -173,35 +162,39 @@ run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, de
                      minESS.coda=min(effectiveSize(as.data.frame(sims.admb[,1,]))),
                      Rhat.admb)
         k <- k+1
-        ## ADMB default RWM algorithm
-        fit.admb.rwm <-
-          sample_admb(dir='admb', model=model, iter=10*Niter, warmup=Nwarmup,
-                      init=inits.seed, chains=1, thin=10*Nthin,
-                      control=list(metric=M,algorithm='RWM'))
-        sims.admb.rwm <- fit.admb.rwm$samples[-(1:Nwarmup),,, drop=FALSE]
-        perf.admb.rwm <- data.frame(monitor(sims=sims.admb.rwm, warmup=0, print=FALSE, probs=.5))
-        Rhat.admb.rwm <- with(perf.admb.rwm, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
-        adapt <- as.data.frame(fit.admb.rwm$sampler_params[[1]])
-        perf.list[[k]] <-
-          data.frame(platform='admb.rwm',
-                     seed=seed, delta.target=idelta, metric=imetric,
-                     eps.final=NA,
-                     Npar=dim(sims.admb.rwm)[3]-1,
-                     time.warmup=fit.admb.rwm$time.warmup,
-                     time.total=fit.admb.rwm$time.total,
-                     minESS=min(perf.admb.rwm$n_eff),
-                     medianESS=median(perf.admb.rwm$n_eff),
-                     Nsims=dim(sims.admb.rwm)[1],
-                     minESS.coda=min(effectiveSize(as.data.frame(sims.admb.rwm[,1,]))),
-                     Rhat.admb.rwm)
-        k <- k+1
+        if(useRWM){
+          ## ADMB default RWM algorithm About 2 times the average
+          ## trajectory length should be equivalent in time to NUTS
+          thin.rwm <- floor(adapt.list[[k-1]]$nsteps.mean * 2)
+          fit.admb.rwm <-
+            sample_admb(dir='admb', model=model, iter=thin.rwm*Niter, warmup=Nwarmup,
+                        init=inits.seed, chains=1, thin=thin.rwm*Nthin,
+                        algorithm='RWM', control=list(metric=NULL))
+          sims.admb.rwm <- fit.admb.rwm$samples[-(1:Nwarmup),,, drop=FALSE]
+          perf.admb.rwm <- data.frame(monitor(sims=sims.admb.rwm, warmup=0, print=FALSE, probs=.5))
+          Rhat.admb.rwm <- with(perf.admb.rwm, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
+          adapt <- as.data.frame(fit.admb.rwm$sampler_params[[1]])
+          perf.list[[k]] <-
+            data.frame(platform='admb.rwm',
+                       seed=seed, delta.target=idelta, metric=imetric,
+                       eps.final=NA,
+                       Npar=dim(sims.admb.rwm)[3]-1,
+                       time.warmup=fit.admb.rwm$time.warmup,
+                       time.total=fit.admb.rwm$time.total,
+                       minESS=min(perf.admb.rwm$n_eff),
+                       medianESS=median(perf.admb.rwm$n_eff),
+                       Nsims=dim(sims.admb.rwm)[1],
+                       minESS.coda=min(effectiveSize(as.data.frame(sims.admb.rwm[,1,]))),
+                       Rhat.admb.rwm)
+          k <- k+1
+        }
         ## End of ADMB model
       } # End loop over metric
     }   # end loop over adapt_delta
     rm(fit.stan, sims.stan, perf.stan, adapt)
     rm(fit.tmb, sims.tmb, perf.tmb)
     rm(fit.admb, sims.admb, perf.admb)
-    rm(fit.admb.rwm, sims.admb.rwm, perf.admb.rwm)
+    ##  rm(fit.admb.rwm, sims.admb.rwm, perf.admb.rwm)
   }
   perf <- do.call(rbind.fill, perf.list)
   perf$efficiency <- perf$minESS/perf$time.total
@@ -211,22 +204,20 @@ run.chains <- function(obj.stan, obj.tmb, model, covar, seeds, Nout, Nthin=1, de
 }
 
 #' Verify models and then run empirical tests across delta
-fit.empirical <- function(obj.stan, obj.tmb, model, pars, covar, inits, data, seeds,
+fit.empirical <- function(obj.stan, obj.tmb, model, pars, inits, data, seeds,
                           delta, model.stan, Nout,  metric,
                           Nthin=1, sink.console=FALSE, ...){
     ## Now rerun across gradient of acceptance rates and compare to JAGS
   message('Starting empirical runs')
-  ## For now using diagonal to more closely match what Stan is doing.
-  covar2 <- diag(x=diag(covar))
-    results.empirical <-
-      run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=model, seeds=seeds,
-                 Nout=Nout, covar=covar2,
-                 metric=metric, delta=delta, data=data,
-                 Nthin=Nthin, inits=inits, pars=pars,
-                 sink.console=sink.console, ...)
-    with(results.empirical, plot.empirical.results(perf, adapt))
-    write.csv(file=paste0(m, '_adapt_empirical.csv'), results.empirical$adapt)
-    write.csv(file=paste0(m, '_perf_empirical.csv'), results.empirical$perf)
+  results.empirical <-
+    run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=model, seeds=seeds,
+               Nout=Nout,
+               metric=metric, delta=delta, data=data,
+               Nthin=Nthin, inits=inits, pars=pars,
+               sink.console=sink.console, ...)
+  with(results.empirical, plot.empirical.results(perf, adapt))
+  write.csv(file=paste0(m, '_adapt_empirical.csv'), results.empirical$adapt)
+  write.csv(file=paste0(m, '_perf_empirical.csv'), results.empirical$perf)
 }
 
 #' Make plots comparing the performance of simulated data for a model.
@@ -375,12 +366,12 @@ verify.models <- function(obj.stan, obj.tmb, model, covar, pars, inits, data, No
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
   fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits, control=list(metric=covar), ...)
+               init=inits[[1]], control=list(metric=NULL))
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
-  fit.admb <- sample_admb(dir=dir, model=model, iter=Niter,
+  fit.admb <- sample_admb(dir='admb', model=model, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits, control=list(metric=covar))
+               init=inits, control=list(metric=NULL))
   sims.admb <- fit.admb$samples[-(1:fit.admb$warmup),,,drop=FALSE]
   if(!is.null(admb.columns))
     sims.admb[,,admb.columns] <- exp(sims.admb[,,admb.columns])

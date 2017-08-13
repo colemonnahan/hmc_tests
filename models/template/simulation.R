@@ -3,7 +3,7 @@ stop("No data generation setup")
 
 adapt.list <- perf.list <- list()
 k <- 1
-j <- 0  
+j <- 0
 for(i in seq_along(Npar.vec)){
   Npar <- Npar.vec[i]
   message(paste("======== Starting Npar=", Npar))
@@ -11,9 +11,8 @@ for(i in seq_along(Npar.vec)){
   set.seed(115)
 
   ## Update data, inits and model objects
-
   data <- NULL
-  inits <- NULL
+  inits <- NULL # needs to be list of length seeds
 
   obj.stan <- stan(fit=obj.stan, data=data, iter=100,
                    chains=1, init=list(inits[[1]]), verbose=FALSE)
@@ -25,7 +24,6 @@ for(i in seq_along(Npar.vec)){
   ## Run with updated model size
   temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
                      inits=inits, pars=pars, data=data, metric='diag',
-                     covar=covar,
                      seeds=seeds, Nout=Nout, Nthin=1, delta=delta)
   adapt.list[[k]] <- cbind(cor=j,temp$adapt)
   perf.list[[k]] <- cbind(cor=j,temp$perf)

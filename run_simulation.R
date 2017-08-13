@@ -21,6 +21,18 @@ sink <- FALSE
 
 ### ------------------------------------------------------------
 ### Step 2: Run the models.
+m <- 'iidz'                             # model name
+verify <- FALSE                         # whether to verify
+delta <- 0.8                            # adapt_delta for Stan
+Nout <- 500                            # no. of samples out
+Nthin <- 1                              # thin rate for emp/sim modes (leave at 1!)
+Nthin.ind <- 1                          # thin rate for verify mode
+Npar.vec <-2^(1:8)
+source(paste0('models/',m,'/run_model.R'))
+## Run multivariate normal, empirical and simulated
+
+
+
 ## Run multivariate normal, empirical and simulated
 m <- 'mvnd'                             # model name
 verify <- FALSE                         # whether to verify
