@@ -239,3 +239,14 @@ g <- ggplot(output.long, aes(log2(warmup), y=value, color=am)) +
 g <- g + scale_y_log10()
 setwd('C:/Users/Cole/hmc_tests/')
 ggsave('plots/mass_matrix_adaptation.png', g, width=7, height=3.5)
+
+
+## quick admb tests
+x = read.table('admb/mass_adapt.txt', sep = ' ', na.strings = 'nan', header=TRUE)
+plot(x[,1], x[,4], col=ifelse(x$update, 'red', 'black'),
+     cex=ifelse(x$update, 2, .2))
+plot(x[,1], x[,8], col=ifelse(x$update, 'red', 'black'),
+     cex=ifelse(x$update, 2, .2))
+
+x2 <- x[1:50,]
+x2

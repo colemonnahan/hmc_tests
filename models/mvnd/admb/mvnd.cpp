@@ -46,7 +46,7 @@ void model_parameters::userfunction(void)
   jnll =0.0;
   dvector x(1,dim);
   for(int i=1; i<=dim; i++) x(i)=0;
-    jnll=neg_log_density(x-mu);
+  jnll=neg_log_density(x-mu);
 }
 
 model_data::~model_data()
