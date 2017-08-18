@@ -20,7 +20,7 @@ dir <- 'admb'; model <- 'mvnd'
 setwd(dir)
 write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
 system('admb mvnd')
-system('mvnd')
+system('mvnd -hbf 1')
 setwd('..')
 stan.fit <- stan(file='mvnd.stan', data=data, chains=1, iter=1000)
 extract_adapt <- function(fit){
@@ -213,40 +213,53 @@ ggsave("plots/adapt_tests_ess.png", g, width=7, height=5)
 ## Test mass matrix adaptation
 ## Run across fixed step size to see if matches, then with adaptation to
 ## see if step size is similar
+devtools::install("c:/Users/Cole/adnuts")
 set.seed(2115)
 dir <- 'admb'; model <- 'mvnd'
-chains <- 1
+chains <- 5
+seeds <- 1:chains
+cores <- 5
 td <- 12
 eps <- NULL
 init <- sapply(1:chains, function(x) list(mu=c(0,0)))
+setwd('admb')
+write.table(x=c(Npar, covar), file='mvnd.dat', row.names=FALSE, col.names=FALSE)
+system('admb mvnd')
+system('mvnd -hbf 1')
+setwd('..')
+
 
 ## Loop across warmup lengths and see how estmiated step size changes
 output <- ldply(100*2^(0:5), function(warmup){
   ldply(c(TRUE, FALSE), function(am) {
-    ldply(1:15, function(seed){
-    tmb <- sample_tmb(mvnd.obj, iter=warmup+200, seeds=seed, init=init, chains=chains, warmup=warmup,
+    tmb <- sample_tmb(mvnd.obj, iter=warmup+200, seeds=seeds, init=init, chains=chains, warmup=warmup,
+                      parallel=TRUE, cores=cores,
                       control=list(stepsize=eps, max_treedepth=td, adapt_mass=am))
-    tmb.adapt <- data.frame(tmb$sampler_params[[1]], platform='tmb')
-    avg.steps <- mean(tmb.adapt$n_leapfrog[-(1:warmup)])
-    runtime <- tmb$time.total
-    return(data.frame(warmup=warmup, am=am, seed=seed, runtime=runtime,
-                      steps=avg.steps, eps=tail(tmb.adapt$stepsize__,1)))})
-  })})
-output.long <- melt(output, id.vars=c('warmup', 'am', 'seed'))
+    tmb.avg.steps <- sapply(1:chains, function(i)
+      mean(tmb$sampler_params[[i]][-(1:warmup),4]))
+    tmb.eps <- sapply(1:chains, function(i)
+      tail(tmb$sampler_params[[i]][,2],n=1))
+    x1 <- data.frame(platform='tmb', warmup=warmup, am=am, seeds=seeds,
+                     runtime=tmb$time.total, steps=tmb.avg.steps, eps=tmb.eps)
+    mm <- if(am) NULL else 'unit'
+    admb <- sample_admb('mvnd', path='admb', iter=warmup+200, seeds=seed, init=init, chains=chains, warmup=warmup,
+                      parallel=TRUE, cores=cores,
+                      control=list(metric=mm, adapt_mass=am))
+    admb.avg.steps <- sapply(1:chains, function(i)
+      mean(admb$sampler_params[[i]][-(1:warmup),4]))
+    admb.eps <- sapply(1:chains, function(i)
+      tail(admb$sampler_params[[i]][,2],n=1))
+    x2 <- data.frame(platform='admb', warmup=warmup, am=am, seeds=seeds,
+                     runtime=admb$time.total, steps=admb.avg.steps, eps=admb.eps)
+    return(rbind(x1,x2))
+    })
+  })
 
-g <- ggplot(output.long, aes(log2(warmup), y=value, color=am)) +
-  geom_point(alpha=.5) + facet_wrap('variable', scales='free')
+output.long <- melt(output, id.vars=c('warmup', 'am', 'seeds', 'platform'))
+output.long <- subset(output.long, variable!='runtime')
+g <- ggplot(output.long, aes(log2(warmup), y=value, color=am, shape=platform)) +
+  geom_jitter(alpha=.75, height=0, width=.2) + facet_grid('variable~.', scales='free')
 g <- g + scale_y_log10()
 setwd('C:/Users/Cole/hmc_tests/')
 ggsave('plots/mass_matrix_adaptation.png', g, width=7, height=3.5)
 
-
-## quick admb tests
-x = read.table('admb/mass_adapt.txt', sep = ' ', na.strings = 'nan', header=TRUE)
-plot(x[,1], x[,4], col=ifelse(x$update, 'red', 'black'),
-     cex=ifelse(x$update, 2, .2))
-plot(x[,1], x[,8], col=ifelse(x$update, 'red', 'black'),
-     cex=ifelse(x$update, 2, .2))
-
-x2 <- x[1:50,]
-x2
