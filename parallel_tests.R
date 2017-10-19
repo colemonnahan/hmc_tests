@@ -51,17 +51,17 @@ tail(extract_samples(tmb.serial)[,1,],1)
 ### Use this to test the function outside of the package. Useful for
 ### debugging
 ###
-## devtools::install("c:/Users/cole/adnuts")
-## inits <- lapply(1:3, function(i)  list(mu=rnorm(2)))
-## sfInit(parallel=TRUE, slaveOutfile='out.txt', cpus=2)
-## sfLibrary(TMB)
-## rm(test)
-## sfExportAll()
-## test <- sfLapply(1:2, function(i)
-## ##test <- lapply(1:2, function(i)
-##   adnuts:::sample_tmb_parallel(i, obj=mvnd.obj, init= inits[[i]],
-##                                dir=getwd() , algorithm='NUTS', lower=NULL,
-##                                upper=NULL, iter=2000 ))
+devtools::install("c:/Users/cole/adnuts")
+inits <- lapply(1:3, function(i)  list(mu=rnorm(2)))
+sfInit(parallel=TRUE, slaveOutfile='out.txt', cpus=2)
+sfLibrary(TMB)
+rm(test)
+sfExportAll()
+test <- sfLapply(1:2, function(i)
+test <- lapply(1:2, function(i)
+  adnuts:::sample_tmb_parallel(i, obj=mvnd.obj, init= inits[[i]], seed=1,
+                               path=getwd() , algorithm='NUTS', lower=lower.bounds,
+                               upper=NULL, iter=100 ))
 
 
 
