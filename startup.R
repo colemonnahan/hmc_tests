@@ -44,7 +44,7 @@ run_model <- function(m, data, inits, pars,verify=FALSE, simulation=FALSE){
   if(verify)
     verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
                   pars=pars, inits=inits, data=data, Nout=Nout.ind,
-                  Nthin=Nthin.ind, covar=covar.est)
+                  Nthin=Nthin.ind)
   ## Load initial values from those sampled above.
   sims.ind <- readRDS(file='sims.ind.RDS')
   sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
@@ -56,14 +56,14 @@ run_model <- function(m, data, inits, pars,verify=FALSE, simulation=FALSE){
   ## defaults for TMB and ADMB too: estimated diagonal mass matrix. I also
   ## dropped RWM since it wont work for mixed effects models
   fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
-                delta=delta, metric='diag', seeds=seeds, covar=covar2,
+                delta=delta, metric='diag', seeds=seeds,
                 Nout=Nout, max_treedepth=12)
 
   ## If there is a simulation component put it in this file
   if(FALSE)
     source("simulation.R")
 
-  rm(obj.stan, obj.tmb, data, inits, pars, lower, upper, covar.est)
+  rm(obj.stan, obj.tmb, data, inits, pars, lower, upper)
   dyn.unload(m)
   message(paste('Finished with model:', m))
   setwd('../..')
@@ -407,7 +407,7 @@ plot.model.comparisons <- function(sims.stan, sims.tmb, sims.admb, perf.platform
 #'   exponentiate. THis is needed b/c ADMB needs to add jacobian manually
 #'   for bounded (0, Inf) parameters. Thus exponentiate these columns to
 #'   match TMB and Stan.
-verify.models <- function(obj.stan, obj.tmb, model, covar, pars, inits, data, Nout, Nthin,
+verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nthin,
                           sink.console=TRUE, dir=NULL, admb.columns=NULL, ...){
   message('Starting independent runs')
   ## if(sink.console){
