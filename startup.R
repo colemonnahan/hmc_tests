@@ -13,6 +13,62 @@ library(shinystan)
 ggwidth <- 8
 ggheight <- 5
 
+#' Run analysis for a single model
+#'
+#' @param m Character for model name (also folder name)
+#' @param data Data list needed for model
+#' @param inits List of inits for model
+#' @param pars Character vector for pars
+run_model <- function(m, data, inits, pars,verify=FALSE, simulation=FALSE){
+
+  oldwd <- getwd()
+  on.exit(setwd(oldwd))
+  setwd(paste0('models/',m))
+
+  ## Compile Stan, TMB and ADMB models
+  obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=500,
+                   chains=1, init=list(inits[[1]]),
+                   control=list(adapt_engaged=TRUE))
+  compile(paste0(m, '.cpp'))
+  dyn.load(paste0(m))
+  obj.tmb <- MakeADFun(data=data, parameters=inits[[1]], DLL=m)
+  setwd('admb')
+  write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
+              col.names=FALSE )
+  ## Don't need a good hessian since using adaptation now, so just run it a
+  ## single iteration to get the files with names
+  system(paste('admb',m))
+  system(paste(m, ' -maxfn 1'))
+  setwd('..')
+
+  if(verify)
+    verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
+                  pars=pars, inits=inits, data=data, Nout=Nout.ind,
+                  Nthin=Nthin.ind, covar=covar.est)
+  ## Load initial values from those sampled above.
+  sims.ind <- readRDS(file='sims.ind.RDS')
+  sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
+  ## Setup inits for efficiency tests (fit.empirical). You need to adjust the
+  ## named arguments for each model.
+  inits <- lapply(1:length(seeds), function(i) list(mu=as.numeric(sims.ind[i,])))
+
+  ## Fit empirical data with no thinning for efficiency tests. Using Stan
+  ## defaults for TMB and ADMB too: estimated diagonal mass matrix. I also
+  ## dropped RWM since it wont work for mixed effects models
+  fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
+                delta=delta, metric='diag', seeds=seeds, covar=covar2,
+                Nout=Nout, max_treedepth=12)
+
+  ## If there is a simulation component put it in this file
+  if(FALSE)
+    source("simulation.R")
+
+  rm(obj.stan, obj.tmb, data, inits, pars, lower, upper, covar.est)
+  dyn.unload(m)
+  message(paste('Finished with model:', m))
+  setwd('../..')
+}
+
 
 #' Run Stan, TMB, and ADMB versions of the same model with NUTS.
 #'
