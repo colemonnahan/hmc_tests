@@ -27,25 +27,19 @@ delta <- 0.8                            # adapt_delta for Stan
 Nout <- 500                            # no. of samples out
 Nthin <- 1                              # thin rate for emp/sim modes (leave at 1!)
 Nthin.ind <- 1                          # thin rate for verify mode
-Npar.vec <-2^(1:8)
+Npar.vec <-2^(1:4)
 source(paste0('models/',m,'/run_model.R'))
 ## Run multivariate normal, empirical and simulated
 
 
 
 ## Run multivariate normal, empirical and simulated
-m <- 'mvnd'                             # model name
-verify <- FALSE                         # whether to verify
-delta <- 0.8                            # adapt_delta for Stan
-Nout <- 1000                            # no. of samples out
-Nthin <- 1                              # thin rate for emp/sim modes (leave at 1!)
-Nthin.ind <- 1                          # thin rate for verify mode
-## Settings for simulation mode. cor is a factor for independent (0) or
-## from wishart (1) (see paper). Npar is how many parameters.
-cor.vec <- c(0,1)
-## Npar.vec <- c(5, 15, 25, 50, 100, 200, 300, 400)
-Npar.vec <- c(2,4,8,16,32,64, 128)
-source(paste0('models/',m,'/run_model.R'))
+##Npar.vec <- c(2,4,8,16,32,64, 128)
+Npar <- 5
+covar <- diag(Npar)
+data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
+inits <- lapply(1:1, function(i) list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar)))/2))
+run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=TRUE)
 ## Run multivariate normal, empirical and simulated
 
 ## Bounded MVN to test parameter transformations. Has 3 parameters, one

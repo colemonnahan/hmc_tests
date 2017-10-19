@@ -27,7 +27,7 @@ covar.est <- cov(samples)               # estimated mass matrix
 data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
 compile(paste0(m, '.cpp'))
 dyn.load(paste0(m))
-obj.tmb <- MakeADFun(data=data, parameters=inits[[1]])
+obj.tmb <- MakeADFun(data=data, parameters=inits[[1]], DLL=m)
 devtools::install("c:/users/cole/adnuts")
 x1 <- sample_tmb(obj.tmb, iter=2000, init=inits[[1]], control=list(metric=diag(5)))
 x2 <- sample_tmb(obj.tmb, iter=2000, init=inits[[1]], control=list(metric=covar))

@@ -10,8 +10,15 @@ library(reshape2)
 library(TMB)
 library(R2admb)
 library(shinystan)
+library(tmbstan)
 ggwidth <- 8
 ggheight <- 5
+
+## library(tmbstan)
+## TMB::runExample("simple")
+## fit <- tmbstan(obj, chains=1)
+## TMB::runExample("randomregression")
+## fit <- tmbstan(obj, chains=1)
 
 #' Run analysis for a single model
 #'
@@ -19,16 +26,16 @@ ggheight <- 5
 #' @param data Data list needed for model
 #' @param inits List of inits for model
 #' @param pars Character vector for pars
-run_model <- function(m, data, inits, pars,verify=FALSE, simulation=FALSE){
+run_model <- function(m, data, inits, pars,
+                      verify=FALSE, Nout.ind=1000, Nthin.ind=2,
+                      simulation=FALSE){
 
   oldwd <- getwd()
   on.exit(setwd(oldwd))
   setwd(paste0('models/',m))
 
   ## Compile Stan, TMB and ADMB models
-  obj.stan <- stan(file= paste0(m, '.stan'), data=data, iter=500,
-                   chains=1, init=list(inits[[1]]),
-                   control=list(adapt_engaged=TRUE))
+  obj.stan <- stan_model(file= paste0(m, '_stan.stan'))
   compile(paste0(m, '.cpp'))
   dyn.load(paste0(m))
   obj.tmb <- MakeADFun(data=data, parameters=inits[[1]], DLL=m)
@@ -37,8 +44,10 @@ run_model <- function(m, data, inits, pars,verify=FALSE, simulation=FALSE){
               col.names=FALSE )
   ## Don't need a good hessian since using adaptation now, so just run it a
   ## single iteration to get the files with names
-  system(paste('admb',m))
-  system(paste(m, ' -maxfn 1'))
+  if(!file.exists(paste0(m,'.exe'))) {
+    system(paste('admb',m))
+    system(paste(m, ' -maxfn 1'))
+  }
   setwd('..')
 
   if(verify)
@@ -356,20 +365,25 @@ plot.empirical.results <- function(perf, adapt){
 #' platform. As created by verify.model.
 #' @return ggplot object invisibly. Also makes plot in folder 'plots' in
 #' current working directory.
-plot.model.comparisons <- function(sims.stan, sims.tmb, sims.admb, perf.platforms=NULL){
+plot.model.comparisons <- function(sims.stan, sims.tmbstan, sims.tmb, sims.admb, perf.platforms=NULL){
   ## Clean up names so they match exactly
   names(sims.stan) <- gsub('\\.', '', x=names(sims.stan))
+  names(sims.tmbstan) <- gsub('\\.', '', x=names(sims.tmbstan))
   names(sims.tmb) <- gsub('\\.', '', x=names(sims.tmb))
   names(sims.admb) <- gsub('\\.', '', x=names(sims.admb))
-  sims.stan$lp__ <- sims.tmb$lp__ <- sims.admb$lp__ <- NULL
+  sims.stan$lp__ <- sims.tmbstan$lp__ <-
+    sims.tmb$lp__ <- sims.admb$lp__ <- NULL
   par.names <- names(sims.tmb)
   sims.stan <- sims.stan[,par.names]
   ## Massage qqplot results into long format for ggplot
   qq <- ldply(1:length(par.names), function(i){
     tmb <- as.data.frame(qqplot(sims.tmb[,i], sims.stan[,i], plot.it=FALSE))
+    tmbstan <- as.data.frame(qqplot(sims.tmbstan[,i], sims.stan[,i], plot.it=FALSE))
     admb <- as.data.frame(qqplot(sims.admb[,i], sims.stan[,i], plot.it=FALSE))
-    return(rbind(cbind(par=par.names[i], platform='tmb',tmb),
-            cbind(par=par.names[i], platform='admb',admb)))})
+    x <- data.frame(par=par.names[i], stan=tmb[,2], tmb=tmb[,1], tmbstan=tmbstan[,1], admb=admb[,1])
+    return(x)})
+  ## Melt it down
+  qq.long <- melt(qq, id.vars=c('par', 'stan'), variable.name='platform')
   ## Since can be too many parameters, break them up into pages. Stolen
   ## from
   ## http://stackoverflow.com/questions/22996911/segment-facet-wrap-into-multi-page-pdf
@@ -382,10 +396,10 @@ plot.model.comparisons <- function(sims.stan, sims.tmb, sims.admb, perf.platform
       width=ggwidth,height=ggheight)
   for(ii in 2:length(plotSequence)){
     start <- plotSequence[ii-1] + 1;   end <- plotSequence[ii]
-    tmp <- subset(qq, par %in% par.names[start:end])
-    g <- ggplot(tmp, aes(x,y, color=platform))+ geom_point(alpha=.5) +
-      geom_abline(slope=1, col='red') + facet_wrap('par',
-                                                   scales='free', nrow=5) + xlab('tmb')+ ylab('stan')
+    tmp <- subset(qq.long, par %in% par.names[start:end])
+    g <- ggplot(tmp, aes(stan, value, color=platform))+ geom_point(alpha=.5) +
+      geom_abline(slope=1, col='red') +
+      facet_wrap('par', scales='free', nrow=5) + xlab('stan')+ ylab('y')
     ## theme(axis.text.x=element_blank(), axis.text.y=element_blank())
     g <- g+ theme(text=element_text(size=7))
     print(g)
@@ -416,16 +430,19 @@ verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nth
   ## }
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
-  fit.stan <- stan(fit=obj.stan, data=data, iter=Niter, chains=1,
-                   thin=Nthin, init=inits)
+  fit.stan <- sampling(object=obj.stan, data=data, init=inits,
+                       iter=Niter, chains=1, thin=Nthin)
   sims.stan <- extract(fit.stan, permuted=FALSE)
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
+  fit.tmbstan <- tmbstan(obj=obj.tmb, iter=Niter, chains=1, thin=Nthin, init=inits)
+  sims.tmbstan <- extract(fit.tmbstan, permuted=FALSE)
+  perf.tmbstan <- data.frame(rstan::monitor(sims=sims.tmbstan, warmup=0, print=FALSE, probs=.5))
   fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
                init=inits[[1]], control=list(metric=NULL))
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
-  fit.admb <- sample_admb(dir='admb', model=model, iter=Niter,
+  fit.admb <- sample_admb(path='admb', model=model, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
                init=inits, control=list(metric=NULL))
   sims.admb <- fit.admb$samples[-(1:fit.admb$warmup),,,drop=FALSE]
@@ -434,10 +451,13 @@ verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nth
   perf.admb <- data.frame(rstan::monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
   perf.platforms <- rbind(cbind(platform='tmb',perf.tmb),
                           cbind(platform='admb',perf.admb),
-                          cbind(platform='stan',perf.stan))
+                          cbind(platform='tmbstan',perf.tmbstan),
+                          cbind(platform='stan',perf.stan)
+                          )
   perf.platforms <- melt(perf.platforms, c('Rhat', 'n_eff'), id.vars='platform')
   plot.model.comparisons(
     sims.stan=as.data.frame(sims.stan[,1,]),
+    sims.tmbstan=as.data.frame(sims.tmbstan[,1,]),
     sims.tmb=as.data.frame(sims.tmb[,1,]),
     sims.admb=as.data.frame(sims.admb[,1,]),
                          perf.platforms)
