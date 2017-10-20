@@ -52,22 +52,24 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
           verify=FALSE, simulation=TRUE, empirical=FALSE)
 
 
+## VB growth, simulated
+## Run independent normal with variable SDs
+m <- 'growth_nc'
+dat <-
+  sample.lengths(Nfish=30, n.ages=5)
+data <- list(Nfish=30, Nobs=nrow(dat), loglengths=dat$loglengths,
+                  fish=dat$fish, ages=dat$ages)
+inits <- function()
+  list(sigma_obs=runif(1, .01, .2), logLinf_mean=runif(1, 2, 5),
+       logk_mean=runif(1,-4,0), logLinf_sigma=runif(1, .01, .4),
+       logk_sigma=runif(1, .01, .4), logLinf=rnorm(30, 4, 1),
+       logk=rnorm(30, -2, 1))
+pars <- NULL
+obj.stan <- stan_model(file= 'models/growth_nc/growth_nc.stan')
+Npar.vec <- 2^(4+1:4)
+run_model(m='growth_nc', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
+          verify=FALSE, simulation=TRUE, empirical=FALSE)
 
-
-
-## Bounded MVN to test parameter transformations. Has 3 parameters, one
-## bounded above and below, one bounded only below, and one unbounded. ADMB
-## has to do the second case manually. Hence some funky code.
-m <- 'mvnb'
-verify <- TRUE
-delta <- 0.8
-Nout <- 1000
-Nthin <- 1
-Nthin.ind <- 10
-source(paste0('models/',m,'/run_model.R'))
-
-## Run multivariate normal, empirical and simulated
-m <- 'growth'
 verify <- TRUE
 delta <- 0.8
 Nout <- 500
