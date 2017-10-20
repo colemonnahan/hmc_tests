@@ -20,14 +20,15 @@ ggheight <- 5
 ## TMB::runExample("randomregression")
 ## fit <- tmbstan(obj, chains=1)
 
+
 #' Run analysis for a single model
 #'
 #' @param m Character for model name (also folder name)
 #' @param data Data list needed for model
 #' @param inits A function that generates a list of random starting values
 #' @param pars Character vector for pars
-run_model <- function(m, data, inits, pars, Nout=1000,
-                      verify=FALSE, Nout.ind=1000, Nthin.ind=2,
+run_model <- function(m, obj.stan, data, inits, pars, Nout=1000,
+                      verify=FALSE, empirical=TRUE, Nout.ind=1000, Nthin.ind=2,
                       delta=.8, metric='diag',
                       simulation=FALSE){
 
@@ -35,7 +36,7 @@ run_model <- function(m, data, inits, pars, Nout=1000,
   on.exit(setwd(oldwd))
   setwd(paste0('models/',m))
   ## Compile Stan, TMB and ADMB models
-  obj.stan <- stan_model(file= paste0(m, '_stan.stan'))
+  ## obj.stan <- stan_model(file= paste0(m, '_stan.stan'))
   compile(paste0(m, '.cpp'))
   dyn.load(paste0(m))
   obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m)
@@ -46,8 +47,8 @@ run_model <- function(m, data, inits, pars, Nout=1000,
   ## single iteration to get the files with names
   if(!file.exists(paste0(m,'.exe'))) {
     system(paste('admb',m))
-    system(paste(m, ' -maxfn 1'))
   }
+  system(paste(m, ' -maxfn 1 -nox'))
   setwd('..')
 
   if(verify)
@@ -64,13 +65,17 @@ run_model <- function(m, data, inits, pars, Nout=1000,
   ## Fit empirical data with no thinning for efficiency tests. Using Stan
   ## defaults for TMB and ADMB too: estimated diagonal mass matrix. I also
   ## dropped RWM since it wont work for mixed effects models
+  if(empirical)
   fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
                 delta=delta, metric=metric, seeds=seeds,
                 Nout=Nout, max_treedepth=12)
 
   ## If there is a simulation component put it in this file
-  if(FALSE)
+  if(simulation){
+    message('Starting simulation..')
+   ## run_simulation(obj.stan=obj.stan, model=m)
     source("simulation.R")
+    }
   message(paste('Finished with model:', m))
   setwd('../..')
 }
@@ -333,27 +338,27 @@ plot.simulated.results <- function(perf, adapt){
     model.name <- as.character(perf$model[1])
     perf.long <- melt(perf,
                       id.vars=c('model', 'platform', 'seed', 'Npar',
-                                'Nsims', 'metric', 'cor'),
+                                'Nsims', 'metric'),
                       measure.vars=c('time.total', 'minESS', 'efficiency'))
-    perf.long <- ddply(perf.long, .(platform, cor, Npar, variable), mutate,
+    perf.long <- ddply(perf.long, .(platform, Npar, variable), mutate,
                        mean.value=mean(value))
     g <- ggplot(perf.long, aes(Npar, log10(value), group=platform, color=platform)) +
         geom_point()+
             geom_line(data=perf.long, aes(Npar, log10(mean.value))) +
-                facet_grid(variable~cor, scales='free_y') + ggtitle("Performance Comparison")
+                facet_grid(variable~., scales='free_y') + ggtitle("Performance Comparison")
     ggsave(paste0('plots/', model.name, '_perf_simulated.png'), g, width=ggwidth, height=ggheight)
     adapt$pct.divergent <- with(adapt, ndivergent/Nsims)
     adapt$pct.max.treedepths <- with(adapt, max_treedepths/Nsims)
     adapt.long <- melt(adapt,
                       id.vars=c('model', 'platform', 'seed', 'Npar',
-                                'Nsims', 'cor'),
+                                'Nsims'),
                       measure.vars=c('delta.mean', 'eps.final',
                                      'pct.divergent', 'nsteps.mean'))
-    adapt.long <- ddply(adapt.long, .(platform, cor, Npar, variable), mutate,
+    adapt.long <- ddply(adapt.long, .(platform, Npar, variable), mutate,
                        mean.value=mean(value))
     g <- ggplot(adapt.long, aes(Npar, value, group=platform, color=platform)) +
         geom_point() + geom_line(data=adapt.long, aes(Npar, mean.value)) +
-                facet_grid(variable~cor, scales='free_y') + ggtitle("Adaptation Comparison")
+                facet_grid(variable~., scales='free_y') + ggtitle("Adaptation Comparison")
     ggsave(paste0('plots/',model.name, '_adapt_simulated.png'), g, width=ggwidth, height=ggheight)
 }
 
