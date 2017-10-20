@@ -112,15 +112,17 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
   ##   on.exit(sink())
   ## }
 
+
   for(seed in seeds){
     message(paste('==== Starting seed',seed, 'at', Sys.time()))
     set.seed(seed)
+    init.seed <- list(inits())
     for(idelta in delta){
       for(imetric in metric){
         fit.stan <-
           rstan::sampling(object=obj.stan, iter=Niter, data=data,
                warmup=Nwarmup, chains=1, thin=Nthin, algorithm='NUTS',
-               init=inits, seed=seed,
+               init=init.seed, seed=seed,
                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
                             metric=paste0(imetric,'_e'),
                             max_treedepth=max_treedepth))
@@ -158,7 +160,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
         fit.tmbstan <-
           tmbstan(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits(), seed=seed,
+               init=init.seed, seed=seed,
                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
                             metric=paste0(imetric,'_e'),
                             max_treedepth=max_treedepth))
@@ -195,7 +197,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
         ## Start of TMB run
         fit.tmb <-
           sample_tmb(obj=obj.tmb, iter=Niter, warmup=Nwarmup, chains=1, thin=Nthin,
-                     init=inits,
+                     init=init.seed,
                      control=list(metric=NULL, adapt_delta=idelta,
                                   max_treedepth=max_treedepth, adapt_mass=TRUE))
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
@@ -230,7 +232,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                      Rhat.tmb)
         k <- k+1
         fit.admb <- sample_admb(path='admb', model=model, iter=Niter, warmup=Nwarmup,
-                                init=inits, thin=Nthin, chains=1,
+                                init=init.seed, thin=Nthin, chains=1,
                                 control=list(metric=NULL, max_treedepth=max_treedepth, adapt_delta=idelta))
         sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
@@ -268,7 +270,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
           thin.rwm <- floor(adapt.list[[k-1]]$nsteps.mean * 2)
           fit.admb.rwm <-
             sample_admb(dir='admb', model=model, iter=thin.rwm*Niter, warmup=Nwarmup,
-                        init=inits.seed, chains=1, thin=thin.rwm*Nthin,
+                        init=init.seed, chains=1, thin=thin.rwm*Nthin,
                         algorithm='RWM', control=list(metric=NULL))
           sims.admb.rwm <- fit.admb.rwm$samples[-(1:Nwarmup),,, drop=FALSE]
           perf.admb.rwm <- data.frame(monitor(sims=sims.admb.rwm, warmup=0, print=FALSE, probs=.5))
@@ -291,10 +293,6 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
         ## End of ADMB model
       } # End loop over metric
     }   # end loop over adapt_delta
-    rm(fit.stan, sims.stan, perf.stan, adapt)
-    rm(fit.tmb, sims.tmb, perf.tmb)
-    rm(fit.admb, sims.admb, perf.admb)
-    ##  rm(fit.admb.rwm, sims.admb.rwm, perf.admb.rwm)
   }
   perf <- do.call(rbind.fill, perf.list)
   perf$efficiency <- perf$minESS/perf$time.total
