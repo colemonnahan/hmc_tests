@@ -31,7 +31,7 @@ Npar <- 16
 covar <- diag(Npar)
 data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
 inits <- function() list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar))))
-run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=FALSE)
+run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=TRUE)
 ## Run multivariate normal, empirical and simulated
 
 m <- 'iidz'                             # model name
