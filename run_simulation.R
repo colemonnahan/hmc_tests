@@ -20,7 +20,20 @@ sink <- FALSE
 ### ------------------------------------------------------------
 
 ### ------------------------------------------------------------
+
+
 ### Step 2: Run the models.
+
+
+## Run multivariate normal, empirical and simulated
+##Npar.vec <- c(2,4,8,16,32,64, 128)
+Npar <- 16
+covar <- diag(Npar)
+data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
+inits <- function() list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar))))
+run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=FALSE)
+## Run multivariate normal, empirical and simulated
+
 m <- 'iidz'                             # model name
 verify <- FALSE                         # whether to verify
 delta <- 0.8                            # adapt_delta for Stan
@@ -33,14 +46,6 @@ source(paste0('models/',m,'/run_model.R'))
 
 
 
-## Run multivariate normal, empirical and simulated
-##Npar.vec <- c(2,4,8,16,32,64, 128)
-Npar <- 5
-covar <- diag(Npar)
-data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
-inits <- lapply(1:1, function(i) list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar)))/2))
-run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=TRUE)
-## Run multivariate normal, empirical and simulated
 
 ## Bounded MVN to test parameter transformations. Has 3 parameters, one
 ## bounded above and below, one bounded only below, and one unbounded. ADMB

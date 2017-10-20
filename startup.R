@@ -24,21 +24,21 @@ ggheight <- 5
 #'
 #' @param m Character for model name (also folder name)
 #' @param data Data list needed for model
-#' @param inits List of inits for model
+#' @param inits A function that generates a list of random starting values
 #' @param pars Character vector for pars
-run_model <- function(m, data, inits, pars,
+run_model <- function(m, data, inits, pars, Nout=1000,
                       verify=FALSE, Nout.ind=1000, Nthin.ind=2,
+                      delta=.8, metric='diag',
                       simulation=FALSE){
 
   oldwd <- getwd()
   on.exit(setwd(oldwd))
   setwd(paste0('models/',m))
-
   ## Compile Stan, TMB and ADMB models
   obj.stan <- stan_model(file= paste0(m, '_stan.stan'))
   compile(paste0(m, '.cpp'))
   dyn.load(paste0(m))
-  obj.tmb <- MakeADFun(data=data, parameters=inits[[1]], DLL=m)
+  obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m)
   setwd('admb')
   write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
               col.names=FALSE )
@@ -54,26 +54,23 @@ run_model <- function(m, data, inits, pars,
     verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
                   pars=pars, inits=inits, data=data, Nout=Nout.ind,
                   Nthin=Nthin.ind)
-  ## Load initial values from those sampled above.
-  sims.ind <- readRDS(file='sims.ind.RDS')
-  sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
-  ## Setup inits for efficiency tests (fit.empirical). You need to adjust the
-  ## named arguments for each model.
-  inits <- lapply(1:length(seeds), function(i) list(mu=as.numeric(sims.ind[i,])))
+  ## ## Load initial values from those sampled above.
+  ## sims.ind <- readRDS(file='sims.ind.RDS')
+  ## sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
+  ## ## Setup inits for efficiency tests (fit.empirical). You need to adjust the
+  ## ## named arguments for each model.
+  ## inits <- lapply(1:length(seeds), function(i) list(mu=as.numeric(sims.ind[i,])))
 
   ## Fit empirical data with no thinning for efficiency tests. Using Stan
   ## defaults for TMB and ADMB too: estimated diagonal mass matrix. I also
   ## dropped RWM since it wont work for mixed effects models
   fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
-                delta=delta, metric='diag', seeds=seeds,
+                delta=delta, metric=metric, seeds=seeds,
                 Nout=Nout, max_treedepth=12)
 
   ## If there is a simulation component put it in this file
   if(FALSE)
     source("simulation.R")
-
-  rm(obj.stan, obj.tmb, data, inits, pars, lower, upper)
-  dyn.unload(m)
   message(paste('Finished with model:', m))
   setwd('../..')
 }
@@ -117,14 +114,13 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
 
   for(seed in seeds){
     message(paste('==== Starting seed',seed, 'at', Sys.time()))
-    inits.seed <- list(inits[[which(seed==seeds)]])
     set.seed(seed)
     for(idelta in delta){
       for(imetric in metric){
         fit.stan <-
-          stan(fit=obj.stan, iter=Niter, data=data,
+          rstan::sampling(object=obj.stan, iter=Niter, data=data,
                warmup=Nwarmup, chains=1, thin=Nthin, algorithm='NUTS',
-               init=inits.seed, seed=seed,
+               init=inits, seed=seed,
                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
                             metric=paste0(imetric,'_e'),
                             max_treedepth=max_treedepth))
@@ -158,11 +154,50 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                      minESS.coda=min(effectiveSize(as.data.frame(sims.stan[,1,]))),
                      Rhat.stan)
         k <- k+1
+        ## tmbstan
+        fit.tmbstan <-
+          tmbstan(obj=obj.tmb, iter=Niter,
+               warmup=Nwarmup, chains=1, thin=Nthin,
+               init=inits(), seed=seed,
+               control=list(adapt_engaged=TRUE, adapt_delta=idelta,
+                            metric=paste0(imetric,'_e'),
+                            max_treedepth=max_treedepth))
+        sims.tmbstan <- extract(fit.tmbstan, permuted=FALSE)
+        perf.tmbstan <- data.frame(monitor(sims=sims.tmbstan, warmup=0, print=FALSE, probs=.5))
+        Rhat.tmbstan <- with(perf.tmbstan, data.frame(Rhat.min=min(Rhat), Rhat.max=max(Rhat), Rhat.median=median(Rhat)))
+        adapt <- as.data.frame(get_sampler_params(fit.tmbstan, inc_warmup=FALSE))
+        adapt.list[[k]] <-
+          data.frame(platform='tmbstan', seed=seed,
+                     Npar=dim(sims.tmbstan)[3]-1,
+                     Nsims=dim(sims.tmbstan)[1],
+                     delta.mean=mean(adapt$accept_stat__),
+                     delta.target=idelta,
+                     eps.final=tail(adapt$stepsize__,1),
+                     max_treedepths=sum(adapt$treedepth__>max_treedepth),
+                     ndivergent=sum(adapt$divergent__),
+                     nsteps.mean=mean(adapt$n_leapfrog__),
+                     nsteps.median=median(adapt$n_leapfrog__),
+                     nsteps.sd=sd(adapt$n_leapfrog__),
+                     metric=imetric)
+        perf.list[[k]] <-
+          data.frame(platform='tmbstan',
+                     seed=seed, delta.target=idelta, metric=imetric,
+                     eps.final=tail(adapt$stepsize__,1),
+                     Npar=dim(sims.tmbstan)[3]-1,
+                     time.warmup= get_elapsed_time(fit.tmbstan)[1],
+                     time.total= sum(get_elapsed_time(fit.tmbstan)),
+                     minESS=min(perf.tmbstan$n_eff),
+                     medianESS=median(perf.tmbstan$n_eff),
+                     Nsims=dim(sims.tmbstan)[1],
+                     minESS.coda=min(effectiveSize(as.data.frame(sims.tmbstan[,1,]))),
+                     Rhat.tmbstan)
+        k <- k+1
         ## Start of TMB run
         fit.tmb <-
           sample_tmb(obj=obj.tmb, iter=Niter, warmup=Nwarmup, chains=1, thin=Nthin,
-                     init=inits.seed[[1]], control=list(metric=NULL,
-                                                        adapt_delta=idelta, max_treedepth=max_treedepth, adapt_mass=TRUE))
+                     init=inits,
+                     control=list(metric=NULL, adapt_delta=idelta,
+                                  max_treedepth=max_treedepth, adapt_mass=TRUE))
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
         sims.tmb <- fit.tmb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.tmb <- data.frame(monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
@@ -194,8 +229,8 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                      minESS.coda=min(effectiveSize(as.data.frame(sims.tmb[,1,]))),
                      Rhat.tmb)
         k <- k+1
-        fit.admb <- sample_admb(dir='admb', model=model, iter=Niter, warmup=Nwarmup,
-                                init=inits.seed, thin=Nthin,
+        fit.admb <- sample_admb(path='admb', model=model, iter=Niter, warmup=Nwarmup,
+                                init=inits, thin=Nthin, chains=1,
                                 control=list(metric=NULL, max_treedepth=max_treedepth, adapt_delta=idelta))
         sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
@@ -281,8 +316,8 @@ fit.empirical <- function(obj.stan, obj.tmb, model, pars, inits, data, seeds,
                Nthin=Nthin, inits=inits, pars=pars,
                sink.console=sink.console, ...)
   with(results.empirical, plot.empirical.results(perf, adapt))
-  write.csv(file=paste0(m, '_adapt_empirical.csv'), results.empirical$adapt)
-  write.csv(file=paste0(m, '_perf_empirical.csv'), results.empirical$perf)
+  write.csv(file=paste0(model, '_adapt_empirical.csv'), results.empirical$adapt)
+  write.csv(file=paste0(model, '_perf_empirical.csv'), results.empirical$perf)
 }
 
 #' Make plots comparing the performance of simulated data for a model.
@@ -434,12 +469,12 @@ verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nth
                        iter=Niter, chains=1, thin=Nthin)
   sims.stan <- extract(fit.stan, permuted=FALSE)
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
-  fit.tmbstan <- tmbstan(obj=obj.tmb, iter=Niter, chains=1, thin=Nthin, init=inits)
+  fit.tmbstan <- tmbstan(obj=obj.tmb, iter=Niter, chains=1, thin=Nthin, init=inits())
   sims.tmbstan <- extract(fit.tmbstan, permuted=FALSE)
   perf.tmbstan <- data.frame(rstan::monitor(sims=sims.tmbstan, warmup=0, print=FALSE, probs=.5))
   fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits[[1]], control=list(metric=NULL))
+               init=inits, control=list(metric=NULL))
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
   fit.admb <- sample_admb(path='admb', model=model, iter=Niter,
