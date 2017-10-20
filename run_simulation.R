@@ -30,7 +30,7 @@ covar <- diag(Npar)
 data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
 inits <- function() list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar))))
 obj.stan <- stan_model(file= 'models/mvnd/mvnd.stan')
-run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=TRUE)
+run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=FALSE)
 
 ## Run iid normal increasing in size
 ## Setup data, inits and pars
@@ -38,11 +38,10 @@ data <- list(n=5, x=rep(0, 5))
 inits <- function() list(mu=rnorm(5))
 pars <- 'mu'
 obj.stan <- stan_model(file= 'models/iidz/iidz.stan')
-Npar.vec <- 2^(3+1:4)
+Npar.vec <- 2^(4+1:4)
 run_model(m='iidz', obj.stan=obj.stan, data=data, inits=inits, pars=pars, verify=FALSE,
           simulation=TRUE, empirical=FALSE)
 
-## Run multivariate normal, empirical and simulated
 
 
 

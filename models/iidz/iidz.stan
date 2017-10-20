@@ -9,3 +9,4 @@ parameters {
 model {
   x~normal(mu,1.0);
 }
+
