@@ -8,7 +8,7 @@
 main.dir <- 'C:/Users/Cole/hmc_tests/'
 setwd(main.dir)
 source("startup.R")
-Nreps <- 3                 # number of replicates
+Nreps <- 4                 # number of replicates
 Nout.ind <- 1000            # number of independent samples if verify==TRUE
 set.seed(241)
 seeds <- 1:Nreps#sample(1:1e5, size=Nreps)         #
@@ -20,33 +20,40 @@ sink <- FALSE
 ### ------------------------------------------------------------
 
 ### ------------------------------------------------------------
+
+
 ### Step 2: Run the models.
-m <- 'iidz'                             # model name
-verify <- FALSE                         # whether to verify
-delta <- 0.8                            # adapt_delta for Stan
-Nout <- 500                            # no. of samples out
-Nthin <- 1                              # thin rate for emp/sim modes (leave at 1!)
-Nthin.ind <- 1                          # thin rate for verify mode
-Npar.vec <-2^(1:8)
-source(paste0('models/',m,'/run_model.R'))
 ## Run multivariate normal, empirical and simulated
+##Npar.vec <- c(2,4,8,16,32,64, 128)
+Npar <- 16
+covar <- diag(Npar)
+data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
+inits <- function() list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar))))
+obj.stan <- stan_model(file= 'models/mvnd/mvnd.stan')
+run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=FALSE)
+
+## Run iid normal increasing in size
+## Setup data, inits and pars
+data <- list(n=5, x=rep(0, 5))
+inits <- function() list(mu=rnorm(5))
+pars <- 'mu'
+obj.stan <- stan_model(file= 'models/iidz/iidz.stan')
+Npar.vec <- 2^(4+1:4)
+run_model(m='iidz', obj.stan=obj.stan, data=data, inits=inits, pars=pars, verify=FALSE,
+          simulation=TRUE, empirical=FALSE)
+
+## Run independent normal with variable SDs
+data <- list(n=5, x=rep(0, 5), sds=1:5)
+inits <- function() list(mu=rnorm(5))
+pars <- 'mu'
+obj.stan <- stan_model(file= 'models/zdiag/zdiag.stan')
+Npar.vec <- 2^(4+1:4)
+run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
+          verify=FALSE, simulation=TRUE, empirical=FALSE)
 
 
 
-## Run multivariate normal, empirical and simulated
-m <- 'mvnd'                             # model name
-verify <- FALSE                         # whether to verify
-delta <- 0.8                            # adapt_delta for Stan
-Nout <- 1000                            # no. of samples out
-Nthin <- 1                              # thin rate for emp/sim modes (leave at 1!)
-Nthin.ind <- 1                          # thin rate for verify mode
-## Settings for simulation mode. cor is a factor for independent (0) or
-## from wishart (1) (see paper). Npar is how many parameters.
-cor.vec <- c(0,1)
-## Npar.vec <- c(5, 15, 25, 50, 100, 200, 300, 400)
-Npar.vec <- c(2,4,8,16,32,64, 128)
-source(paste0('models/',m,'/run_model.R'))
-## Run multivariate normal, empirical and simulated
+
 
 ## Bounded MVN to test parameter transformations. Has 3 parameters, one
 ## bounded above and below, one bounded only below, and one unbounded. ADMB

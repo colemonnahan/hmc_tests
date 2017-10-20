@@ -1,12 +1,13 @@
 data {
   int<lower=0> n;
   vector[n] x;
+  vector[n] sds;
 }
 parameters {
   vector[n] mu;
 }
 
 model {
-  x~normal(mu,1.0);
+  x~normal(mu,sds);
 }
 

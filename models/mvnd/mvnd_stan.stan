@@ -6,7 +6,6 @@ data {
 parameters {
   vector[Npar] mu;
 }
-
 model {
   x~multi_normal(mu, covar);
 }

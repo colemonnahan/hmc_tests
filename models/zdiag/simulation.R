@@ -1,5 +1,5 @@
 ## Generate simulated data
-m <- 'iidz'
+m <- 'zdiag'
 adapt.list <- perf.list <- list()
 k <- 1
 for(i in seq_along(Npar.vec)){
@@ -7,7 +7,7 @@ for(i in seq_along(Npar.vec)){
   message(paste("======== Starting Npar=", Npar))
 
   ## Update data, inits and model objects
-  data <- list(n=Npar, x=rep(0, Npar))
+  data <- list(n=Npar, x=rep(0, Npar), sds=1:Npar)
   inits <- function(i) list(mu=rnorm(Npar))
   obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m)
   setwd('admb')
