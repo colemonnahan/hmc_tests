@@ -21,43 +21,44 @@ Type objective_function<Type>::operator() ()
   // non-centered random effects
   PARAMETER_VECTOR(logLinf_raw);
   PARAMETER_VECTOR(logk_raw);
-  vector<Type> logk_raw(Nfish);
 
   // transform random effects
-  vector<Type> logk_raw(Nfish);
-  vector<Type> logLinf_raw(Nfish);
+  vector<Type> logk(Nfish);
+  vector<Type> logLinf(Nfish);
   logLinf = logLinf_mean+logLinf_raw*logLinf_sigma;
   logk = logk_mean+logk_raw*logk_sigma;
 
   // Calculate predicted lengths
-  vector<Type> ypred;
-  Type Linf;
-  Type k;
-  for(i in 1:Nobs){
-    Linf  = exp(logLinf(fish(i)));
-    k = exp(logk(fish(i)));
-    ypred(i) = log( Linf*(1-exp(-k*(ages(i)-5)))^delta );
+  vector<Type> ypred(Nobs);
+  Type Linf; Type k;
+  for(int i=0; i<Nobs; i++){
+    Linf  = exp(logLinf(fish(i)-1));
+    k = exp(logk(fish(i)-1));
+    ypred(i) = log( Linf*pow(1-exp(-k*(ages(i)-5)),delta) );
   }
 
-  Type logprior=0.0;
-  Type loglikelihood=0.0;
+  Type nlp=0.0; // negative log prior
+  Type nll=0.0; // negative log likelihood
 
   // delta is uniform above
-  sigma_obs~cauchy(0,5);
+  nlp -= dnorm(sigma_obs, Type(0), Type(5), true);
+
 
   // hyperpriors
-  logLinf_sigma~cauchy(0,5);
-  logk_sigma~cauchy(0,5);
+  nlp -= dnorm(logk_sigma, Type(0), Type(5), true);
+  nlp -= dnorm(logLinf_sigma, Type(0), Type(5), true);
   // hyper means are uniform above
 
   // random effects; non-centered
-  logLinf_raw~normal(0, 1);
-  logk_raw~normal(0, 1);
+  nll-=dnorm(logLinf_raw, Type(0), Type(1), true).sum();
+  nll-=dnorm(logk_raw, Type(0), Type(1), true).sum();
 
-  // calculate likelihood of data
+  // likelihood of data
+  nll-=dnorm(ypred, loglengths, sigma_obs, true).sum();
+  //Type nll= -1*dnorm(mu, x, Type(1.0), true).sum();
 
-  loglengths~normal(ypred, sigma_obs);
+  Type nld=nll+nlp; // negative log density
 
-    Type nll= -1*dnorm(mu, x, Type(1.0), true).sum();
-  return(nll);
+  REPORT(ypred);
+  return(nld);
 }

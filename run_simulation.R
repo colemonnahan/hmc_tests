@@ -55,15 +55,34 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
 ## VB growth, simulated
 ## Run independent normal with variable SDs
 m <- 'growth_nc'
+N <- 100
 dat <-
-  sample.lengths(Nfish=30, n.ages=5)
-data <- list(Nfish=30, Nobs=nrow(dat), loglengths=dat$loglengths,
+  sample.lengths(Nfish=N, n.ages=5)
+data <- list(Nfish=N, Nobs=nrow(dat), loglengths=dat$loglengths,
                   fish=dat$fish, ages=dat$ages)
 inits <- function()
-  list(sigma_obs=runif(1, .01, .2), logLinf_mean=runif(1, 2, 5),
+  list(delta=runif(1, 0,2), sigma_obs=runif(1, .01, .2), logLinf_mean=runif(1, 2, 5),
        logk_mean=runif(1,-4,0), logLinf_sigma=runif(1, .01, .4),
-       logk_sigma=runif(1, .01, .4), logLinf=rnorm(30, 4, 1),
-       logk=rnorm(30, -2, 1))
+       logk_sigma=runif(1, .01, .4), logLinf_raw=rnorm(N, 0, 1),
+       logk_raw=rnorm(N, 0, 1))
+
+setwd(paste0('models/',m))
+compile(paste0(m, '.cpp'))
+dyn.load(paste0(m))
+obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m,
+                     random=c("logk_raw", "logLinf_raw"))
+
+lower <- abs(unlist(inits()))*-Inf
+upper <- abs(unlist(inits()))*Inf
+#lower <- upper <- NULL
+lower[c('delta','sigma_obs', 'logLinf_sigma', 'logk_sigma')] <- 0
+lower[c('logLinf_mean', 'logk_mean')] <- -5
+upper[c('delta', 'logLinf_mean', 'logk_mean')] <- 5
+opt <- nlminb(obj.tmb$par, obj.tmb$fn, obj.tmb$gr, lower=lower, upper=upper)
+rr <- obj.tmb$report()
+
+test <- tmbstan(obj=obj.tmb, chains=1, lower=lower, upper=upper)
+test <- sample_tmb(obj.tmb, chains=1, lower=lower, upper=upper, init=inits)
 pars <- NULL
 obj.stan <- stan_model(file= 'models/growth_nc/growth_nc.stan')
 Npar.vec <- 2^(4+1:4)
