@@ -29,8 +29,8 @@ ggheight <- 5
 #' @param pars Character vector for pars
 run_model <- function(m, obj.stan, data, inits, pars, Nout=1000,
                       verify=FALSE, empirical=TRUE, Nout.ind=1000, Nthin.ind=2,
-                      delta=.8, metric='diag',
-                      simulation=FALSE){
+                      delta=.8, metric='diag', simulation=FALSE, admb.columns=NULL,
+                      lower=NULL, upper=NULL){
 
   oldwd <- getwd()
   on.exit(setwd(oldwd))
@@ -48,13 +48,13 @@ run_model <- function(m, obj.stan, data, inits, pars, Nout=1000,
   if(!file.exists(paste0(m,'.exe'))) {
     system(paste('admb',m))
   }
-  system(paste(m, ' -maxfn 1 -nox'))
+  system(paste(m, ' -maxfn 1 -nox -nohess'))
   setwd('..')
 
   if(verify)
     verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
                   pars=pars, inits=inits, data=data, Nout=Nout.ind,
-                  Nthin=Nthin.ind)
+                  Nthin=Nthin.ind, admb.columns=admb.columns, lower=lower, upper=upper)
   ## ## Load initial values from those sampled above.
   ## sims.ind <- readRDS(file='sims.ind.RDS')
   ## sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
@@ -67,7 +67,7 @@ run_model <- function(m, obj.stan, data, inits, pars, Nout=1000,
   ## dropped RWM since it wont work for mixed effects models
   if(empirical)
   fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
-                delta=delta, metric=metric, seeds=seeds,
+                delta=delta, metric=metric, seeds=seeds, lower=lower, upper=upper,
                 Nout=Nout, max_treedepth=12)
 
   ## If there is a simulation component put it in this file
@@ -101,8 +101,9 @@ run_model <- function(m, obj.stan, data, inits, pars, Nout=1000,
 #' @return A list of two data frames. adapt is the adaptive results from
 #' Stan, and perf is the performance metrics for each run.
 run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
-                       metric='diag', data, inits, pars,
-                       sink.console=FALSE, max_treedepth=12, useRWM=FALSE){
+                       metric='diag', data, inits, pars, lower=NULL,
+                       upper=NULL, sink.console=FALSE, max_treedepth=12,
+                       useRWM=FALSE){
   if(Nthin!=1) stop('this probably breaks if Nthin!=1')
   stopifnot(metric=='diag')
   Niter <- 2*Nout*Nthin
@@ -116,8 +117,6 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
   ##   sink(file='trash.txt', append=FALSE, type='output')
   ##   on.exit(sink())
   ## }
-
-
   for(seed in seeds){
     message(paste('==== Starting seed',seed, 'at', Sys.time()))
     set.seed(seed)
@@ -162,11 +161,13 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                      Rhat.stan)
         k <- k+1
         ## tmbstan
+        lwr <- if(is.null(lower)) numeric(0) else lower
+        upr <- if(is.null(upper)) numeric(0) else upper
         fit.tmbstan <-
           tmbstan(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=init.seed, seed=seed,
-               control=list(adapt_engaged=TRUE, adapt_delta=idelta,
+               init=init.seed, seed=seed, lower=lwr, upper=upr,
+                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
                             metric=paste0(imetric,'_e'),
                             max_treedepth=max_treedepth))
         sims.tmbstan <- extract(fit.tmbstan, permuted=FALSE)
@@ -202,7 +203,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
         ## Start of TMB run
         fit.tmb <-
           sample_tmb(obj=obj.tmb, iter=Niter, warmup=Nwarmup, chains=1, thin=Nthin,
-                     init=init.seed,
+                     init=init.seed, lower=lower, upper=upper,
                      control=list(metric=NULL, adapt_delta=idelta,
                                   max_treedepth=max_treedepth, adapt_mass=TRUE))
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
@@ -308,7 +309,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
 
 #' Verify models and then run empirical tests across delta
 fit.empirical <- function(obj.stan, obj.tmb, model, pars, inits, data, seeds,
-                          delta, model.stan, Nout,  metric,
+                          delta, model.stan, Nout,  metric, lower, upper,
                           Nthin=1, sink.console=FALSE, ...){
     ## Now rerun across gradient of acceptance rates and compare to JAGS
   message('Starting empirical runs')
@@ -316,7 +317,7 @@ fit.empirical <- function(obj.stan, obj.tmb, model, pars, inits, data, seeds,
     run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=model, seeds=seeds,
                Nout=Nout,
                metric=metric, delta=delta, data=data,
-               Nthin=Nthin, inits=inits, pars=pars,
+               Nthin=Nthin, inits=inits, pars=pars, lower=lower, upper=upper,
                sink.console=sink.console, ...)
   with(results.empirical, plot.empirical.results(perf, adapt))
   write.csv(file=paste0(model, '_adapt_empirical.csv'), results.empirical$adapt)
@@ -460,7 +461,8 @@ plot.model.comparisons <- function(sims.stan, sims.tmbstan, sims.tmb, sims.admb,
 #'   for bounded (0, Inf) parameters. Thus exponentiate these columns to
 #'   match TMB and Stan.
 verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nthin,
-                          sink.console=TRUE, dir=NULL, admb.columns=NULL, ...){
+                          sink.console=TRUE, dir=NULL, admb.columns=NULL,
+                          lower=NULL, upper=NULL){
   message('Starting independent runs')
   ## if(sink.console){
   ##   sink(file='trash.txt', append=FALSE, type='output')
@@ -472,11 +474,14 @@ verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nth
                        iter=Niter, chains=1, thin=Nthin)
   sims.stan <- extract(fit.stan, permuted=FALSE)
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
-  fit.tmbstan <- tmbstan(obj=obj.tmb, iter=Niter, chains=1, thin=Nthin, init=inits())
+  lwr <- if(is.null(lower)) numeric(0) else lower
+  upr <- if(is.null(upper)) numeric(0) else upper
+  fit.tmbstan <- tmbstan(obj=obj.tmb, iter=Niter, chains=1, thin=Nthin,
+                         init=list(inits()), lower=lwr, upper=upr)
   sims.tmbstan <- extract(fit.tmbstan, permuted=FALSE)
   perf.tmbstan <- data.frame(rstan::monitor(sims=sims.tmbstan, warmup=0, print=FALSE, probs=.5))
   fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
-               warmup=Nwarmup, chains=1, thin=Nthin,
+               warmup=Nwarmup, chains=1, thin=Nthin, lower=lower, upper=upper,
                init=inits, control=list(metric=NULL))
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))

@@ -62,6 +62,18 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
   #ifndef NO_AD_INITIALIZE
     ypred.initialize();
   #endif
+  sigma_obs2.allocate("sigma_obs2");
+  #ifndef NO_AD_INITIALIZE
+  sigma_obs2.initialize();
+  #endif
+  logk_sigma2.allocate("logk_sigma2");
+  #ifndef NO_AD_INITIALIZE
+  logk_sigma2.initialize();
+  #endif
+  logLinf_sigma2.allocate("logLinf_sigma2");
+  #ifndef NO_AD_INITIALIZE
+  logLinf_sigma2.initialize();
+  #endif
   Linf.allocate("Linf");
   #ifndef NO_AD_INITIALIZE
   Linf.initialize();
@@ -86,9 +98,11 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
 void model_parameters::initializationfunction(void)
 {
   delta.set_initial_value(1);
-  sigma_obs.set_initial_value(.1);
-  logLinf_sigma.set_initial_value(.1);
-  logk_sigma.set_initial_value(.1);
+  sigma_obs.set_initial_value(-2.3);
+  logLinf_sigma.set_initial_value(-2.3);
+  logk_sigma.set_initial_value(-2.3);
+  logk_mean.set_initial_value(-2.3);
+  logLinf_mean.set_initial_value(3.9);
 }
 
 void model_parameters::userfunction(void)
@@ -96,8 +110,13 @@ void model_parameters::userfunction(void)
   nld =0.0;
  nlp=0.0;
  nll=0.0;
- logLinf = logLinf_mean+logLinf_raw*logLinf_sigma;
- logk = logk_mean+logk_raw*logk_sigma;
+ // Exponentiate sds since ADMB can't do (0,Inf) bounds. Need to adjust for
+ // Jacobian below
+ sigma_obs2=exp(sigma_obs);
+ logLinf_sigma2=exp(logLinf_sigma);
+ logk_sigma2=exp(logk_sigma);
+ logLinf = logLinf_mean+logLinf_raw*logLinf_sigma2;
+ logk = logk_mean+logk_raw*logk_sigma2;
  double zero=0.0; double five=5.0;
   // Calculate predicted lengths
   for(int i=1; i<=Nobs; i++){
@@ -106,19 +125,21 @@ void model_parameters::userfunction(void)
     ypred(i) = log( Linf*pow(1-exp(-k*(ages(i)-5)),delta) );
   }
   // delta is uniform above
-  nlp += dcauchy(sigma_obs, zero, five);
+  nlp += dcauchy(sigma_obs2, zero, five);
   // hyperpriors
-  nlp += dcauchy(logk_sigma, zero, five);
-  nlp += dcauchy(logLinf_sigma, zero, five);
+  nlp += dcauchy(logk_sigma2, zero, five);
+  nlp += dcauchy(logLinf_sigma2, zero, five);
   // hyper means are uniform above
+  // Jacobian adjustment for variances
+  nll -= sigma_obs + logk_sigma + logLinf_sigma;
   // random effects; non-centered
   nll+=dnorm(logLinf_raw, 0,1);
   nll+=dnorm(logk_raw, 0,1);
   // likelihood of data
    dvariable SS=norm2(loglengths-ypred);
-   dvariable tmp=Nobs*(0.5*log(2.*M_PI)+log(sigma_obs))+0.5*SS/(sigma_obs*sigma_obs);
+   dvariable tmp=Nobs*(0.5*log(2.*M_PI)+log(sigma_obs2))+0.5*SS/(sigma_obs2*sigma_obs2);
   nll+=tmp;
-  // for(int i=1; i<=Nobs; i++){	  
+  // for(int i=1; i<=Nobs; i++){
   //   nll+=dnorm(loglengths(i), ypred(i), sigma_obs);
   // }
   nld=nll+nlp; // negative log density

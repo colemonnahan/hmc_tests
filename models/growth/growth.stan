@@ -1,4 +1,4 @@
-data {
+	data {
   int<lower=0> Nfish; // number of groups
   int<lower=0> Nobs;   // number of observations
   vector[Nobs] loglengths;  // observed log cpue
@@ -11,8 +11,8 @@ parameters {
   real<lower=0> sigma_obs; // data on log scale
 
   // hyperparameters with bounds
-  real<lower=-5, upper=5> logLinf_mean;
-  real<lower=-5, upper=5> logk_mean;
+  real logLinf_mean;
+  real logk_mean;
   real<lower=0> logLinf_sigma;
   real<lower=0> logk_sigma;
 
