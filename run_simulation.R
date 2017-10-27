@@ -65,13 +65,14 @@ inits <- function()
        logk_mean=runif(1,-4,0), logLinf_sigma=runif(1, .01, .4),
        logk_sigma=runif(1, .01, .4), logLinf_raw=rnorm(N, 0, 1),
        logk_raw=rnorm(N, 0, 1))
-
 setwd(paste0('models/',m))
 compile(paste0(m, '.cpp'))
 dyn.load(paste0(m))
 obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m,
                      random=c("logk_raw", "logLinf_raw"))
-
+setwd('admb')
+write.table(file='growth_nc.dat', x=unlist(data), row.names=FALSE, col.names=FALSE)
+setwd('..')
 lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
 #lower <- upper <- NULL
@@ -81,6 +82,7 @@ upper[c('delta', 'logLinf_mean', 'logk_mean')] <- 5
 opt <- nlminb(obj.tmb$par, obj.tmb$fn, obj.tmb$gr, lower=lower, upper=upper)
 rr <- obj.tmb$report()
 
+test <- sample_admb('growth', path='admb', iter=2000, init=inits)
 test <- tmbstan(obj=obj.tmb, chains=1, lower=lower, upper=upper)
 test <- sample_tmb(obj.tmb, chains=1, lower=lower, upper=upper, init=inits)
 pars <- NULL
