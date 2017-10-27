@@ -55,7 +55,7 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
 ## VB growth, simulated
 ## Run independent normal with variable SDs
 m <- 'growth_nc'
-N <- 100
+N <- 30
 dat <-
   sample.lengths(Nfish=N, n.ages=5)
 data <- list(Nfish=N, Nobs=nrow(dat), loglengths=dat$loglengths,
