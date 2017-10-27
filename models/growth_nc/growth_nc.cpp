@@ -1,4 +1,16 @@
 #include <TMB.hpp>
+
+// Hand-coded Cauchy distribution
+template<class Type>
+Type dcauchy(Type x, Type mean, Type shape, int give_log=0){
+  Type logres = 0.0;
+  logres-= log(M_PI);
+  logres-= log(shape);
+  // Note, this is unstable and should switch to log1p formulation
+  logres-= log(1 + pow( (x-mean)/shape ,2));
+  if(give_log) return logres; else return exp(logres);
+}
+
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
@@ -41,12 +53,11 @@ Type objective_function<Type>::operator() ()
   Type nll=0.0; // negative log likelihood
 
   // delta is uniform above
-  nlp -= dnorm(sigma_obs, Type(0), Type(5), true);
-
+  nlp -= dcauchy(sigma_obs, Type(0), Type(5), true);
 
   // hyperpriors
-  nlp -= dnorm(logk_sigma, Type(0), Type(5), true);
-  nlp -= dnorm(logLinf_sigma, Type(0), Type(5), true);
+  nlp -= dcauchy(logk_sigma, Type(0), Type(5), true);
+  nlp -= dcauchy(logLinf_sigma, Type(0), Type(5), true);
   // hyper means are uniform above
 
   // random effects; non-centered
