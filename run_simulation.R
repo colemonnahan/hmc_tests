@@ -58,13 +58,14 @@ m <- 'growth'
 temp <- growth_setup(N=30, seed=2345)
 data <- temp$data
 inits <- temp$inits
+Npar.vec <- 2^(3+1:3)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
 lower[c('delta','sigma_obs', 'logLinf_sigma', 'logk_sigma')] <- 0
 upper[c('delta')] <- 5
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
-          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
+          verify=TRUE, simulation=TRUE, empirical=FALSE, Nthin.ind=1,
           lower=lower, upper=upper, admb.columns=c(2,5,6))
 
 ### ------------------------------------------------------------

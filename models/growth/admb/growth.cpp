@@ -125,6 +125,7 @@ void model_parameters::userfunction(void)
     ypred(i) = log( Linf*pow(1-exp(-k*(ages(i)-5)),delta) );
   }
   // delta is uniform above
+  nlp += dnorm(delta, 1, 0.25);
   nlp += dcauchy(sigma_obs2, zero, five);
   // hyperpriors
   nlp += dcauchy(logk_sigma2, zero, five);
