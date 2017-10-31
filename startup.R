@@ -126,7 +126,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
         fit.stan <-
           rstan::sampling(object=obj.stan, iter=Niter, data=data,
                warmup=Nwarmup, chains=1, thin=Nthin, algorithm='NUTS',
-               init=init.seed, seed=seed, pars=names(init.seed),
+               init=init.seed, seed=seed, pars=names(init.seed[[1]]),
                control=list(adapt_engaged=TRUE, adapt_delta=idelta,
                             metric=paste0(imetric,'_e'),
                             max_treedepth=max_treedepth))
