@@ -1,3 +1,4 @@
+
 ## Load libraries, functions, and global variables
 ## devtools::install('C:/Users/Cole/adnuts')
 ## devtools::document('C:/Users/Cole/adnuts')
@@ -27,7 +28,7 @@ ggheight <- 5
 #' @param data Data list needed for model
 #' @param inits A function that generates a list of random starting values
 #' @param pars Character vector for pars
-run_model <- function(m, obj.stan, data, inits, pars, Nout=1000,
+run_model <- function(m, obj.stan, data, inits, Nout=1000,
                       verify=FALSE, empirical=TRUE, Nout.ind=1000, Nthin.ind=2,
                       delta=.8, metric='diag', simulation=FALSE, admb.columns=NULL,
                       lower=NULL, upper=NULL){
@@ -531,6 +532,20 @@ make.acf <- function(df, model, string){
         title(names(df)[i], line=-1)
     }
     dev.off()
+}
+
+wildflower_setup <- function(){
+  data <- readRDS('models/wildflower/data.RDS')
+  inits <- function()
+    list(yearInterceptSD = runif(1, .5, 1.5),
+         plantInterceptSD = runif(1, .5, 1.5),
+         plantSlopeSD = runif(1, .5, 1.5),
+         intercept = rnorm(data$Nstage, 0, 1),
+         slope = rnorm(1, 0, 10),
+         yearInterceptEffect_raw= rnorm(data$Nyear, 0, 1),
+         plantInterceptEffect_raw= rnorm(data$Nplant, 0, 1),
+         plantSlopeEffect_raw= rnorm(data$Nplant, 0, 1))
+  return(list(data=data, inits=inits))
 }
 
 
