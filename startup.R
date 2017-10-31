@@ -533,7 +533,20 @@ make.acf <- function(df, model, string){
     dev.off()
 }
 
+
 ## Growth model functions
+growth_setup <- function(N, seed){
+  set.seed(seed)
+  dat <- sample.lengths(Nfish=N, n.ages=5)
+  data <- list(Nfish=N, Nobs=nrow(dat), loglengths=dat$loglengths,
+               fish=dat$fish, ages=dat$ages)
+  inits <- function()
+    list(delta=runif(1, .5,1.5), sigma_obs=runif(1, .01, .2), logLinf_mean=runif(1, 2, 5),
+         logk_mean=runif(1,-4,0), logLinf_sigma=runif(1, .01, .4),
+         logk_sigma=runif(1, .01, .4), logLinf_raw=rnorm(N, 0, 1),
+         logk_raw=rnorm(N, 0, 1))
+  return(list(data=data, inits=inits))
+}
 sample.vbgf <- function(ages, Linf, k,  t0, sigma.obs){
     lengths <- Linf*(1-exp(-k*(ages-t0)))
     loglengths <- log(lengths)+ rnorm(n=length(lengths), mean=0, sd=sigma.obs)

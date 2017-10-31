@@ -55,32 +55,14 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
 ## VB growth, simulated
 ## Run independent normal with variable SDs
 m <- 'growth'
-N <- 30
-dat <-
-  sample.lengths(Nfish=N, n.ages=5)
-data <- list(Nfish=N, Nobs=nrow(dat), loglengths=dat$loglengths,
-                  fish=dat$fish, ages=dat$ages)
-inits <- function()
-  list(delta=runif(1, 0,2), sigma_obs=runif(1, .01, .2), logLinf_mean=runif(1, 2, 5),
-       logk_mean=runif(1,-4,0), logLinf_sigma=runif(1, .01, .4),
-       logk_sigma=runif(1, .01, .4), logLinf_raw=rnorm(N, 0, 1),
-       logk_raw=rnorm(N, 0, 1))
-## setwd(paste0('models/',m))
-## compile(paste0(m, '.cpp'))
-## dyn.load(paste0(m))
-## obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m,
-##                      random=c("logk_raw", "logLinf_raw"))
-## setwd('admb')
-## write.table(file='growth.dat', x=unlist(data), row.names=FALSE, col.names=FALSE)
-## setwd('../../..')
+temp <- growth_setup(N=30, seed=2345)
+data <- temp$data
+inits <- temp$inits
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
-#lower <- upper <- NULL
 lower[c('delta','sigma_obs', 'logLinf_sigma', 'logk_sigma')] <- 0
 upper[c('delta')] <- 5
-## test <- sampling(obj.stan, iter=500, data=data)
-
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
           verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
           lower=lower, upper=upper, admb.columns=c(2,5,6))
