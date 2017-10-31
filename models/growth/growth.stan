@@ -35,7 +35,7 @@ model {
   real k;
 
   // priors
-  // delta is uniform above
+  delta~normal(1,.25);
   sigma_obs~cauchy(0,5);
 
   // hyperpriors

@@ -53,6 +53,7 @@ Type objective_function<Type>::operator() ()
   Type nll=0.0; // negative log likelihood
 
   // delta is uniform above
+  nlp -= dnorm(delta, Type(1.0), Type(0.25), true);
   nlp -= dcauchy(sigma_obs, Type(0), Type(5), true);
 
   // hyperpriors

@@ -25,7 +25,7 @@ DATA_SECTION
   init_ivector ages(1,Nobs);
 
 PARAMETER_SECTION
-  init_bounded_number delta(.5,5);
+  init_bounded_number delta(0,5);
   init_number sigma_obs;
   init_number logLinf_mean;
   init_number logk_mean;
@@ -74,6 +74,7 @@ PROCEDURE_SECTION
     ypred(i) = log( Linf*pow(1-exp(-k*(ages(i)-5)),delta) );
   }
   // delta is uniform above
+  nlp += dnorm(delta, 1, 0.25);
   nlp += dcauchy(sigma_obs2, zero, five);
 
   // hyperpriors
