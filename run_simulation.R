@@ -64,9 +64,24 @@ lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
 lower[c('delta','sigma_obs', 'logLinf_sigma', 'logk_sigma')] <- 0
 upper[c('delta')] <- 5
-run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, pars=pars,
+run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits,
           verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=1,
           lower=lower, upper=upper, admb.columns=c(2,5,6))
+
+## Wildflower
+m <- 'wildflower'
+temp <- wildflower_setup()
+data <- temp$data
+inits <- temp$inits
+obj.stan <- stan_model(file= 'models/wildflower/wildflower.stan')
+lower <- abs(unlist(inits()))*-Inf
+upper <- abs(unlist(inits()))*Inf
+lower[c('yearInterceptSD','plantInterceptSD', 'plantSlopeSD')] <- 0
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
+          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
+          lower=lower, upper=upper, admb.columns=c(1,2,3))
+
+
 
 ### ------------------------------------------------------------
 ### Step 3: Load and prepare result data frames for plotting and tables
