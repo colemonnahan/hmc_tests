@@ -1,30 +1,0 @@
-Compiling model graph
-   Resolving undeclared variables
-   Allocating nodes
-Graph information:
-   Observed stochastic nodes: 3634
-   Unobserved stochastic nodes: 1101
-   Total graph size: 30729
-
-Initializing model
-
-  |                                                          |                                                  |   0%  |                                                          |**                                                |   4%  |                                                          |****                                              |   8%  |                                                          |******                                            |  12%  |                                                          |********                                          |  16%  |                                                          |**********                                        |  20%  |                                                          |************                                      |  24%  |                                                          |**************                                    |  28%  |                                                          |****************                                  |  32%  |                                                          |******************                                |  36%  |                                                          |********************                              |  40%  |                                                          |**********************                            |  44%  |                                                          |************************                          |  48%  |                                                          |**************************                        |  52%  |                                                          |****************************                      |  56%  |                                                          |******************************                    |  60%  |                                                          |********************************                  |  64%  |                                                          |**********************************                |  68%  |                                                          |************************************              |  72%  |                                                          |**************************************            |  76%  |                                                          |****************************************          |  80%  |                                                          |******************************************        |  84%  |                                                          |********************************************      |  88%  |                                                          |**********************************************    |  92%  |                                                          |************************************************  |  96%  |                                                          |**************************************************| 100%
-
-SAMPLING FOR MODEL 'wildflower_nc' NOW (CHAIN 1).
-
-Chain 1, Iteration:    1 / 2000 [  0%]  (Warmup)
-Chain 1, Iteration:  200 / 2000 [ 10%]  (Warmup)
-Chain 1, Iteration:  400 / 2000 [ 20%]  (Warmup)
-Chain 1, Iteration:  600 / 2000 [ 30%]  (Warmup)
-Chain 1, Iteration:  800 / 2000 [ 40%]  (Warmup)
-Chain 1, Iteration: 1000 / 2000 [ 50%]  (Warmup)
-Chain 1, Iteration: 1001 / 2000 [ 50%]  (Sampling)
-Chain 1, Iteration: 1200 / 2000 [ 60%]  (Sampling)
-Chain 1, Iteration: 1400 / 2000 [ 70%]  (Sampling)
-Chain 1, Iteration: 1600 / 2000 [ 80%]  (Sampling)
-Chain 1, Iteration: 1800 / 2000 [ 90%]  (Sampling)
-Chain 1, Iteration: 2000 / 2000 [100%]  (Sampling)
- Elapsed Time: 65.838 seconds (Warm-up)
-               61.864 seconds (Sampling)
-               127.702 seconds (Total)
-
