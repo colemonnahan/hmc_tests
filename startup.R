@@ -537,7 +537,7 @@ make.acf <- function(df, model, string){
 swallows_setup <- function(){
   data <- readRDS('models/swallows/data.RDS')
   inits <- function()
-    list(a=rnorm(len=data$K-1, 3, 1), a1=rnorm(1, .5, 1),
+    list(a=rnorm(data$K-1, 3, 1), a1=rnorm(1, .5, 1),
          b0=rnorm(4, 3, sd=1), b1=rnorm(4, 0, .15),
          sigmayearphi=runif(1, 0, 2), sigmaphi=runif(1,0,2),
          sigmap=runif(1,0,2),
