@@ -534,6 +534,19 @@ make.acf <- function(df, model, string){
     dev.off()
 }
 
+swallows_setup <- function(){
+  data <- readRDS('models/swallows/data.RDS')
+  inits <- function()
+    list(a=rnorm(len=data$K-1, 3, 1), a1=rnorm(1, .5, 1),
+         b0=rnorm(4, 3, sd=1), b1=rnorm(4, 0, .15),
+         sigmayearphi=runif(1, 0, 2), sigmaphi=runif(1,0,2),
+         sigmap=runif(1,0,2),
+         fameffphi_raw=rnorm(data$nfam,0,1),
+         fameffp_raw=rnorm(data$nfam,0,1),
+         yeareffphi_raw=rnorm(4, 0,1))
+  return(list(data=data, inits=inits))
+}
+
 wildflower_setup <- function(){
   data <- readRDS('models/wildflower/data.RDS')
   inits <- function()
