@@ -23,9 +23,9 @@ parameters {
   real b1[4];                  // slope for age per year for p
   real a[K-1];                   // intercept of phi
   real a1;                     // coef of phi
-  real<lower=0, upper=5> sigmaphi;      // between family standard deviation in logit(phi)
-  real<lower=0, upper=3> sigmayearphi;  // between-year standard deviation in logit(phi)
-  real<lower=0, upper=5> sigmap;        // between family standard deviation in logit(p)
+  real<lower=0> sigmaphi;      // between family standard deviation in logit(phi)
+  real<lower=0> sigmayearphi;  // between-year standard deviation in logit(phi)
+  real<lower=0> sigmap;        // between family standard deviation in logit(p)
   real fameffphi_raw[nfam];        // family effects for phi
   real fameffp_raw[nfam];          // family effects for p
   real yeareffphi_raw[4];          // year effect on phi
@@ -66,13 +66,13 @@ transformed parameters {
 
 model {
   // priors, vectorized
-  b0~normal(0, 5);
-  b1~normal(0, 5);
+  b0~normal(0,5);
+  b1~normal(0,5);
   a~normal(0,5);
-  a1~normal(0,5);
-  sigmaphi~student_t(2,0,1);
-  sigmayearphi~student_t(2,0,1);
-  sigmap~student_t(2,0,1);
+  a1~normal(0,10);
+  sigmaphi~cauchy(0,1);
+  sigmayearphi~cauchy(0,1);
+  sigmap~cauchy(0,1);
   // random effects, vectorized
   fameffphi_raw~normal(0, 1);
   fameffp_raw~normal(0,1);
