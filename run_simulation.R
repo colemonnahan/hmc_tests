@@ -81,6 +81,18 @@ run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
           verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
           lower=lower, upper=upper, admb.columns=c(1,2,3))
 
+## Swallows bird count data
+m <- 'swallows'
+temp <- swallows_setup()
+data <- temp$data
+inits <- temp$inits
+lower <- abs(unlist(inits()))*-Inf
+upper <- abs(unlist(inits()))*Inf
+lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
+obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
+          verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=1,
+          lower=lower, upper=upper, admb.columns=c(1,2,3))
 
 
 ### ------------------------------------------------------------
