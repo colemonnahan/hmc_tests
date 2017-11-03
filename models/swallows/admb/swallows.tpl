@@ -18,7 +18,7 @@ GLOBALS_SECTION
   return logres;
  }
  dvariable inv_logit(const dvariable& x){
-  dvariable y= 1/(1+exp(-x));
+  dvariable y= 1/(1+mfexp(-x));
   return y;
  }
 
@@ -27,7 +27,9 @@ DATA_SECTION
   init_number I;
   init_number K;
   init_int nfam;
-  init_matrix CH(1,I,1,K);
+  // For some reason ADMB reads this in the wrong order. So just go with it
+  // and transpose below.
+  init_matrix CH0(1,K,1,I);
   init_vector carez(1,I);
   init_ivector year(1,I);
   init_vector agec(1,K);
@@ -35,6 +37,9 @@ DATA_SECTION
   init_ivector last(1,I);
   init_imatrix ones(1,I,1,K);
   init_ivector ones2(1,I);
+  matrix CH(1,I,1,K);
+  !! CH = trans(CH0);
+  // !! cout << CH << endl;
 
 PARAMETER_SECTION
 // fixed effects -- bounds added in R
@@ -57,7 +62,6 @@ PARAMETER_SECTION
   number x;
   number nlp;
   number nll;
-
   matrix p(1,I,1,K);
   matrix phi(1,I,1,K-1);
   matrix chi(1,I,1,K+1);
@@ -83,15 +87,15 @@ PROCEDURE_SECTION
   // calculate phi as a function of fixed and random effects
   for(int t=1; t<=(K-1); t++) {
     x=a(t)+ a1*carez(i)+
-      sigmayearphi*yeareffphi_raw(year(i))+
-      sigmaphi*fameffphi_raw(family(i));
+      sigmayearphi2*yeareffphi_raw(year(i))+
+      sigmaphi2*fameffphi_raw(family(i));
     phi(i,t) = inv_logit(x);
   }
   // calculate p as a function of fixed and random effects
   p(i,1) = 1;  // first occasion is marking occasion
-  for(int t=1; t<K; t++){
+  for(int t=2; t<=K; t++){
     x=b0(year(i))+ b1(year(i))*agec(t)+
-      sigmap*fameffp_raw(family(i));
+      sigmap2*fameffp_raw(family(i));
     p(i,t) = inv_logit(x);
   }
   // probabilitiy of never being seen after last observation. ind here is
@@ -143,9 +147,5 @@ PROCEDURE_SECTION
     // ones2[i]~bernoulli(chi[i,last[i]+1]);
      nll-= log(chi(i,last(i)+1));
   }
-
-
  nld=nll+nlp; // negative log density
 
-REPORT_SECTION
- cout << endl << nll << " " << nlp << endl;

@@ -23,7 +23,7 @@
   return logres;
  }
  dvariable inv_logit(const dvariable& x){
-  dvariable y= 1/(1+exp(-x));
+  dvariable y= 1/(1+mfexp(-x));
   return y;
  }
 #include <admodel.h>
@@ -36,30 +36,32 @@
 
 model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
 {
-  K.allocate("K");
   I.allocate("I");
-  CH.allocate(1,I,1,K,"CH");
+  K.allocate("K");
+  nfam.allocate("nfam");
+  CH0.allocate(1,K,1,I,"CH0");
   carez.allocate(1,I,"carez");
   year.allocate(1,I,"year");
   agec.allocate(1,K,"agec");
   family.allocate(1,I,"family");
-  nfam.allocate("nfam");
+  last.allocate(1,I,"last");
   ones.allocate(1,I,1,K,"ones");
   ones2.allocate(1,I,"ones2");
-  last.allocate(1,I,"last");
+  CH.allocate(1,I,1,K);
+ CH = trans(CH0);
 }
 
 model_parameters::model_parameters(int sz,int argc,char * argv[]) : 
  model_data(argc,argv) , function_minimizer(sz)
 {
   initializationfunction();
+  sigmayearphi.allocate("sigmayearphi");
+  sigmaphi.allocate("sigmaphi");
+  sigmap.allocate("sigmap");
   a.allocate(1,17,"a");
   a1.allocate("a1");
   b0.allocate(1,4,"b0");
   b1.allocate(1,4,"b1");
-  sigmayearphi.allocate("sigmayearphi");
-  sigmaphi.allocate("sigmaphi");
-  sigmap.allocate("sigmap");
   fameffphi_raw.allocate(1,72,"fameffphi_raw");
   fameffp_raw.allocate(1,72,"fameffp_raw");
   yeareffphi_raw.allocate(1,4,"yeareffphi_raw");
@@ -127,15 +129,15 @@ void model_parameters::userfunction(void)
   // calculate phi as a function of fixed and random effects
   for(int t=1; t<=(K-1); t++) {
     x=a(t)+ a1*carez(i)+
-      sigmayearphi*yeareffphi_raw(year(i))+
-      sigmaphi*fameffphi_raw(family(i));
+      sigmayearphi2*yeareffphi_raw(year(i))+
+      sigmaphi2*fameffphi_raw(family(i));
     phi(i,t) = inv_logit(x);
   }
   // calculate p as a function of fixed and random effects
   p(i,1) = 1;  // first occasion is marking occasion
-  for(int t=1; t<K; t++){
+  for(int t=2; t<=K; t++){
     x=b0(year(i))+ b1(year(i))*agec(t)+
-      sigmap*fameffp_raw(family(i));
+      sigmap2*fameffp_raw(family(i));
     p(i,t) = inv_logit(x);
   }
   // probabilitiy of never being seen after last observation. ind here is
@@ -186,18 +188,6 @@ void model_parameters::userfunction(void)
  nld=nll+nlp; // negative log density
 }
 
-void model_parameters::report(const dvector& gradients)
-{
- adstring ad_tmp=initial_params::get_reportfile_name();
-  ofstream report((char*)(adprogram_name + ad_tmp));
-  if (!report)
-  {
-    cerr << "error trying to open report file"  << adprogram_name << ".rep";
-    return;
-  }
- cout << endl << nll << " " << nlp << endl;
-}
-
 void model_parameters::preliminary_calculations(void){
 #if defined(USE_ADPVM)
 
@@ -211,6 +201,8 @@ model_data::~model_data()
 
 model_parameters::~model_parameters()
 {}
+
+void model_parameters::report(const dvector& gradients){}
 
 void model_parameters::final_calcs(void){}
 
