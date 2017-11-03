@@ -92,7 +92,7 @@ lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
           verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=1,
-          lower=lower, upper=upper, admb.columns=c(27,28,29))
+          lower=lower, upper=upper, admb.columns=c(1,2,3))
 
 
 ### ------------------------------------------------------------
@@ -102,4 +102,8 @@ source('load_data.R')
 source('make_plots.R')
 ### End of Step 3.
 ### ------------------------------------------------------------
+
+## options(mc.cores=parallel::detectCores()-1)
+## test <- stan('models/swallows/swallows.stan', data=data, init=inits, iter=700, chains=3,
+##                  pars=names(inits()))
 
