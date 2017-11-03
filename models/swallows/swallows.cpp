@@ -20,27 +20,26 @@ Type inv_logit(Type x){
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
-  DATA_INTEGER(K);
   DATA_INTEGER(I);
-  DATA_MATRIX(CH);
-  DATA_IVECTOR(last);
-  DATA_MATRIX(ones);
-  DATA_VECTOR(ones2);
+  DATA_INTEGER(K);
   DATA_INTEGER(nfam);
-  DATA_IVECTOR(family);
+  DATA_MATRIX(CH);
   DATA_VECTOR(carez);
   DATA_IVECTOR(year);
   DATA_VECTOR(agec);
+  DATA_IVECTOR(family);
+  DATA_IVECTOR(last);
+  DATA_MATRIX(ones);
+  DATA_VECTOR(ones2);
 
   // fixed effects -- bounds added in R
+  PARAMETER(sigmayearphi);
+  PARAMETER(sigmaphi);
+  PARAMETER(sigmap);
   PARAMETER_VECTOR(a);
   PARAMETER(a1);
   PARAMETER_VECTOR(b0);
   PARAMETER_VECTOR(b1);
-  PARAMETER(sigmayearphi);
-  PARAMETER(sigmaphi);
-  PARAMETER(sigmap);
-
   // non-centered random effects
   PARAMETER_VECTOR(fameffphi_raw);
   PARAMETER_VECTOR(fameffp_raw);
@@ -55,7 +54,7 @@ Type objective_function<Type>::operator() ()
   p.setZero();
   phi.setZero();
   chi.setZero();
-  
+
   int k;
   Type x;
   // TMB indexes from 0 not 1, so need to be careful to adjust that
@@ -91,7 +90,7 @@ Type objective_function<Type>::operator() ()
   nlp-= dnorm(b0, Type(0.0), Type(5), true).sum();
   nlp-= dnorm(b1, Type(0.0), Type(5), true).sum();
   nlp-= dnorm(a, Type(0.0), Type(5), true).sum();
-  nlp-= dnorm(a1, Type(0.0), Type(5), true).sum();
+  nlp-= dnorm(a1, Type(0.0), Type(5), true);
   nlp-= dcauchy(sigmaphi, Type(0), Type(1.0));
   nlp-= dcauchy(sigmayearphi, Type(0), Type(1.0));
   nlp-= dcauchy(sigmap, Type(0), Type(1.0));

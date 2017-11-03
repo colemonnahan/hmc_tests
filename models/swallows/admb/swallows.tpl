@@ -24,32 +24,30 @@ GLOBALS_SECTION
 
 
 DATA_SECTION
-  init_number K;
   init_number I;
+  init_number K;
+  init_int nfam;
   init_matrix CH(1,I,1,K);
   init_vector carez(1,I);
   init_ivector year(1,I);
   init_vector agec(1,K);
   init_ivector family(1,I);
-  init_int nfam;
+  init_ivector last(1,I);
   init_imatrix ones(1,I,1,K);
   init_ivector ones2(1,I);
-  // init_ivector ind(1,17);
-  init_ivector last(1,I);
 
 PARAMETER_SECTION
 // fixed effects -- bounds added in R
+  init_number sigmayearphi;
+  init_number sigmaphi;
+  init_number sigmap;
   init_vector a(1,17);
   init_number a1;
   init_vector b0(1,4);
   init_vector b1(1,4);
-  init_number sigmayearphi;
-  init_number sigmaphi;
-  init_number sigmap;
-
   // non-centered random effects
   init_vector fameffphi_raw(1,72);
-  init_vector fameffp_raw(1,72);	  
+  init_vector fameffp_raw(1,72);
   init_vector yeareffphi_raw(1,4);
 
   // exponentiated versions of variance parameters since ADMB can't do lower bounds

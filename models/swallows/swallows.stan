@@ -3,29 +3,28 @@
 
 // Last updated on 3/29/2016
 data {
-  int<lower=2> K;                       // capture events
   int<lower=0> I;                       // number of individuals
-  int<lower=0,upper=1> CH[I,K];         // CH[i,k]: individual i captured at k
-  int<lower=0> last[I];                 // vector of last time the bird was seen
-  int ones[I,K];			// matrix of 1's, for use in "ones trick"
-  int ones2[I];				// vector of 1's, for use in "ones trick"
+  int<lower=2> K;                       // capture events
   int<lower=0> nfam;                    // number of families
-  int<lower=0, upper=nfam> family[I];   // index of group variable
+  int<lower=0,upper=1> CH[I,K];         // CH[i,k]: individual i captured at k
   vector[I] carez;                     // covariable, duration of parental care, z-trans.
   int<lower=1,upper=4> year[I];         // index of year
   vector[K] agec;                      // age of fledling, centered
-  int<lower=0> ind[K-1];	       // reverse index for calculating chi
+  int<lower=0, upper=nfam> family[I];   // index of group variable
+  int<lower=0> last[I];                 // vector of last time the bird was seen
+  int ones[I,K];			// matrix of 1's, for use in "ones trick"
+  int ones2[I];				// vector of 1's, for use in "ones trick"
 }
 
 
 parameters {
-  real b0[4];                  // intercepts per year for p
-  real b1[4];                  // slope for age per year for p
-  real a[K-1];                   // intercept of phi
-  real a1;                     // coef of phi
   real<lower=0> sigmaphi;      // between family standard deviation in logit(phi)
   real<lower=0> sigmayearphi;  // between-year standard deviation in logit(phi)
   real<lower=0> sigmap;        // between family standard deviation in logit(p)
+  real a[K-1];                   // intercept of phi
+  real a1;                     // coef of phi
+  real b0[4];                  // intercepts per year for p
+  real b1[4];                  // slope for age per year for p
   real fameffphi_raw[nfam];        // family effects for phi
   real fameffp_raw[nfam];          // family effects for p
   real yeareffphi_raw[4];          // year effect on phi

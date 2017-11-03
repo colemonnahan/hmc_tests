@@ -92,7 +92,7 @@ lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
           verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=1,
-          lower=lower, upper=upper, admb.columns=c(1,2,3))
+          lower=lower, upper=upper, admb.columns=c(27,28,29))
 
 
 ### ------------------------------------------------------------
