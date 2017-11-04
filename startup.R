@@ -534,6 +534,14 @@ make.acf <- function(df, model, string){
     dev.off()
 }
 
+spatial_setup <- function(){
+  data <- readRDS('models/spatial/spatial_data.RDS')
+  inits <- function()
+    list(b = c(0,0), a = 1.428571, log_sigma = -0.6931472, u = rep(0,n))
+  return(list(data=data, inits=inits))
+}
+
+
 swallows_setup <- function(){
   data <- readRDS('models/swallows/data.RDS')
   inits <- function()

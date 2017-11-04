@@ -91,9 +91,24 @@ upper <- abs(unlist(inits()))*Inf
 lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
-          verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=1,
+          verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=3,
+          Nout.ind=500,
           lower=lower, upper=upper, admb.columns=c(1,2,3))
 
+## Simulated spatial model, TMB example
+m <- 'spatial'
+temp <- swallows_setup()
+data <- temp$data
+inits <- temp$inits
+lower <- abs(unlist(inits()))*-Inf
+upper <- abs(unlist(inits()))*Inf
+lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
+temp <- spatial_setup()
+data <- temp$data; inits <- temp$inits
+obj <- MakeADFun(data=data, parameters=inits(), DLL = "spatial", random = "u")
+opt <- nlminb(obj$par, obj$fn, obj$gr,
+              lower=c(-100.0, -100.0, 0.01, -3.0),
+              upper=c( 100.0,  100.0, 3.00,  3.0) )
 
 ### ------------------------------------------------------------
 ### Step 3: Load and prepare result data frames for plotting and tables
