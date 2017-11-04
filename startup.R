@@ -536,8 +536,13 @@ make.acf <- function(df, model, string){
 
 spatial_setup <- function(){
   data <- readRDS('models/spatial/spatial_data.RDS')
+  ## Normalize covariates, recommended to improve sampling
+  data$X[,2] <- (data$X[,2]-mean(data$X[,2]))/sd(data$X[,2])
+  data$X[,1] <- 1 ## why is this 0.1?
   inits <- function()
-    list(b = c(0,0), a = 1.428571, log_sigma = -0.6931472, u = rep(0,n))
+    list(b=rnorm(2, mean=0, sd=1),
+         a=runif(1, 0, 2),
+         sigma=runif(1, 0, 1), u=rnorm(data$n,0,1))
   return(list(data=data, inits=inits))
 }
 
