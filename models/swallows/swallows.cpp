@@ -91,9 +91,9 @@ Type objective_function<Type>::operator() ()
   nlp-= dnorm(b1, Type(0.0), Type(5), true).sum();
   nlp-= dnorm(a, Type(0.0), Type(1.5), true).sum();
   nlp-= dnorm(a1, Type(0.0), Type(5), true);
-  nlp-= dcauchy(sigmaphi, Type(0), Type(1.0));
-  nlp-= dnorm(sigmayearphi, Type(0), Type(0.5));
-  nlp-= dcauchy(sigmap, Type(0), Type(1.0));
+  nlp-= dcauchy(sigmaphi, Type(0), Type(1.0), true);
+  nlp-= dnorm(sigmayearphi, Type(0), Type(0.5), true);
+  nlp-= dcauchy(sigmap, Type(0), Type(1.0), true);
 
   // random effects; non-centered
   nll-=dnorm(fameffphi_raw, Type(0.0), Type(1.0), true).sum();

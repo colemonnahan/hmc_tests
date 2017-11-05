@@ -91,7 +91,7 @@ upper <- abs(unlist(inits()))*Inf
 lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
-          verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=3,
+          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=3,
           Nout.ind=500,
           lower=lower, upper=upper, admb.columns=c(1,2,3))
 
