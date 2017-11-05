@@ -103,12 +103,12 @@ Type objective_function<Type>::operator() ()
   // // likelihood
   for(int i=0; i<I; i++){ // loop over each individual
     // probability of survival, known alive since k<last
-    for (int t=1; t< (last(i)-1); t++) {
+    for (int t=1; t<last(i); t++) {
       // ones[i,t]~bernoulli(phi[i, t-1]);
     	nll-= log(phi(i,t-1));
     }
     // // probability of observation given known alive
-    for(int t=0; t<last(i); t++){
+    for(int t=0; t< last(i); t++){
       // CH[i,t]~bernoulli(p[i,t]);
       if(CH(i,t)==1){
     	nll-= log(p(i,t));
