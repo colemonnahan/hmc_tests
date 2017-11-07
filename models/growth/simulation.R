@@ -17,7 +17,7 @@ for(i in seq_along(Npar.vec)){
   system(paste(m))
   setwd('..')
   ## Run with updated model size
-  temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m,
+  temp <- run.chains(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, delta=0.9,
                      data=data, inits=inits, pars=pars, metric='diag', seeds=seeds,
                      Nout=1000, Nthin=1)
   adapt.list[[k]] <- cbind(temp$adapt)
