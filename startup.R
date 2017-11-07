@@ -603,7 +603,7 @@ sample.vbgf <- function(ages, Linf, k,  t0, sigma.obs){
 sample.ages <- function(n.ages, t0, Ntime) {sample((t0+1):Ntime, size=n.ages, replace=FALSE)}
 sample.lengths <- function(Nfish, n.ages, logLinf.mean=log(50), logLinf.sigma=.1,
                            logk.mean=log(.1), logk.sigma=.1, sigma.obs=.1,
-                           t0=6, Ntime=40){
+                           t0=5, Ntime=40){
     Linf.vec <- exp(logLinf.mean + rnorm(n=Nfish, 0, sd=logLinf.sigma))
     k.vec <- exp(logk.mean +rnorm(n=Nfish, mean=0, sd=logk.sigma))
     dat <- ldply(1:Nfish, function(i)
