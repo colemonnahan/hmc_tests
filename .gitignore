@@ -1,3 +1,4 @@
+models/*/fits/*_verify.RDS
 *.Rhistory
 *admodel.*
 *admodel_original.cov
