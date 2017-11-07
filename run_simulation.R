@@ -25,7 +25,7 @@ sink <- FALSE
 ### Step 2: Run the models.
 ## Run multivariate normal, empirical and simulated
 ##Npar.vec <- c(2,4,8,16,32,64, 128)
-Npar <- 16
+swalNpar <- 16
 covar <- diag(Npar)
 data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
 inits <- function() list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar))))
@@ -90,10 +90,9 @@ lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
 lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
-run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
-          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=3,
-          Nout.ind=500,
-          lower=lower, upper=upper, admb.columns=c(1,2,3))
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
+          verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=1,
+          Nout.ind=500, lower=lower, upper=upper, admb.columns=c(1,2,3))
 
 ## Simulated spatial model, TMB example
 m <- 'spatial'
