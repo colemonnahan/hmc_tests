@@ -3,9 +3,18 @@ m <- c('ss_logistic', 'wildflower_nc', 'redkite', 'growth_nc', 'swallows', 'mvnc
 ##     geom_point(aes(delta.target, log(samples.per.time))) + facet_wrap('model', scales='free_y')
 ## ggsave('plots/optimal_delta.png', g, width=ggwidth, height=ggheight)
 
-ggplot(simulated, aes(Npar, y=median.efficiency, color=platform)) +
+g <- ggplot(simulated, aes(Npar, y=median.efficiency, color=platform)) +
   geom_line() + facet_wrap("model") + scale_y_log10() +
   geom_pointrange(aes(ymin=lwr.efficiency, ymax=upr.efficiency))
+ggsave('plots/efficiency_simulated.png', g, width=ggwidth, height=ggheight)
+
+g <- ggplot(simulated, aes(Npar, y=time.total, color=platform)) +
+  geom_point() + facet_wrap("model") + scale_y_log10()
+ggsave('plots/runtime_simulated.png', g, width=ggwidth, height=ggheight)
+
+g <- ggplot(simulated, aes(Npar, y=log10(minESS), color=platform)) +
+  geom_point() + facet_wrap("model") + scale_y_log10()
+ggsave('plots/ESS_simulated.png', g, width=ggwidth, height=ggheight)
 
 g <- ggplot(empirical, aes(minESS, y=minESS.coda, group=platform, color=platform))  +
   scale_x_log10()+scale_y_log10()+
@@ -24,7 +33,7 @@ ggsave('plots/runtime.png', g, width=ggwidth, height=ggheight)
 g <- ggplot(empirical, aes(platform, y=Rhat.max))  +
   geom_point()+ facet_wrap('model') +
     theme(axis.text.x = element_text(angle = 90))
-ggsave('plots/runtime.png', g, width=ggwidth, height=ggheight)
+ggsave('plots/Rhat.png', g, width=ggwidth, height=ggheight)
 
 g <- ggplot(subset(mvn.means, model=='mvnd'),
             aes(log10(Npar), log10(mean.efficiency))) +
