@@ -75,7 +75,7 @@ obj.stan <- stan_model(file= 'models/wildflower/wildflower.stan')
 lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
 lower[c('yearInterceptSD','plantInterceptSD', 'plantSlopeSD')] <- 0
-run_model(m=m, obj.stan=obj.stan, data=data, inits=inits,
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
           verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
           lower=lower, upper=upper, admb.columns=c(1,2,3))
 
