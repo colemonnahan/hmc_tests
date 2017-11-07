@@ -39,8 +39,8 @@ for(i in seq_along(Npar.vec)){
     perf <-  do.call(rbind, perf.list)
     adapt <- do.call(rbind, adapt.list)
     plot.simulated.results(perf, adapt)
-    write.csv(x=perf, file=paste0(m,'_perf_simulated.csv'))
-    write.csv(x=adapt, file=paste0(m,'_adapt_simulated.csv'))
+    write.csv(x=perf, file=file.path(main.dir, 'results', paste0(m,'_perf_simulated.csv')))
+    write.csv(x=adapt, file=file.path(main.dir, 'results', paste0(m,'_adapt_simulated.csv')))
     rm(temp)
     k <- k+1
   }
