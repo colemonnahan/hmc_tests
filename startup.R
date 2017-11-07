@@ -54,7 +54,7 @@ run_model <- function(m, obj.stan, data, inits, Nout=1000,
 
   if(verify)
     verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
-                  pars=pars, inits=inits, data=data, Nout=Nout.ind,
+                  pars=pars, inits=inits, data=data, Nout=Nout.ind, delta=delta,
                   Nthin=Nthin.ind, admb.columns=admb.columns, lower=lower, upper=upper )
   ## ## Load initial values from those sampled above.
   ## sims.ind <- readRDS(file='sims.ind.RDS')
@@ -462,7 +462,7 @@ plot.model.comparisons <- function(sims.stan, sims.tmbstan, sims.tmb, sims.admb,
 #'   for bounded (0, Inf) parameters. Thus exponentiate these columns to
 #'   match TMB and Stan.
 verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nthin,
-                          sink.console=TRUE, dir=NULL, admb.columns=NULL,
+                          sink.console=TRUE, dir=NULL, admb.columns=NULL, delta,
                           lower=NULL, upper=NULL){
   message('Starting independent runs')
   ## if(sink.console){
@@ -472,26 +472,26 @@ verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nth
   Niter <- 2*Nout*Nthin
   Nwarmup <- Niter/2
   fit.stan <- sampling(object=obj.stan, data=data, init=inits,
-                       iter=Niter, chains=1, thin=Nthin)
+                       iter=Niter, chains=1, thin=Nthin, control=list(adapt_delta=delta))
   saveRDS(fit.stan, file='fits/stan_fit_verify.RDS')
   sims.stan <- extract(fit.stan, permuted=FALSE)
   perf.stan <- data.frame(rstan::monitor(sims=sims.stan, warmup=0, print=FALSE, probs=.5))
   lwr <- if(is.null(lower)) numeric(0) else lower
   upr <- if(is.null(upper)) numeric(0) else upper
   fit.tmbstan <- tmbstan(obj=obj.tmb, iter=Niter, chains=1, thin=Nthin,
-                         init=list(inits()), lower=lwr, upper=upr)
+                         init=list(inits()), lower=lwr, upper=upr, control=list(adapt_delta=delta))
   saveRDS(fit.tmbstan, file='fits/tmbstan_fit_verify.RDS')
   sims.tmbstan <- extract(fit.tmbstan, permuted=FALSE)
   perf.tmbstan <- data.frame(rstan::monitor(sims=sims.tmbstan, warmup=0, print=FALSE, probs=.5))
   fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin, lower=lower, upper=upper,
-               init=inits, control=list(metric=NULL, max_treedepth=10))
+               init=inits, control=list(adapt_delta=delta))
   saveRDS(fit.tmb, file='fits/tmb_fit_verify.RDS')
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
   fit.admb <- sample_admb(path='admb', model=model, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=inits, control=list(metric=NULL))
+               init=inits, control=list(metric=NULL, adapt_delta=delta))
   saveRDS(fit.admb, file='fits/admb_fit_verify.RDS')
   sims.admb <- fit.admb$samples[-(1:fit.admb$warmup),,,drop=FALSE]
   if(!is.null(admb.columns))
