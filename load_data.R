@@ -9,9 +9,21 @@ setwd(main.dir)
 ##               median.cor <- median(abs(cortemp[lower.tri(cortemp)]))
 ##               data.frame(model=i, max.cor=max.cor, median.cor=median.cor)
 ##             })
+simulated <- ldply(list.files('results', pattern='perf_simulated'), function(i)
+    read.csv(paste0('results/',i)))
+simulated$platform <- factor(simulated$platform, levels= c("stan", "tmbstan", "admb", "tmb"))
+simulated <-
+    ddply(simulated, .(platform, model, Npar), mutate,
+          mean.efficiency=mean(efficiency),
+          sd.efficiency=sd(efficiency),
+          median.efficiency=quantile(efficiency, probs=.5),
+          lwr.efficiency=min(efficiency),
+          upr.efficiency=max(efficiency))
+
+
 empirical <- ldply(list.files('results', pattern='perf_empirical'), function(i)
     read.csv(paste0('results/',i)))
-
+empirical$platform <- factor(empirical$platform, levels= c("stan", "tmbstan", "admb", "tmb"))
 
 ## normalize by maximum run time across delta.target values
 empirical <-
@@ -57,6 +69,7 @@ mvn.means <- ddply(mvn, .(platform, model, Npar, cor), summarize,
 ## summarize adaptation info
 adapt_empirical<- ldply(list.files('results', pattern='adapt_empirical'), function(i)
     read.csv(paste0('results/',i)))
+adapt_empirical$platform <- factor(adapt_empirical$platform, levels= c("stan", "tmbstan", "admb", "tmb"))
 
 ## Write them to file
 write.table(empirical, file='results/empirical.csv', sep=',',

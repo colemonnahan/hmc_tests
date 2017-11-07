@@ -3,6 +3,9 @@ m <- c('ss_logistic', 'wildflower_nc', 'redkite', 'growth_nc', 'swallows', 'mvnc
 ##     geom_point(aes(delta.target, log(samples.per.time))) + facet_wrap('model', scales='free_y')
 ## ggsave('plots/optimal_delta.png', g, width=ggwidth, height=ggheight)
 
+ggplot(simulated, aes(Npar, y=median.efficiency, color=platform)) +
+  geom_line() + facet_wrap("model") + scale_y_log10() +
+  geom_pointrange(aes(ymin=lwr.efficiency, ymax=upr.efficiency))
 
 g <- ggplot(empirical, aes(minESS, y=minESS.coda, group=platform, color=platform))  +
   scale_x_log10()+scale_y_log10()+
@@ -10,20 +13,19 @@ g <- ggplot(empirical, aes(minESS, y=minESS.coda, group=platform, color=platform
       facet_wrap('model', scales='fixed')
 ggsave('plots/ESS_comparison.png', g, width=ggwidth, height=ggheight)
 
-g <- ggplot(empirical, aes(model, y=(minESS/Nsims)))  +
-  geom_point()+ ylim(0,.5) + facet_wrap('platform') +
-    theme(axis.text.x = element_text(angle = 90))
+g <- ggplot(empirical, aes(platform, y=100*(minESS/Nsims)))  +
+  geom_point()+ ylim(0,100) + facet_wrap('model') +
+    theme(axis.text.x = element_text(angle = 90)) + ylab("% ESS")
 ggsave('plots/ESS_percentages.png', g, width=ggwidth, height=ggheight)
-g <- ggplot(empirical, aes(model, y=log(time.total)))  +
-  geom_point()+ facet_wrap('platform') +
+g <- ggplot(empirical, aes(platform, y=log(time.total)))  +
+  geom_point()+ facet_wrap('model') +
     theme(axis.text.x = element_text(angle = 90))
 ggsave('plots/runtime.png', g, width=ggwidth, height=ggheight)
-g <- ggplot() + geom_line(data=growth.means,
-                          aes(log10(Npar), log10(mean.samples.per.time),
-                              group=centered, color=centered)) +
-  geom_point(data=growth, aes(log10(Npar), y=log10(samples.per.time),
-               color=centered)) + facet_grid(platform~normal)
-ggsave('plots/perf_growth_simulated.png', g, width=ggwidth, height=ggheight)
+g <- ggplot(empirical, aes(platform, y=Rhat.max))  +
+  geom_point()+ facet_wrap('model') +
+    theme(axis.text.x = element_text(angle = 90))
+ggsave('plots/runtime.png', g, width=ggwidth, height=ggheight)
+
 g <- ggplot(subset(mvn.means, model=='mvnd'),
             aes(log10(Npar), log10(mean.efficiency))) +
   geom_line() + facet_wrap('platform')
