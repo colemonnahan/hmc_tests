@@ -18,8 +18,8 @@ data {
 
 
 parameters {
-  real<lower=0> sigmaphi;      // between family standard deviation in logit(phi)
   real<lower=0> sigmayearphi;  // between-year standard deviation in logit(phi)
+  real<lower=0> sigmaphi;      // between family standard deviation in logit(phi)
   real<lower=0> sigmap;        // between family standard deviation in logit(p)
   real a[K-1];                   // intercept of phi
   real a1;                     // coef of phi
