@@ -321,8 +321,10 @@ fit.empirical <- function(obj.stan, obj.tmb, model, pars, inits, data, seeds,
                Nthin=Nthin, inits=inits, pars=pars, lower=lower, upper=upper,
                sink.console=sink.console, ...)
   with(results.empirical, plot.empirical.results(perf, adapt))
-  write.csv(file=paste0(model, '_adapt_empirical.csv'), results.empirical$adapt)
-  write.csv(file=paste0(model, '_perf_empirical.csv'), results.empirical$perf)
+  write.csv(file=file.path(main.dir, 'results', paste0(model, '_adapt_empirical.csv')), results.empirical$adapt)
+  write.csv(file=file.path(main.dir, 'results', paste0(model, '_perf_empirical.csv')), results.empirical$perf)
+  ## write.csv(file=paste0(model, '_adapt_empirical.csv'), results.empirical$adapt)
+  ## write.csv(file=paste0(model, '_perf_empirical.csv'), results.empirical$perf)
 }
 
 #' Make plots comparing the performance of simulated data for a model.
