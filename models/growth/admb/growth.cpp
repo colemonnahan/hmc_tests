@@ -42,7 +42,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
  model_data(argc,argv) , function_minimizer(sz)
 {
   initializationfunction();
-  delta.allocate(.5,5,"delta");
+  delta.allocate(0,5,"delta");
   sigma_obs.allocate("sigma_obs");
   logLinf_mean.allocate("logLinf_mean");
   logk_mean.allocate("logk_mean");

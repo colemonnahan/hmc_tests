@@ -61,7 +61,7 @@ upper <- abs(unlist(inits()))*Inf
 lower[c('delta','sigma_obs', 'logLinf_sigma', 'logk_sigma')] <- 0
 upper[c('delta')] <- 5
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
-          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
+          verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=1,
           lower=lower, upper=upper, admb.columns=c(2,5,6))
 
 ## Wildflower
