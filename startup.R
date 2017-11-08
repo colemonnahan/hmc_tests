@@ -30,7 +30,7 @@ ggheight <- 5
 #' @param pars Character vector for pars
 run_model <- function(m, obj.stan, data, inits, Nout=1000,
                       verify=FALSE, empirical=TRUE, Nout.ind=1000, Nthin.ind=2,
-                      delta=.8, metric='diag', simulation=FALSE, admb.columns=NULL,
+                      delta=.8, metric='diag', simulation=FALSE, exp.columns=NULL,
                       lower=NULL, upper=NULL){
 
   oldwd <- getwd()
@@ -53,7 +53,7 @@ run_model <- function(m, obj.stan, data, inits, Nout=1000,
   if(verify)
     verify.models(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, dir='admb',
                   pars=pars, inits=inits, data=data, Nout=Nout.ind, delta=delta,
-                  Nthin=Nthin.ind, admb.columns=admb.columns, lower=lower, upper=upper )
+                  Nthin=Nthin.ind, exp.columns=exp.columns, lower=lower, upper=upper )
   ## ## Load initial values from those sampled above.
   ## sims.ind <- readRDS(file='sims.ind.RDS')
   ## sims.ind <- sims.ind[sample(x=1:NROW(sims.ind), size=length(seeds)),]
@@ -120,6 +120,14 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
     message(paste('==== Starting seed',seed, 'at', Sys.time()))
     set.seed(seed)
     init.seed <- list(inits())
+    init.seed2 <- init.seed
+    ## If some pars are exponentiated in the templates, need to log them
+    ## here so they match
+    if(!is.null(exp.columns)){
+      for(i in exp.columns){
+        init.seed2[[1]][[i]] <- log(init.seed2[[1]][[i]])
+      }
+    }
     for(idelta in delta){
       for(imetric in metric){
         fit.stan <-
@@ -165,7 +173,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
         fit.tmbstan <-
           tmbstan(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
-               init=init.seed, seed=seed, lower=lwr, upper=upr,
+               init=init.seed2, seed=seed, lower=lwr, upper=upr,
                 control=list(adapt_engaged=TRUE, adapt_delta=idelta,
                             metric=paste0(imetric,'_e'),
                             max_treedepth=max_treedepth))
@@ -202,7 +210,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
         ## Start of TMB run
         fit.tmb <-
           sample_tmb(obj=obj.tmb, iter=Niter, warmup=Nwarmup, chains=1, thin=Nthin,
-                     init=init.seed, lower=lower, upper=upper,
+                     init=init.seed2, lower=lower, upper=upper,
                      control=list(metric=NULL, adapt_delta=idelta,
                                   max_treedepth=max_treedepth, adapt_mass=TRUE))
         ## saveRDS(fit.tmb, file=paste('fits/tmb_', metric, idelta, seed,'.RDS', sep='_'))
@@ -237,7 +245,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                      Rhat.tmb)
         k <- k+1
         fit.admb <- sample_admb(path='admb', model=model, iter=Niter, warmup=Nwarmup,
-                                init=init.seed, thin=Nthin, chains=1,
+                                init=init.seed2, thin=Nthin, chains=1,
                                 control=list(metric=NULL, max_treedepth=max_treedepth, adapt_delta=idelta))
         sims.admb <- fit.admb$samples[-(1:Nwarmup),,, drop=FALSE]
         perf.admb <- data.frame(monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
@@ -270,12 +278,13 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                      Rhat.admb)
         k <- k+1
         if(useRWM){
+          stop("RWM is probably broken now, check before using")
           ## ADMB default RWM algorithm About 2 times the average
           ## trajectory length should be equivalent in time to NUTS
           thin.rwm <- floor(adapt.list[[k-1]]$nsteps.mean * 2)
           fit.admb.rwm <-
             sample_admb(dir='admb', model=model, iter=thin.rwm*Niter, warmup=Nwarmup,
-                        init=init.seed, chains=1, thin=thin.rwm*Nthin,
+                        init=init.seed2, chains=1, thin=thin.rwm*Nthin,
                         algorithm='RWM', control=list(metric=NULL))
           sims.admb.rwm <- fit.admb.rwm$samples[-(1:Nwarmup),,, drop=FALSE]
           perf.admb.rwm <- data.frame(monitor(sims=sims.admb.rwm, warmup=0, print=FALSE, probs=.5))
@@ -457,12 +466,12 @@ plot.model.comparisons <- function(sims.stan, sims.tmbstan, sims.tmb, sims.admb,
 #' to verify the posteriors are the same, effectively checking for bugs
 #' between models before doing performance comparisons
 #'
-#' @param admb.columns Columns of the ADMB sample outputs to
+#' @param exp.columns Columns of the ADMB sample outputs to
 #'   exponentiate. THis is needed b/c ADMB needs to add jacobian manually
 #'   for bounded (0, Inf) parameters. Thus exponentiate these columns to
 #'   match TMB and Stan.
 verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nthin,
-                          sink.console=TRUE, dir=NULL, admb.columns=NULL, delta,
+                          sink.console=TRUE, dir=NULL, exp.columns=NULL, delta,
                           lower=NULL, upper=NULL){
   message('Starting independent runs')
   ## if(sink.console){
@@ -482,20 +491,24 @@ verify.models <- function(obj.stan, obj.tmb, model, pars, inits, data, Nout, Nth
                          init=list(inits()), lower=lwr, upper=upr, control=list(adapt_delta=delta))
   saveRDS(fit.tmbstan, file='fits/tmbstan_fit_verify.RDS')
   sims.tmbstan <- extract(fit.tmbstan, permuted=FALSE)
+  if(!is.null(exp.columns))
+    sims.tmbstan[,,exp.columns] <- exp(sims.tmbstan[,,exp.columns])
   perf.tmbstan <- data.frame(rstan::monitor(sims=sims.tmbstan, warmup=0, print=FALSE, probs=.5))
   fit.tmb <- sample_tmb(obj=obj.tmb, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin, lower=lower, upper=upper,
                init=inits, control=list(adapt_delta=delta))
   saveRDS(fit.tmb, file='fits/tmb_fit_verify.RDS')
   sims.tmb <- fit.tmb$samples[-(1:fit.tmb$warmup),,,drop=FALSE]
+  if(!is.null(exp.columns))
+    sims.tmb[,,exp.columns] <- exp(sims.tmb[,,exp.columns])
   perf.tmb <- data.frame(rstan::monitor(sims=sims.tmb, warmup=0, print=FALSE, probs=.5))
   fit.admb <- sample_admb(path='admb', model=model, iter=Niter,
                warmup=Nwarmup, chains=1, thin=Nthin,
                init=inits, control=list(metric=NULL, adapt_delta=delta))
   saveRDS(fit.admb, file='fits/admb_fit_verify.RDS')
   sims.admb <- fit.admb$samples[-(1:fit.admb$warmup),,,drop=FALSE]
-  if(!is.null(admb.columns))
-    sims.admb[,,admb.columns] <- exp(sims.admb[,,admb.columns])
+  if(!is.null(exp.columns))
+    sims.admb[,,exp.columns] <- exp(sims.admb[,,exp.columns])
   perf.admb <- data.frame(rstan::monitor(sims=sims.admb, warmup=0, print=FALSE, probs=.5))
   perf.platforms <- rbind(cbind(platform='tmb',perf.tmb),
                           cbind(platform='admb',perf.admb),
