@@ -46,9 +46,7 @@ run_model <- function(m, obj.stan, data, inits, Nout=1000,
               col.names=FALSE )
   ## Don't need a good hessian since using adaptation now, so just run it a
   ## single iteration to get the files with names
-  if(!file.exists(paste0(m,'.exe'))) {
-    system(paste('admb',m))
-  }
+  system(paste('admb',m))
   system(paste(m, ' -maxfn 1 -nox -nohess'))
   setwd('..')
 

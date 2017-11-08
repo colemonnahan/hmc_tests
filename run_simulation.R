@@ -51,19 +51,17 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
 
 
 ## VB growth, simulated
-## Run independent normal with variable SDs
 m <- 'growth'
 temp <- growth_setup(N=30, seed=2345)
-data <- temp$data
-inits <- temp$inits
-Npar.vec <- 2^(3+1:3)
+data <- temp$data; inits <- temp$inits
+Npar.vec <- 2^(3+1:4)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
 lower[c('delta','sigma_obs', 'logLinf_sigma', 'logk_sigma')] <- 0
 upper[c('delta')] <- 5
-run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits,
-          verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=1,
+run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
+          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
           lower=lower, upper=upper, admb.columns=c(2,5,6))
 
 ## Wildflower
@@ -76,7 +74,7 @@ lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
 lower[c('yearInterceptSD','plantInterceptSD', 'plantSlopeSD')] <- 0
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
-          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
+          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
           lower=lower, upper=upper, admb.columns=c(1,2,3))
 
 ## Swallows bird count data

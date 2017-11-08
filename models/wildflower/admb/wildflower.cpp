@@ -7,7 +7,8 @@
  #include <admodel.h>
  #include "statsLib.h"
  #include <df1b2fun.h>
- #include <adrndeff.h> // Negative log-likelihood for the Cauchy distribution; scalar arguments.
+ #include <adrndeff.h>
+ // Negative log-likelihood for the Cauchy distribution; scalar arguments.
  dvariable dcauchy(const prevariable& mu, const double& x, const double& scale)
  {
   #ifdef M_PI
@@ -57,10 +58,6 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
   ypred.allocate("ypred");
   #ifndef NO_AD_INITIALIZE
   ypred.initialize();
-  #endif
-  ypred2.allocate("ypred2");
-  #ifndef NO_AD_INITIALIZE
-  ypred2.initialize();
   #endif
   yearInterceptSD2.allocate("yearInterceptSD2");
   #ifndef NO_AD_INITIALIZE
