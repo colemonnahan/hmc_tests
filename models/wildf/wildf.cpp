@@ -31,7 +31,7 @@ Type objective_function<Type>::operator() ()
   PARAMETER(plantSlopeSD);
   PARAMETER_VECTOR(intercept);
   PARAMETER(slope);
-    
+
   // non-centered random effects
   PARAMETER_VECTOR(yearInterceptEffect_raw);
   PARAMETER_VECTOR(plantInterceptEffect_raw);
@@ -40,10 +40,15 @@ Type objective_function<Type>::operator() ()
   Type nlp=0.0; // negative log prior
   Type nll=0.0; // negative log likelihood
 
+  // Postive transformations, jacobians below
+  Type yearInterceptSD2=exp(yearInterceptSD);
+  Type plantInterceptSD2=exp(plantInterceptSD);
+  Type plantSlopeSD2=exp(plantSlopeSD);
+
   // priors
-  nlp-= dcauchy(yearInterceptSD, Type(0), Type(5));
-  nlp-= dcauchy(plantInterceptSD, Type(0), Type(5));
-  nlp-= dcauchy(plantSlopeSD, Type(0), Type(5));
+  nlp-= dcauchy(yearInterceptSD2, Type(0), Type(5));
+  nlp-= dcauchy(plantInterceptSD2, Type(0), Type(5));
+  nlp-= dcauchy(plantSlopeSD2, Type(0), Type(5));
   nlp-= dnorm(slope, Type(0.0), Type(10.0));
   nlp-= dnorm(intercept, Type(0.0), Type(10.0)).sum();
 
@@ -52,23 +57,25 @@ Type objective_function<Type>::operator() ()
   for(int i=0; i<Ndata; i++){
     // prediction logit scale
     ypred= intercept(stage(i)-1) +
-      yearInterceptEffect_raw(year(i)-1)*yearInterceptSD +
-      plantInterceptEffect_raw(plant(i)-1)*plantInterceptSD+
-      Pods(i) * plantSlopeEffect_raw(plant(i)-1)*plantSlopeSD+
+      yearInterceptEffect_raw(year(i)-1)*yearInterceptSD2 +
+      plantInterceptEffect_raw(plant(i)-1)*plantInterceptSD2+
+      Pods(i) * plantSlopeEffect_raw(plant(i)-1)*plantSlopeSD2+
       Pods(i) * slope;
     // likelihood contribution
     if(toF(i)==1){
       nll+= log(1+exp(-ypred));
     } else {
-      nll+= ypred+log(1+exp(-ypred));	  
+      nll+= ypred+log(1+exp(-ypred));
     }
   }
-  
+
   // random effects; non-centered
   nll-=dnorm(yearInterceptEffect_raw, Type(0.0), Type(1.0), true).sum();
   nll-=dnorm(plantInterceptEffect_raw,Type(0.0), Type(1.0), true).sum();
   nll-=dnorm(plantSlopeEffect_raw, Type(0.0), Type(1.0), true).sum();
 
+  // Jacobian adjustments
+  nll-= yearInterceptSD + plantInterceptSD + plantSlopeSD;
   Type nld=nll+nlp; // negative log density
   return(nld);
 }

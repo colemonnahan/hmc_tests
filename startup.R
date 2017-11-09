@@ -574,11 +574,11 @@ swallows_setup <- function(){
 wildf_setup <- function(){
   data <- readRDS('models/wildf/data.RDS')
   inits <- function()
-    list(yearInterceptSD = runif(1, .5, 1.5),
-         plantInterceptSD = runif(1, .5, 1.5),
-         plantSlopeSD = runif(1, .5, 1.5),
+    list(yearInterceptSD = runif(1, .05, .15),
+         plantInterceptSD = runif(1, .05, .15),
+         plantSlopeSD = runif(1, .05, .15),
          intercept = rnorm(data$Nstage, 0, 1),
-         slope = rnorm(1, 0, 10),
+         slope = rnorm(1, 0, 1),
          yearInterceptEffect_raw= rnorm(data$Nyear, 0, 1),
          plantInterceptEffect_raw= rnorm(data$Nplant, 0, 1),
          plantSlopeEffect_raw= rnorm(data$Nplant, 0, 1))

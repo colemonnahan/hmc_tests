@@ -1,18 +1,4 @@
 
-// Starting NUTS for model 'wildflower' at Wed Nov 08 08:56:39 2017
-// Using diagonal mass matrix adaptation
-// Initial negative log density=7149.49
-// Error -- base = 0 in function prevariable& pow(const prevariable& v1, const double u)
-// Error -- base = 0 in function prevariable& pow(const prevariable& v1, const double u)
-// Found reasonable step size of 0.03125 after 7 steps.
-// Final step size=0.00801237; after 12 warmup iterations
-// Final acceptance ratio=0.99, and target=0.8
-//  Elapsed Time: 485.289 seconds (Warm-up)
-//                382.405 seconds (Sampling)
-//                867.694 seconds (Total)
-// Process wildflower 
-
-
 GLOBALS_SECTION
  #include <admodel.h>
  #include "statsLib.h"
@@ -65,10 +51,11 @@ PARAMETER_SECTION
   objective_function_value nld;
 
  INITIALIZATION_SECTION
- yearInterceptSD 1;
- plantInterceptSD 1;
- plantSlopeSD 1;
- slope 1;
+ yearInterceptSD .1;
+ plantInterceptSD .1;
+ plantSlopeSD .1;
+ slope .001;
+
 
 PROCEDURE_SECTION
  nlp=0.0;
@@ -110,6 +97,23 @@ PROCEDURE_SECTION
   nll+=dnorm(plantInterceptEffect_raw, 0,1);
   nll+=dnorm(plantSlopeEffect_raw, 0,1);
 
+ // temporrary strong priors to get an invertible hessian, also set nld=nlp;
+ // and it will work
+ //nlp+=dnorm(plantInterceptSD2, .1, .1);
+ // nlp+=dnorm(yearInterceptSD2, .1, .1); nlp+=dnorm(plantSlopeSD2, .1, .1);
+ // nlp+=dnorm(slope, .1, .1); nlp+=dnorm(intercept, 0.0, 10.0);
+ // nlp+=dnorm(yearInterceptEffect_raw, .1,1);
+ // nlp+=dnorm(plantInterceptEffect_raw, .1,1);
+ // nlp+=dnorm(plantSlopeEffect_raw, .1,1);
+
  nld=nll+nlp; // negative log density
 
-
+// REPORT_SECTION
+//  cout << ypred << endl;
+//  cout << nll2 << endl;
+//   cout << sum(nll2) << endl;
+//  cout <<  yearInterceptSD + plantInterceptSD + plantSlopeSD << endl;
+//  cout << dnorm(plantInterceptEffect_raw, 0,1) << endl;
+//  cout << dnorm(plantSlopeEffect_raw, 0,1) << endl;
+//  cout << dnorm(yearInterceptEffect_raw,0,1) << endl;
+//  cout << "nll=" << nll << "; nlp=" << nlp << endl;
