@@ -7,7 +7,7 @@
 }
 parameters {
   // fixed effects
-  real<lower=0, upper=5> delta;
+  real<lower=0> delta;
   real<lower=0> sigma_obs; // data on log scale
 
   // hyperparameters with bounds
@@ -31,7 +31,6 @@ transformed parameters {
 
 model {
   vector[Nobs] ypred;
-  real Linf;
   real k;
 
   // priors
@@ -49,9 +48,8 @@ model {
 
   // calculate likelihood of data
   for(i in 1:Nobs){
-    Linf  = exp(logLinf[fish[i]]);
     k = exp(logk[fish[i]]);
-    ypred[i] = log( Linf*(1-exp(-k*(ages[i]-5)))^delta );
+    ypred[i] = logLinf[fish[i]] + delta*log(1-exp(-k*(ages[i]-5)));
   }
   loglengths~normal(ypred, sigma_obs);
 }

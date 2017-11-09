@@ -1,3 +1,4 @@
+
 GLOBALS_SECTION
  #include <admodel.h>
  #include "statsLib.h"
@@ -25,7 +26,7 @@ DATA_SECTION
   init_ivector ages(1,Nobs);
 
 PARAMETER_SECTION
-  init_bounded_number delta(0,5);
+  init_number delta;
   init_number sigma_obs;
   init_number logLinf_mean;
   init_number logk_mean;
@@ -40,8 +41,7 @@ PARAMETER_SECTION
   number sigma_obs2;
   number logk_sigma2;
   number logLinf_sigma2;
- // Linf and k in natural space
-  number Linf;
+  number delta2;
   number k;
   number nlp;
   number nll;
@@ -63,18 +63,18 @@ PROCEDURE_SECTION
  sigma_obs2=exp(sigma_obs);
  logLinf_sigma2=exp(logLinf_sigma);
  logk_sigma2=exp(logk_sigma);
+ delta2=exp(delta);
  logLinf = logLinf_mean+logLinf_raw*logLinf_sigma2;
  logk = logk_mean+logk_raw*logk_sigma2;
 
  double zero=0.0; double five=5.0;
   // Calculate predicted lengths
   for(int i=1; i<=Nobs; i++){
-    Linf  = exp(logLinf(fish(i)));
     k = exp(logk(fish(i)));
-    ypred(i) = log( Linf*pow(1-exp(-k*(ages(i)-5)),delta) );
+    ypred(i) = logLinf(fish(i)) + delta2*log(1-exp(-k*(ages(i)-5)));
   }
   // delta is uniform above
-  nlp += dnorm(delta, 1, 0.25);
+  nlp += dnorm(delta2, 1, 0.25);
   nlp += dcauchy(sigma_obs2, zero, five);
 
   // hyperpriors
@@ -83,7 +83,7 @@ PROCEDURE_SECTION
   // hyper means are uniform above
 
   // Jacobian adjustment for variances
-  nll -= sigma_obs + logk_sigma + logLinf_sigma;
+  nll -= sigma_obs + logk_sigma + logLinf_sigma + delta;
 
   // random effects; non-centered
   nll+=dnorm(logLinf_raw, 0,1);
