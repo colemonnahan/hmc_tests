@@ -15,13 +15,6 @@ library(tmbstan)
 ggwidth <- 8
 ggheight <- 5
 
-## library(tmbstan)
-## TMB::runExample("simple")
-## fit <- tmbstan(obj, chains=1)
-## TMB::runExample("randomregression")
-## fit <- tmbstan(obj, chains=1)
-
-
 #' Run analysis for a single model
 #'
 #' @param m Character for model name (also folder name)
@@ -67,7 +60,7 @@ run_model <- function(m, obj.stan, data, inits, Nout=1000,
   if(empirical)
   fit.empirical(obj.stan=obj.stan, obj.tmb=obj.tmb, model=m, pars=pars, inits=inits, data=data,
                 delta=delta, metric=metric, seeds=seeds, lower=lower, upper=upper,
-                Nout=Nout, max_treedepth=12)
+                Nout=Nout, max_treedepth=12, exp.columns=exp.columns)
 
   ## If there is a simulation component put it in this file
   if(simulation){
@@ -102,7 +95,7 @@ run_model <- function(m, obj.stan, data, inits, Nout=1000,
 run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
                        metric='diag', data, inits, pars, lower=NULL,
                        upper=NULL, sink.console=FALSE, max_treedepth=12,
-                       useRWM=FALSE){
+                       useRWM=FALSE, exp.columns=NULL){
   if(Nthin!=1) stop('this probably breaks if Nthin!=1')
   stopifnot(metric=='diag')
   Niter <- 2*Nout*Nthin
@@ -318,7 +311,7 @@ run.chains <- function(obj.stan, obj.tmb, model, seeds, Nout, Nthin=1, delta=.8,
 #' Verify models and then run empirical tests across delta
 fit.empirical <- function(obj.stan, obj.tmb, model, pars, inits, data, seeds,
                           delta, model.stan, Nout,  metric, lower, upper,
-                          Nthin=1, sink.console=FALSE, ...){
+                          Nthin=1, sink.console=FALSE, exp.columns=NULL, ...){
     ## Now rerun across gradient of acceptance rates and compare to JAGS
   message('Starting empirical runs')
   results.empirical <-
@@ -326,7 +319,7 @@ fit.empirical <- function(obj.stan, obj.tmb, model, pars, inits, data, seeds,
                Nout=Nout,
                metric=metric, delta=delta, data=data,
                Nthin=Nthin, inits=inits, pars=pars, lower=lower, upper=upper,
-               sink.console=sink.console, ...)
+               sink.console=sink.console, exp.columns=exp.columns, ...)
   with(results.empirical, plot.empirical.results(perf, adapt))
   write.csv(file=file.path(main.dir, 'results', paste0(model, '_adapt_empirical.csv')), results.empirical$adapt)
   write.csv(file=file.path(main.dir, 'results', paste0(model, '_perf_empirical.csv')), results.empirical$perf)
