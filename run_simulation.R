@@ -43,7 +43,7 @@ run_model(m='iidz', obj.stan=obj.stan, data=data, inits=inits,
 
 ## Run independent normal with variable SDs
 data <- list(n=50, x=rep(0, 50), sds=1:50)
-inits <- function() list(mu=rnorm(5))
+inits <- function() list(mu=rnorm(50))
 obj.stan <- stan_model(file= 'models/zdiag/zdiag.stan')
 Npar.vec <- 2^(4+1:4)
 run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
@@ -56,7 +56,7 @@ data <- temp$data; inits <- temp$inits
 Npar.vec <- 2^(3+1:4)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
-          verify=FALSE, simulation=TRUE, empirical=TRUE, Nthin.ind=3,
+          verify=TRUE, simulation=TRUE, empirical=TRUE, Nthin.ind=3,
           exp.columns=c(1,2,5,6))
 
 ## Wildflower
@@ -65,12 +65,9 @@ temp <- wildf_setup()
 data <- temp$data
 inits <- temp$inits
 obj.stan <- stan_model(file= 'models/wildf/wildf.stan')
-lower <- abs(unlist(inits()))*-Inf
-upper <- abs(unlist(inits()))*Inf
-lower[c('yearInterceptSD','plantInterceptSD', 'plantSlopeSD')] <- 0
-run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
-          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
-          lower=lower, upper=upper, exp.columns=c(1,2,3))
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.95,
+          verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=5,
+          Nout.ind=500, exp.columns=c(1,2,3))
 
 ## Swallows bird count data
 m <- 'swallows'
