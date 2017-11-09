@@ -571,8 +571,8 @@ swallows_setup <- function(){
   return(list(data=data, inits=inits))
 }
 
-wildflower_setup <- function(){
-  data <- readRDS('models/wildflower/data.RDS')
+wildf_setup <- function(){
+  data <- readRDS('models/wildf/data.RDS')
   inits <- function()
     list(yearInterceptSD = runif(1, .5, 1.5),
          plantInterceptSD = runif(1, .5, 1.5),

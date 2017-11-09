@@ -60,11 +60,11 @@ run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
           exp.columns=c(1,2,5,6))
 
 ## Wildflower
-m <- 'wildflower'
-temp <- wildflower_setup()
+m <- 'wildf'
+temp <- wildf_setup()
 data <- temp$data
 inits <- temp$inits
-obj.stan <- stan_model(file= 'models/wildflower/wildflower.stan')
+obj.stan <- stan_model(file= 'models/wildf/wildf.stan')
 lower <- abs(unlist(inits()))*-Inf
 upper <- abs(unlist(inits()))*Inf
 lower[c('yearInterceptSD','plantInterceptSD', 'plantSlopeSD')] <- 0
