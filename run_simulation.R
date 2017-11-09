@@ -49,20 +49,15 @@ Npar.vec <- 2^(4+1:4)
 run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
           verify=FALSE, simulation=TRUE, empirical=TRUE)
 
-
 ## VB growth, simulated
 m <- 'growth'
 temp <- growth_setup(N=30, seed=2345)
 data <- temp$data; inits <- temp$inits
 Npar.vec <- 2^(3+1:4)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
-lower <- abs(unlist(inits()))*-Inf
-upper <- abs(unlist(inits()))*Inf
-lower[c('delta','sigma_obs', 'logLinf_sigma', 'logk_sigma')] <- 0
-upper[c('delta')] <- 5
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
-          verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=1,
-          lower=lower, upper=upper, admb.columns=c(2,5,6))
+          verify=FALSE, simulation=TRUE, empirical=TRUE, Nthin.ind=3,
+          exp.columns=c(1,2,5,6))
 
 ## Wildflower
 m <- 'wildflower'
@@ -75,7 +70,7 @@ upper <- abs(unlist(inits()))*Inf
 lower[c('yearInterceptSD','plantInterceptSD', 'plantSlopeSD')] <- 0
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
           verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
-          lower=lower, upper=upper, admb.columns=c(1,2,3))
+          lower=lower, upper=upper, exp.columns=c(1,2,3))
 
 ## Swallows bird count data
 m <- 'swallows'
@@ -88,7 +83,7 @@ lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
           verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
-          Nout.ind=500, lower=lower, upper=upper, admb.columns=c(1,2,3))
+          Nout.ind=500, lower=lower, upper=upper, exp.columns=c(1,2,3))
 
 ## Simulated spatial model, TMB example
 m <- 'spatial'
