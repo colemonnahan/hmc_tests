@@ -68,7 +68,9 @@ PARAMETER_SECTION
   objective_function_value nld;
 
 INITIALIZATION_SECTION
- sigmaphi .1
+ sigmaphi 1
+ sigmayearphi 1
+ sigmap 1
 
 PROCEDURE_SECTION
  nlp=0.0;
@@ -110,8 +112,8 @@ PROCEDURE_SECTION
   chi(i,1) = (1 - p(i,1)) * chi(i,2);
  }
 
-  // Jacobian adjustment for variances
-  nll -= sigmaphi + sigmayearphi + sigmap;
+ // Jacobian adjustment for variances
+ nll -= sigmaphi + sigmayearphi + sigmap;
 
  // priors
  nlp+= dcauchy(sigmaphi2, zero, one);

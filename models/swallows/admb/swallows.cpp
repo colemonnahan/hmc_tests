@@ -108,7 +108,9 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
 
 void model_parameters::initializationfunction(void)
 {
-  sigmaphi.set_initial_value(.1);
+  sigmaphi.set_initial_value(1);
+  sigmayearphi.set_initial_value(1);
+  sigmap.set_initial_value(1);
 }
 
 void model_parameters::userfunction(void)
@@ -151,8 +153,8 @@ void model_parameters::userfunction(void)
   }
   chi(i,1) = (1 - p(i,1)) * chi(i,2);
  }
-  // Jacobian adjustment for variances
-  nll -= sigmaphi + sigmayearphi + sigmap;
+ // Jacobian adjustment for variances
+ nll -= sigmaphi + sigmayearphi + sigmap;
  // priors
  nlp+= dcauchy(sigmaphi2, zero, one);
  nlp+= dnorm(sigmayearphi2, zero, 0.5);
