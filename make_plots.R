@@ -22,6 +22,9 @@ g <- ggplot(empirical, aes(minESS, y=minESS.coda, group=platform, color=platform
       facet_wrap('model', scales='fixed')
 ggsave('plots/ESS_comparison.png', g, width=ggwidth, height=ggheight)
 
+ggplot(empirical, aes(platform, efficiency, group=seed)) + geom_line() +
+  facet_wrap("model") + scale_y_log10()
+
 g <- ggplot(empirical, aes(platform, y=100*(minESS/Nsims)))  +
   geom_point()+ ylim(0,100) + facet_wrap('model') +
     theme(axis.text.x = element_text(angle = 90)) + ylab("% ESS")
@@ -35,18 +38,7 @@ g <- ggplot(empirical, aes(platform, y=Rhat.max))  +
     theme(axis.text.x = element_text(angle = 90))
 ggsave('plots/Rhat.png', g, width=ggwidth, height=ggheight)
 
-g <- ggplot(subset(mvn.means, model=='mvnd'),
-            aes(log10(Npar), log10(mean.efficiency))) +
-  geom_line() + facet_wrap('platform')
-ggsave('plots/perf_mvnd_simulated.png', g, width=ggwidth,
-       height=ggheight)
-empirical.means.wide$stan_faster <- empirical.means.wide$stan_re>1
-empirical.means.wide$stan_faster <- empirical.means.wide$stan_re>1
-g <- ggplot(empirical.means.wide, aes(log10(Npar), max.cor)) +
-  geom_point(aes(size=abs(log10(stan_re)), color=stan_faster)) +
-    geom_text(aes(label=model), hjust=1, vjust=2)
-ggsave('plots/perf_by_N_cor.png', g, width=ggwidth,
-       height=ggheight)
+
 ## Some adaptation plots
 g <- ggplot(adapt_empirical, aes(model, log(eps.final), color=platform)) + geom_point(alpha=.5)
 ggsave('plots/adapt_eps.png', g, width=ggwidth, height=ggheight)

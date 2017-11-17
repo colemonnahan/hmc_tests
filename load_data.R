@@ -34,11 +34,20 @@ empirical <-
           lwr.efficiency=min(efficiency),
           upr.efficiency=max(efficiency))
 ## empirical <- merge(x=empirical, y=cor.table, by='model')
-empirical.means <-
-    ddply(empirical, .(platform, model, Npar), summarize,
-          mean.efficiency=mean(efficiency))
-empirical.means.wide <- dcast(subset(empirical.means), model+Npar~platform,
-                              value.var='mean.efficiency')
+empirical.median <-
+    ddply(empirical, .(model, platform, Npar), summarize,
+          median.efficiency=median(efficiency))
+empirical.median.wide <- dcast(subset(empirical.median), model+Npar~platform,
+                              value.var='median.efficiency')
+rnd <- 3
+empirical.perf.table <- within(empirical.median.wide, {
+  stan.re <- round(stan/stan,rnd)
+  tmbstan.re <- round(tmbstan/stan,rnd)
+  tmb.re <- round(tmb/stan,rnd)
+  admb.re <- round(admb/stan,rnd)})
+empirical.perf.table <- empirical.perf.table[, c(1, 10,9,8,7)]
+print(empirical.perf.table)
+
 ## empirical.means.wide$stan_re <- with(empirical.means.wide, round(stan/tmb, 2))
 simulated <- ldply(list.files('results', pattern='perf_simulated'), function(i)
     read.csv(paste0('results/',i)))

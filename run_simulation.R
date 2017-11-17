@@ -56,7 +56,7 @@ data <- temp$data; inits <- temp$inits
 Npar.vec <- 2^(3+1:4)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
-          verify=TRUE, simulation=TRUE, empirical=TRUE, Nthin.ind=3,
+          verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=3,
           exp.columns=c(1,2,5,6))
 
 ## Wildflower
@@ -66,7 +66,7 @@ data <- temp$data
 inits <- temp$inits
 obj.stan <- stan_model(file= 'models/wildf/wildf.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.95,
-          verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=5,
+          verify=FALSE, empirical=TRUE, Nthin.ind=5,
           Nout.ind=500, exp.columns=c(1,2,3))
 
 ## Swallows bird count data
