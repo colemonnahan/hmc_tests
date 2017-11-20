@@ -51,7 +51,7 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
 
 ## VB growth, simulated
 m <- 'growth'
-temp <- growth_setup(N=30, seed=2345)
+temp <- growth_setup(N=128, seed=2345)
 data <- temp$data; inits <- temp$inits
 Npar.vec <- 2^(3+1:4)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
@@ -109,3 +109,52 @@ source('make_plots.R')
 ## test <- stan('models/swallows/swallows.stan', data=data, init=inits, iter=700, chains=3,
 ##                  pars=names(inits()))
 
+## ## Old tests for a growth model which was slow to converge and thus
+## adapating poorly
+## devtools::install("C:/Users/Cole/adnuts")
+## NN <- 15
+## set.seed(1)
+## seeds0 <- sample(1:1e5, size=NN)
+## ii <- ii2 <- lapply(1:NN, function(i) inits())
+## for(i in 1:NN){
+##   for(j in c(1,2,5,6)){
+##     ii[[i]][[j]] <- log(ii[[i]][[j]])
+##   }
+## }
+## ii <- lapply(1:NN, function(i) ii[[1]])
+## ii2 <- lapply(1:NN, function(i) ii2[[1]])
+## fit.tmb <-
+##   sample_tmb(obj=obj.tmb, iter=1100, warmup=1000, chains=NN, seeds=1:15,
+##              init=ii, control=list(metric=NULL, adapt_delta=.9,
+##                           max_treedepth=8, stepsize=.001, adapt_mass=TRUE))
+## sp1 <- extract_sampler_params(fit.tmb, TRUE)
+## ggplot(subset(sp, chain!=11), aes(iteration, energy__, group=chain,
+##                                   color=factor(chain), size=divergent__)) +
+##   geom_point() + geom_line() + xlim(0,300)
+## ggplot(subset(sp, chain!=11), aes(iteration, divergent__, group=chain, color=factor(chain))) +
+##   geom_line() + xlim(0,25)
+## plot(sp$iteration, log(sp$stepsize__), type='l'); abline(v=c(125,175,475))
+## plot(sp$iteration, sp$energy__, type='l'); abline(v=c(125,175,475))
+## ss <- extract_samples(fit.tmb, TRUE, TRUE)
+## which(ss$lp__-sp$energy__>0)
+
+## fit.admb <-
+##   sample_admb('growth', 'admb',  iter=1100, warmup=1000, chains=15, seeds=1:15,
+##              init=ii, control=list(metric=NULL, adapt_delta=.9,
+##                           max_treedepth=8, adapt_mass=TRUE))
+## sp2 <- extract_sampler_params(fit.admb, TRUE)
+## plot(sp$iteration, log(sp$stepsize__), type='l'); abfline(v=c(125,175,475))
+## plot(sp$iteration, sp$energy__, type='l'); abline(v=c(125,175,475))
+## ss <- extract_samples(fit.admb, TRUE, TRUE)
+## which(ss$lp__-sp$energy__>0)
+
+## fit.stan <- sampling(obj.stan, data=data,  iter=1100, warmup=1000, chains=15, init=ii2,
+##                  control=list(adapt_delta=.9, max_treedepth=8))
+## sp3 <- data.frame(chain=rep(1:15, each=1100), iteration=1:1100, do.call(rbind,
+##                  get_sampler_params(fit.stan, inc_warmup=TRUE)))
+## sp3$energy__ <- sp3$energy__*-1
+
+## sp.all <- rbind(cbind(alg='tmb', sp1), cbind(alg='admb', sp2),
+##                 cbind(alg='stan', sp3))
+## ggplot(subset(sp.all, chain!=11), aes(iteration, energy__, group=chain, color=factor(chain))) +
+##   geom_line() + xlim(150,750) + facet_wrap("alg")
