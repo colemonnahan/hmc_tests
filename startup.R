@@ -593,10 +593,10 @@ growth_setup <- function(N, seed){
   data <- list(Nfish=N, Nobs=nrow(dat), loglengths=dat$loglengths,
                fish=dat$fish, ages=dat$ages)
   inits <- function()
-    list(delta=runif(1, .5,1.5), sigma_obs=runif(1, .1, .2), logLinf_mean=runif(1, 2, 5),
-         logk_mean=runif(1,-4,0), logLinf_sigma=runif(1, .1, .4),
-         logk_sigma=runif(1, .1, .4), logLinf_raw=rnorm(N, 0, 1),
-         logk_raw=rnorm(N, 0, 1))
+    list(delta=runif(1, .9,1.1), sigma_obs=runif(1, .1, .2), logLinf_mean=runif(1, 3.8, 3.95),
+         logk_mean=runif(1,-2.2,-1.9), logLinf_sigma=runif(1, .05, .2),
+         logk_sigma=runif(1, .1, .2), logLinf_raw=rep(0,N),
+         logk_raw=rep(0,N))
   return(list(data=data, inits=inits))
 }
 sample.vbgf <- function(ages, Linf, k,  t0, sigma.obs){
