@@ -79,24 +79,8 @@ run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
           verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=10,
           Nout.ind=500, exp.columns=c(1,2,3))
 
+## Still trying to get this model working
 m <- 'sslog'
-par(mfrow=c(2,3))
-isigma2 <- rgamma(1e5, 3.78, .01)
-hist(1/sqrt(isigma2), breaks=750, xlim=c(0,.2))
-sigma <- rlnorm(1e5, -2.81, .25)
-hist(sigma, breaks=750, xlim=c(0,.2))
-qqplot(1/sqrt(isigma2), sigma);  abline(0,1)
-itau2 <- rgamma(1e5, 1.708603, 0.008613854)
-hist(1/sqrt(itau2), breaks=750, xlim=c(0,1))
-tau <- rlnorm(1e5, -2.5, .75)
-hist(tau, breaks=750, xlim=c(0,1))
-qqplot(1/sqrt(itau2), tau);  abline(0,1)
-iq2 <- rgamma(1e5, .001, 0.001)
-hist(1/sqrt(iq2), breaks=750, xlim=c(0,1000))
-q <- rlnorm(1e5, -2.5, .75)
-hist(q, breaks=750, xlim=c(0,1))
-qqplot(1/sqrt(iq2), q);  abline(0,1)
-
 setwd(main.dir)
 temp <- sslog_setup()
 data <- temp$data
@@ -106,8 +90,6 @@ test <- sampling(obj.stan, iter=2000, pars=names(inits()[[1]]), data=data,
                  init=inits,
                  control=list(adapt_delta=.98))
 setwd(paste0('models/',m))
-## Compile Stan, TMB and ADMB models
-## obj.stan <- stan_model(file= paste0(m, '_stan.stan'))
 compile(paste0(m, '.cpp'))
 dyn.load(paste0(m))
 obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m)
