@@ -95,4 +95,4 @@ write.table(simulated, file='results/simulated.csv', sep=',',
 ## Check that everything worked properly among platforms and models
 print(subset(empirical, platform=='tmb' & seed ==seeds[1],
              select=c(model, Nsims)))
-print(ddply(empirical, .(model, platform), summarize, reps=length(seeds)))
+print(ddply(empirical, .(model, platform), summarize, reps=length(seed)))
