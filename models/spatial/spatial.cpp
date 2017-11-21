@@ -25,10 +25,15 @@ Type objective_function<Type>::operator() ()
 
   using namespace density;
   int i,j;
-  Type res=0;
+  Type nll=0;
+  Type nlp=0;
+
+  // Exponentiated versions to bound below at 0
+  Type sigma2=exp(sigma);
+  Type a2=exp(a);
 
   vector<Type> eta(n);
-  eta = X*b + sigma*u;
+  eta = X*b + sigma2*u;
 
   //
   matrix<Type> cov(n,n);
@@ -37,22 +42,27 @@ Type objective_function<Type>::operator() ()
     cov(i,i)=Type(1);
     for ( j=0;j<i;j++)
     {
-      cov(i,j)=exp(-a*dd(i,j));			// Exponentially decaying correlation
+      cov(i,j)=exp(-a2*dd(i,j));			// Exponentially decaying correlation
       cov(j,i)=cov(i,j);
     }
   }
 
   MVNORM_t<Type> neg_log_density(cov);
-  res+=neg_log_density(u);
+  nll+=neg_log_density(u);
 
   // logdpois = N log lam - lam
-  for(i=0;i<n;i++) res -= y[i]*eta[i]-exp(eta[i]);
+  for(i=0;i<n;i++) nll -= y[i]*eta[i]-exp(eta[i]);
 
-  // priors; a is U(0,2) bounded externally but putting a normal here too
-  res-= dnorm(a, Type(1.0), Type(.35), true);
-  res-= dnorm(b, Type(0.0), Type(10.0), true).sum();
-  res-= dcauchy(sigma, Type(0.0), Type(1.0), true);
+  // priors; a is strictly positive but also adding an informative prior to
+  // help aid convergence
+  nlp-= dnorm(a2, Type(1.0), Type(.35), true);
+  nlp-= dnorm(b, Type(0.0), Type(10.0), true).sum();
+  nlp-= dcauchy(sigma2, Type(0.0), Type(1.0), true);
 
-  return res;
+  // Add effect of Jacobian of transformations
+  nlp-= sigma + a;
+
+  Type nld=nlp+nll; // negative log posterior density
+  return nld;
 
 }
