@@ -79,34 +79,19 @@ run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
           verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=10,
           Nout.ind=500, exp.columns=c(1,2,3))
 
-## Still trying to get this model working
+## State space logistic fisheries assessment model. The adapt_delta needs
+## to be high since it's not very well defined (classic banana
+## shape). Plus, this model was converted from BUGS with really specific
+## priors and so it's funky in other ways.
 m <- 'sslog'
 setwd(main.dir)
 temp <- sslog_setup()
 data <- temp$data
 inits <- temp$inits
 obj.stan <- stan_model(file= 'models/sslog/sslog.stan')
-test <- sampling(obj.stan, iter=2000, pars=names(inits()[[1]]), data=data,
-                 init=inits,
-                 control=list(adapt_delta=.98))
-setwd(paste0('models/',m))
-compile(paste0(m, '.cpp'))
-dyn.load(paste0(m))
-obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m)
-test <- tmbstan(obj.tmb, iter=2000, init=list(inits()), chains=1 )
-setwd('admb')
-write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
-            col.names=FALSE )
-## Don't need a good hessian since using adaptation now, so just run it a
-## single iteration to get the files with names
-system(paste('admb',m))
-system(paste(m, ' -maxfn 1 -nox -nohess'))
-
-
-run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
-          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
-          Nout.ind=500, exp.columns=c(1,2,3))
-
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.98,
+          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
+          Nout.ind=500)
 
 
 ### ------------------------------------------------------------

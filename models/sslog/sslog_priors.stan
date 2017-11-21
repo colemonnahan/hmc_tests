@@ -1,5 +1,23 @@
 
 // this is a hack version I started to change priors then gave up
+
+// par(mfrow=c(2,3))
+// isigma2 <- rgamma(1e5, 3.78, .01)
+// hist(1/sqrt(isigma2), breaks=750, xlim=c(0,.2))
+// sigma <- rlnorm(1e5, -2.81, .25)
+// hist(sigma, breaks=750, xlim=c(0,.2))
+// qqplot(1/sqrt(isigma2), sigma);  abline(0,1)
+// itau2 <- rgamma(1e5, 1.708603, 0.008613854)
+// hist(1/sqrt(itau2), breaks=750, xlim=c(0,1))
+// tau <- rlnorm(1e5, -2.5, .75)
+// hist(tau, breaks=750, xlim=c(0,1))
+// qqplot(1/sqrt(itau2), tau);  abline(0,1)
+// iq2 <- rgamma(1e5, .001, 0.001)
+// hist(1/sqrt(iq2), breaks=750, xlim=c(0,1000))
+// q <- rlnorm(1e5, -2.5, .75)
+// hist(q, breaks=750, xlim=c(0,1))
+// qqplot(1/sqrt(iq2), q);  abline(0,1)
+
 data {
   int<lower=0> N; // number of years
   real catches[N];

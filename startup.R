@@ -592,8 +592,8 @@ sslog_setup <- function(){
   catches <- dat$Catches
   data <- list(N=nrow(dat), catches=catches, logcpue=log(cpue))
   inits <- function()
-    list(logr=runif(1, -.4, 0), logK=runif(1, 5.5,6.6),
-         iq=runif(1, 4,5), isigma2=runif(1, 80,120), itau2=runif(1, 80,120),
+    list(logK=runif(1, 5.8,6.6), logr=runif(1, -2, -1),
+         iq=runif(1, 3,5), isigma2=runif(1, 120,500), itau2=runif(1, 50,100),
          u_raw=rep(0, len=nrow(dat)))
   return(list(data=data, inits=inits))
 }

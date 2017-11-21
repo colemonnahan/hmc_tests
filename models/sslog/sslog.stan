@@ -5,11 +5,11 @@ data {
 }
 parameters {
  // bounded parameters provide uniform priors
-  real<lower=-1> logK;
-  real<lower=-5> logr;
-  real<lower=1, upper=10> iq;
-  real<lower=50> isigma2;
-  real<lower=50> itau2;
+  real logK;
+  real logr;
+  real iq;
+  real isigma2;
+  real itau2;
   vector[N] u_raw;
 }
 
