@@ -1,43 +1,35 @@
+
+// this is a hack version I started to change priors then gave up
 data {
   int<lower=0> N; // number of years
   real catches[N];
   real logcpue[N];
 }
 parameters {
- // bounded parameters provide uniform priors
-  real<lower=-1> logK;
-  real<lower=-5> logr;
-  real<lower=1, upper=10> iq;
-  real<lower=50> isigma2;
-  real<lower=50> itau2;
+  real<lower=0> logK;
+  real<lower=0> logr;
+  real<lower=0> q;
+  real<lower=0> sigma;
+  real<lower=0> tau;
   vector[N] u_raw;
 }
 
 transformed parameters {
-  real sigma2;
-  real tau2;
-  real q;
-  real K;
-  real r;
   vector[N] u;
-  sigma2 = 1/isigma2;
-  tau2 = 1/itau2;
-  q = 1/iq;
-  K = exp(logK);
-  r = exp(logr);
   // non-centered random effects; implies u~N(0,sigma)
-  u = u_raw*sqrt(sigma2);
+  u = u_raw*sigma;
 }
 
 model {
  real B[N];
  real ypred[N];
  real temp;
- // priors
+
+// priors
  logr~normal(-1.38, 0.51);
  iq~gamma(0.001, 0.001);
- isigma2~gamma(3.785518, 0.010223);
- itau2~gamma(1.708603, 0.008613854);
+ sigma~lognormal(-2.8, 0.25);
+ tau~lognormal(-2.5,0.75);
  // project dynamics
  B[1] = K;
  ypred[1] = log(B[1]) +log(q);

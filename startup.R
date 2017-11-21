@@ -586,6 +586,19 @@ wildf_setup <- function(){
 }
 
 
+sslog_setup <- function(){
+  dat <- read.csv('models/sslog/tuna_data.csv')
+  cpue <- dat$CPUE
+  catches <- dat$Catches
+  data <- list(N=nrow(dat), catches=catches, logcpue=log(cpue))
+  inits <- function()
+    list(logr=runif(1, -.4, 0), logK=runif(1, 5.5,6.6),
+         iq=runif(1, 4,5), isigma2=runif(1, 80,120), itau2=runif(1, 80,120),
+         u_raw=rep(0, len=nrow(dat)))
+  return(list(data=data, inits=inits))
+}
+
+
 ## Growth model functions
 growth_setup <- function(N, seed){
   set.seed(seed)
