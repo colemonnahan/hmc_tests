@@ -8,7 +8,7 @@
 main.dir <- 'C:/Users/Cole/hmc_tests/'
 setwd(main.dir)
 source("startup.R")
-Nreps <- 4                 # number of replicates
+Nreps <- 10                 # number of replicates
 Nout.ind <- 1000            # number of independent samples if verify==TRUE
 set.seed(241)
 seeds <- 1:Nreps#sample(1:1e5, size=Nreps)         #
@@ -37,7 +37,7 @@ run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=FALSE)
 data <- list(n=50, x=rep(0, 50))
 inits <- function() list(mu=rnorm(50))
 obj.stan <- stan_model(file= 'models/iidz/iidz.stan')
-Npar.vec <- 2^(4+1:4)
+Npar.vec <- 2^(4+1:6)
 run_model(m='iidz', obj.stan=obj.stan, data=data, inits=inits,
           simulation=TRUE, empirical=TRUE, verify=FALSE)
 
@@ -45,7 +45,7 @@ run_model(m='iidz', obj.stan=obj.stan, data=data, inits=inits,
 data <- list(n=50, x=rep(0, 50), sds=1:50)
 inits <- function() list(mu=rnorm(50))
 obj.stan <- stan_model(file= 'models/zdiag/zdiag.stan')
-Npar.vec <- 2^(4+1:4)
+Npar.vec <- 2^(4+1:6)
 run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
           verify=FALSE, simulation=TRUE, empirical=TRUE)
 
@@ -53,7 +53,7 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
 m <- 'growth'
 temp <- growth_setup(N=128, seed=2345)
 data <- temp$data; inits <- temp$inits
-Npar.vec <- 2^(3+1:4)
+Npar.vec <- 2^(3+1:5)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
           verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=3,
@@ -74,13 +74,10 @@ m <- 'swallows'
 temp <- swallows_setup()
 data <- temp$data
 inits <- temp$inits
-lower <- abs(unlist(inits()))*-Inf
-upper <- abs(unlist(inits()))*Inf
-lower[c('sigmayearphi', 'sigmaphi', 'sigmap')] <- 0
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
-          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
-          Nout.ind=500, lower=lower, upper=upper, exp.columns=c(1,2,3))
+          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=10,
+          Nout.ind=500, exp.columns=c(1,2,3))
 
 ## Simulated spatial model, TMB example
 m <- 'spatial'
