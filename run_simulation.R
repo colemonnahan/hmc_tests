@@ -79,20 +79,53 @@ run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
           verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
           Nout.ind=500, exp.columns=c(1,2,3))
 
-## Simulated spatial model, TMB example
-m <- 'spatial'
-temp <- spatial_setup()
-data <- temp$data; inits <- temp$inits
-lower <- abs(unlist(inits()))*-Inf
-upper <- abs(unlist(inits()))*Inf
-lower['sigma'] <- 0; lower['a'] <- 0
-upper['a'] <- 2
-obj <- MakeADFun(data=data, parameters=inits(), DLL = "spatial", random = "u")
-opt <- nlminb(obj$par, obj$fn, obj$gr,
-              lower=c(-100.0, -100.0, 0.01, -3.0),
-              upper=c( 100.0,  100.0, 3.00,  3.0) )
-test <- tmbstan(obj, lower=lower, upper=upper, chains=3, iter=700,
-                init=lapply(1:3, function(i) inits()))
+m <- 'sslog'
+par(mfrow=c(2,3))
+isigma2 <- rgamma(1e5, 3.78, .01)
+hist(1/sqrt(isigma2), breaks=750, xlim=c(0,.2))
+sigma <- rlnorm(1e5, -2.81, .25)
+hist(sigma, breaks=750, xlim=c(0,.2))
+qqplot(1/sqrt(isigma2), sigma);  abline(0,1)
+itau2 <- rgamma(1e5, 1.708603, 0.008613854)
+hist(1/sqrt(itau2), breaks=750, xlim=c(0,1))
+tau <- rlnorm(1e5, -2.5, .75)
+hist(tau, breaks=750, xlim=c(0,1))
+qqplot(1/sqrt(itau2), tau);  abline(0,1)
+iq2 <- rgamma(1e5, .001, 0.001)
+hist(1/sqrt(iq2), breaks=750, xlim=c(0,1000))
+q <- rlnorm(1e5, -2.5, .75)
+hist(q, breaks=750, xlim=c(0,1))
+qqplot(1/sqrt(iq2), q);  abline(0,1)
+
+setwd(main.dir)
+temp <- sslog_setup()
+data <- temp$data
+inits <- temp$inits
+obj.stan <- stan_model(file= 'models/sslog/sslog.stan')
+test <- sampling(obj.stan, iter=2000, pars=names(inits()[[1]]), data=data,
+                 init=inits,
+                 control=list(adapt_delta=.98))
+setwd(paste0('models/',m))
+## Compile Stan, TMB and ADMB models
+## obj.stan <- stan_model(file= paste0(m, '_stan.stan'))
+compile(paste0(m, '.cpp'))
+dyn.load(paste0(m))
+obj.tmb <- MakeADFun(data=data, parameters=inits(), DLL=m)
+test <- tmbstan(obj.tmb, iter=2000, init=list(inits()), chains=1 )
+setwd('admb')
+write.table(x=unlist(data), file=paste0(m,'.dat'), row.names=FALSE,
+            col.names=FALSE )
+## Don't need a good hessian since using adaptation now, so just run it a
+## single iteration to get the files with names
+system(paste('admb',m))
+system(paste(m, ' -maxfn 1 -nox -nohess'))
+
+
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
+          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
+          Nout.ind=500, exp.columns=c(1,2,3))
+
+
 
 ### ------------------------------------------------------------
 ### Step 3: Load and prepare result data frames for plotting and tables
@@ -155,3 +188,22 @@ source('make_plots.R')
 ##                 cbind(alg='stan', sp3))
 ## ggplot(subset(sp.all, chain!=11), aes(iteration, energy__, group=chain, color=factor(chain))) +
 ##   geom_line() + xlim(150,750) + facet_wrap("alg")
+
+## ## Simulated spatial model, TMB example
+## m <- 'spatial'
+## temp <- spatial_setup()
+## data <- temp$data; inits <- temp$inits
+## lower <- abs(unlist(inits()))*-Inf
+## upper <- abs(unlist(inits()))*Inf
+## lower['sigma'] <- 0; lower['a'] <- 0
+## upper['a'] <- 2
+## setwd('models/spatial')
+## compile('spatial.cpp')
+## dyn.load('spatial')
+
+## obj <- MakeADFun(data=data, parameters=inits(), DLL = "spatial", random = "u")
+## opt <- nlminb(obj$par, obj$fn, obj$gr,
+##               lower=c(-100.0, -100.0, 0.01, -3.0),
+##               upper=c( 100.0,  100.0, 3.00,  3.0) )
+## test <- tmbstan(obj,  chains=3, iter=700,
+##                 init=lapply(1:3, function(i) inits()))
