@@ -76,7 +76,7 @@ data <- temp$data
 inits <- temp$inits
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
-          verify=FALSE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
+          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=10,
           Nout.ind=500, exp.columns=c(1,2,3))
 
 m <- 'sslog'
