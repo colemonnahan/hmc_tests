@@ -606,9 +606,9 @@ growth_setup <- function(N, seed){
   data <- list(Nfish=N, Nobs=nrow(dat), loglengths=dat$loglengths,
                fish=dat$fish, ages=dat$ages)
   inits <- function()
-    list(delta=runif(1, .9,1.1), sigma_obs=runif(1, .1, .2), logLinf_mean=runif(1, 3.8, 3.95),
-         logk_mean=runif(1,-2.2,-1.9), logLinf_sigma=runif(1, .05, .2),
-         logk_sigma=runif(1, .1, .2), logLinf_raw=rep(0,N),
+    list(delta=runif(1, .1,2), sigma_obs=runif(1, .01, 1), logLinf_mean=runif(1, 3, 5),
+         logk_mean=runif(1,-4,0), logLinf_sigma=runif(1, .01, 1),
+         logk_sigma=runif(1, .01, 1), logLinf_raw=rep(0,N),
          logk_raw=rep(0,N))
   return(list(data=data, inits=inits))
 }

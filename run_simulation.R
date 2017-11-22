@@ -108,8 +108,12 @@ source('make_plots.R')
 
 ## Old tests for a growth model which was slow to converge and thus
 ## adapating poorly
-devtools::install("C:/Users/Cole/adnuts")
-NN <- 1
+### Make sure to go into startup.R and get the TMB and ADMB models working
+## first
+## devtools::install("C:/Users/Cole/adnuts")
+## temp <- growth_setup(N=128, seed=2345)
+## data <- temp$data; inits <- temp$inits
+NN <- 25
 set.seed(4)
 seeds0 <- sample(1:1e5, size=NN)
 ii <- ii2 <- lapply(1:NN, function(i) inits())
@@ -120,50 +124,29 @@ for(i in 1:NN){
 }
 ii <- lapply(1:NN, function(i) ii[[1]])
 ii2 <- lapply(1:NN, function(i) ii2[[1]])
+setwd(main.dir)
 fit.tmb <-
   sample_tmb(obj=obj.tmb, iter=1100, warmup=1000, chains=NN, seeds=1:NN,
              init=ii, control=list(metric=NULL, adapt_delta=.9,
                                    max_treedepth=10, verbose=TRUE, adapt_mass=TRUE))
 fit.admb <-
-  sample_admb('growth', 'admb',  iter=1100, warmup=1000, chains=NN, seeds=1:NN,
+  sample_admb('growth', 'models/growth/admb',  iter=1100, warmup=1000, chains=NN, seeds=1:NN,
               init=ii, control=list(metric=NULL, adapt_delta=.9,
                                     max_treedepth=10, adapt_mass=TRUE))
 fit.stan <- sampling(obj.stan, data=data,  iter=1100, warmup=1000,
-                     chains=NN, seeds=1:NN, init=ii2,
+                     chains=NN, init=ii2,
                      control=list(adapt_delta=.9, max_treedepth=10))
+save.image()
 
 sp1 <- extract_sampler_params(fit.tmb, TRUE)
-ggplot(sp1, aes(iteration, energy__, group=chain,
-                                  color=factor(chain), size=divergent__)) +
-  geom_point() + geom_line()
-ggplot(sp1, aes(iteration, stepsize__, group=chain,
-                                  color=factor(chain), size=divergent__)) +
-  geom_point() + geom_line() + scale_y_log10()
-ggplot(sp1, aes(iteration, accept_stat__, group=chain,
-                                  color=factor(chain), size=divergent__)) +
-  geom_point() + geom_line()  + scale_y_log10()
-
-
-ggplot(subset(sp1, chain!=11), aes(iteration, divergent__, group=chain, color=factor(chain))) +
-  geom_line() + xlim(0,25)
-plot(sp1$iteration, log(sp1$stepsize__), type='l'); abline(v=c(125,225,425))
-plot(sp1$iteration, sp1$energy__, type='l'); abline(v=c(125,225,425))
-ss <- extract_samples(fit.tmb, TRUE, TRUE)
-
 sp2 <- extract_sampler_params(fit.admb, TRUE)
-plot(sp$iteration, log(sp$stepsize__), type='l'); abfline(v=c(125,175,475))
-plot(sp$iteration, sp$energy__, type='l'); abline(v=c(125,175,475))
-ss <- extract_samples(fit.admb, TRUE, TRUE)
-which(ss$lp__-sp$energy__>0)
-
-sp3 <- data.frame(chain=rep(1:15, each=1100), iteration=1:1100, do.call(rbind,
+sp3 <- data.frame(chain=rep(1:NN, each=1100), iteration=1:1100, do.call(rbind,
                  get_sampler_params(fit.stan, inc_warmup=TRUE)))
 sp3$energy__ <- sp3$energy__*-1
-
 sp.all <- rbind(cbind(alg='tmb', sp1), cbind(alg='admb', sp2),
                 cbind(alg='stan', sp3))
 ggplot(subset(sp.all, chain!=11), aes(iteration, energy__, group=chain, color=factor(chain))) +
-  geom_line() + xlim(150,750) + facet_wrap("alg")
+  geom_line() + xlim(1,50) + facet_wrap("alg")
 
 ## ## Simulated spatial model, TMB example
 ## m <- 'spatial'
