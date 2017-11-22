@@ -23,6 +23,14 @@ sink <- FALSE
 
 
 ### Step 2: Run the models.
+## Run multivariate normal, empirical and simulated
+##Npar.vec <- c(2,4,8,16,32,64, 128)
+Npar <- 16
+covar <- diag(Npar)
+data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
+inits <- function() list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar))))
+obj.stan <- stan_model(file= 'models/mvnd/mvnd.stan')
+run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=FALSE)
 
 ## Run iid normal increasing in size
 ## Setup data, inits and pars
@@ -103,9 +111,9 @@ source('make_plots.R')
 ### Make sure to go into startup.R and get the TMB and ADMB models working
 ## first
 ## devtools::install("C:/Users/Cole/adnuts")
-## temp <- growth_setup(N=128, seed=2345)
-## data <- temp$data; inits <- temp$inits
-NN <- 25
+temp <- growth_setup(N=128, seed=2345)
+data <- temp$data; inits <- temp$inits
+NN <- 15
 set.seed(4)
 seeds0 <- sample(1:1e5, size=NN)
 ii <- ii2 <- lapply(1:NN, function(i) inits())
@@ -116,7 +124,6 @@ for(i in 1:NN){
 }
 ii <- lapply(1:NN, function(i) ii[[1]])
 ii2 <- lapply(1:NN, function(i) ii2[[1]])
-setwd(main.dir)
 fit.tmb <-
   sample_tmb(obj=obj.tmb, iter=1100, warmup=1000, chains=NN, seeds=1:NN,
              init=ii, control=list(metric=NULL, adapt_delta=.9,
@@ -128,8 +135,6 @@ fit.admb <-
 fit.stan <- sampling(obj.stan, data=data,  iter=1100, warmup=1000,
                      chains=NN, init=ii2,
                      control=list(adapt_delta=.9, max_treedepth=10))
-save.image()
-
 sp1 <- extract_sampler_params(fit.tmb, TRUE)
 sp2 <- extract_sampler_params(fit.admb, TRUE)
 sp3 <- data.frame(chain=rep(1:NN, each=1100), iteration=1:1100, do.call(rbind,
@@ -137,8 +142,16 @@ sp3 <- data.frame(chain=rep(1:NN, each=1100), iteration=1:1100, do.call(rbind,
 sp3$energy__ <- sp3$energy__*-1
 sp.all <- rbind(cbind(alg='tmb', sp1), cbind(alg='admb', sp2),
                 cbind(alg='stan', sp3))
-ggplot(subset(sp.all, chain!=11), aes(iteration, energy__, group=chain, color=factor(chain))) +
-  geom_line() + xlim(1,50) + facet_wrap("alg")
+sp.all <- ddply(sp.all, .(chain, alg), mutate,
+                energy2=energy__/energy__[1])
+saveRDS(sp.all, file='sp.all.RDS')
+ggplot(subset(sp.all), aes(iteration, energy2, group=chain))+
+  geom_line() + xlim(1,50) + facet_wrap("alg") + geom_point(aes(color=divergent__==1))
+ggplot(subset(sp.all), aes(iteration, energy__, group=chain))+
+  geom_line() + xlim(1,50) + facet_wrap("alg") + geom_point(aes(color=divergent__==1))
+ggplot(subset(sp.all), aes(iteration, log2(stepsize__), group=chain, color=factor(chain))) +
+  geom_line() + xlim(1,755) + facet_wrap("alg")
+
 
 ## ## Simulated spatial model, TMB example
 ## m <- 'spatial'
