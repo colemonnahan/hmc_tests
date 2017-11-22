@@ -7,7 +7,7 @@ parameters {
  // bounded parameters provide uniform priors
   real logK;
   real logr;
-  real iq;
+  real<lower=1, upper=10> iq;
   real isigma2;
   real itau2;
   vector[N] u_raw;

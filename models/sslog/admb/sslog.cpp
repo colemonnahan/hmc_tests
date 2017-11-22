@@ -25,7 +25,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
   initializationfunction();
   logK.allocate("logK");
   logr.allocate("logr");
-  iq.allocate("iq");
+  iq.allocate(1,10,"iq");
   isigma2.allocate("isigma2");
   itau2.allocate("itau2");
   u_raw.allocate(1,N,"u_raw");

@@ -88,10 +88,13 @@ setwd(main.dir)
 temp <- sslog_setup()
 data <- temp$data
 inits <- temp$inits
+lower <- -Inf*abs(.1+unlist(inits()))
+upper <- Inf*abs(.1+unlist(inits()))
+lower['iq'] <- 1; upper['iq'] <- 10
 obj.stan <- stan_model(file= 'models/sslog/sslog.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.98,
-          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=1,
-          Nout.ind=500)
+          verify=TRUE, simulation=FALSE, empirical=FALSE, Nthin.ind=2,
+          Nout.ind=500, lower=lower, upper=upper)
 
 
 ### ------------------------------------------------------------
