@@ -3,11 +3,11 @@ DATA_SECTION
   init_number N;
   init_vector catches(1,N);
   init_vector logcpue(1,N);
-  
+
 PARAMETER_SECTION
   init_number logK;
   init_number logr;
-  init_number iq;
+  init_bounded_number iq(1,10);
   init_number isigma2;
   init_number itau2;
   init_vector u_raw(1,N);
@@ -24,7 +24,7 @@ PARAMETER_SECTION
   number r;
   number nlp;
   number nll;
-  
+
   objective_function_value nld;
 
 INITIALIZATION_SECTION
@@ -33,7 +33,7 @@ INITIALIZATION_SECTION
   iq 5;
   isigma2 400;
   itau2 92;
-  
+
 PROCEDURE_SECTION
  nlp=0.0;
  nll=0.0;
@@ -76,4 +76,4 @@ PROCEDURE_SECTION
  nll+= tmp;
 
  nld=nll+nlp;
- 
+
