@@ -23,14 +23,6 @@ sink <- FALSE
 
 
 ### Step 2: Run the models.
-## Run multivariate normal, empirical and simulated
-##Npar.vec <- c(2,4,8,16,32,64, 128)
-Npar <- 16
-covar <- diag(Npar)
-data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
-inits <- function() list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar))))
-obj.stan <- stan_model(file= 'models/mvnd/mvnd.stan')
-run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=FALSE)
 
 ## Run iid normal increasing in size
 ## Setup data, inits and pars
