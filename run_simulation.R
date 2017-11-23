@@ -53,7 +53,7 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
 m <- 'growth'
 temp <- growth_setup(N=128, seed=2345)
 data <- temp$data; inits <- temp$inits
-Npar.vec <- 2^(3+1:5)
+Npar.vec <- 2^(3+1:6)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
           verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=3,
