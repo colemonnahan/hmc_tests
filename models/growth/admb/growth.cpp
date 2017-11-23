@@ -42,7 +42,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
  model_data(argc,argv) , function_minimizer(sz)
 {
   initializationfunction();
-  delta.allocate(0,5,"delta");
+  delta.allocate("delta");
   sigma_obs.allocate("sigma_obs");
   logLinf_mean.allocate("logLinf_mean");
   logk_mean.allocate("logk_mean");
@@ -74,9 +74,9 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
   #ifndef NO_AD_INITIALIZE
   logLinf_sigma2.initialize();
   #endif
-  Linf.allocate("Linf");
+  delta2.allocate("delta2");
   #ifndef NO_AD_INITIALIZE
-  Linf.initialize();
+  delta2.initialize();
   #endif
   k.allocate("k");
   #ifndef NO_AD_INITIALIZE
@@ -115,24 +115,24 @@ void model_parameters::userfunction(void)
  sigma_obs2=exp(sigma_obs);
  logLinf_sigma2=exp(logLinf_sigma);
  logk_sigma2=exp(logk_sigma);
+ delta2=exp(delta);
  logLinf = logLinf_mean+logLinf_raw*logLinf_sigma2;
  logk = logk_mean+logk_raw*logk_sigma2;
  double zero=0.0; double five=5.0;
   // Calculate predicted lengths
   for(int i=1; i<=Nobs; i++){
-    Linf  = exp(logLinf(fish(i)));
     k = exp(logk(fish(i)));
-    ypred(i) = log( Linf*pow(1-exp(-k*(ages(i)-5)),delta) );
+    ypred(i) = logLinf(fish(i)) + delta2*log(1-exp(-k*(ages(i)-5)));
   }
   // delta is uniform above
-  nlp += dnorm(delta, 1, 0.25);
+  nlp += dnorm(delta2, 1, 0.25);
   nlp += dcauchy(sigma_obs2, zero, five);
   // hyperpriors
   nlp += dcauchy(logk_sigma2, zero, five);
   nlp += dcauchy(logLinf_sigma2, zero, five);
   // hyper means are uniform above
   // Jacobian adjustment for variances
-  nll -= sigma_obs + logk_sigma + logLinf_sigma;
+  nll -= sigma_obs + logk_sigma + logLinf_sigma + delta;
   // random effects; non-centered
   nll+=dnorm(logLinf_raw, 0,1);
   nll+=dnorm(logk_raw, 0,1);
