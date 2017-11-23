@@ -1,19 +1,17 @@
-m <- c('ss_logistic', 'wildflower_nc', 'redkite', 'growth_nc', 'swallows', 'mvnc','mvnd')
-## g <- ggplot(subset(empirical, platform!='jags' & model %in% m)) +
-##     geom_point(aes(delta.target, log(samples.per.time))) + facet_wrap('model', scales='free_y')
-## ggsave('plots/optimal_delta.png', g, width=ggwidth, height=ggheight)
+## This file makes some exploratory plots given the empirical and simulated
+## results loaded in the workspace
 
 g <- ggplot(simulated, aes(Npar, y=median.efficiency, color=platform)) +
-  geom_line() + facet_wrap("model") + scale_y_log10() +
+  geom_line() + facet_wrap("model", scales='free') + scale_y_log10() +
   geom_pointrange(aes(ymin=lwr.efficiency, ymax=upr.efficiency))
 ggsave('plots/efficiency_simulated.png', g, width=ggwidth, height=ggheight)
 
 g <- ggplot(simulated, aes(Npar, y=time.total, color=platform)) +
-  geom_point() + facet_wrap("model") + scale_y_log10()
+  geom_point() + facet_wrap("model", scales='free') + scale_y_log10()
 ggsave('plots/runtime_simulated.png', g, width=ggwidth, height=ggheight)
 
 g <- ggplot(simulated, aes(Npar, y=log10(minESS), color=platform)) +
-  geom_point() + facet_wrap("model") + scale_y_log10()
+  geom_point() + facet_wrap("model", scales='free') + scale_y_log10()
 ggsave('plots/ESS_simulated.png', g, width=ggwidth, height=ggheight)
 
 g <- ggplot(empirical, aes(minESS, y=minESS.coda, group=platform, color=platform))  +
@@ -22,12 +20,16 @@ g <- ggplot(empirical, aes(minESS, y=minESS.coda, group=platform, color=platform
       facet_wrap('model', scales='fixed')
 ggsave('plots/ESS_comparison.png', g, width=ggwidth, height=ggheight)
 
-ggplot(empirical, aes(platform, efficiency, group=seed)) + geom_line() +
-  facet_wrap("model") + scale_y_log10()
+g <- ggplot(empirical, aes(platform, efficiency, group=seed)) +
+  geom_line( alpha=.5) +
+  facet_wrap("model") + scale_y_log10() +
+  geom_line(aes(platform, median.efficiency), col='red', lwd=2)
+ggsave('plots/empirical_efficiency.png', g, width=ggwidth, height=ggheight)
 
 g <- ggplot(empirical, aes(platform, y=100*(minESS/Nsims)))  +
-  geom_point()+ ylim(0,100) + facet_wrap('model') +
-    theme(axis.text.x = element_text(angle = 90)) + ylab("% ESS")
+  geom_point()+  facet_wrap('model') +
+  #theme(axis.text.x = element_text(angle = 90)) +
+  ylab("% ESS")
 ggsave('plots/ESS_percentages.png', g, width=ggwidth, height=ggheight)
 g <- ggplot(empirical, aes(platform, y=log(time.total)))  +
   geom_point()+ facet_wrap('model') +
@@ -40,18 +42,22 @@ ggsave('plots/Rhat.png', g, width=ggwidth, height=ggheight)
 
 
 ## Some adaptation plots
-g <- ggplot(adapt_empirical, aes(model, log(eps.final), color=platform)) + geom_point(alpha=.5)
+g0 <- ggplot(adapt_empirical, aes(x=platform, color=platform)) +
+   facet_wrap("model", scales='free_y') #+ scale_y_log10()
+
+g <- g0+ geom_point(aes(y=eps.final), alpha=.5) + ylab("Step size")
 ggsave('plots/adapt_eps.png', g, width=ggwidth, height=ggheight)
-g <- ggplot(adapt_empirical, aes(model, delta.mean, color=platform)) + geom_point(alpha=.5)
+
+g <- g0+ geom_point(aes(y=delta.mean), alpha=.5) + ylab("Acceptance Rate")
 ggsave('plots/adapt_delta.png', g, width=ggwidth, height=ggheight)
-g <- ggplot(adapt_empirical, aes(model, log10(nsteps.median), color=platform)) + geom_jitter(alpha=.5)
+g <- g0+ geom_jitter(aes(y=nsteps.mean), alpha=.5) + ylab("Mean Steps")
 ggsave('plots/adapt_nsteps.png', g, width=ggwidth, height=ggheight)
-g <- ggplot(adapt_empirical, aes(model, max_treedepths, color=platform)) + geom_point(alpha=.5)
+g <- g0+ geom_point(aes(y=max_treedepths), alpha=.5) + ylab("# Max treedepths")
 ggsave('plots/adapt_max_treedepths.png', g, width=ggwidth, height=ggheight)
-g <- ggplot(adapt_empirical, aes(model, 100*ndivergent/Nsims, color=platform)) +
-    geom_point(alpha=.5) + ylab('Percent diverged transitions')
+g <- g0+ geom_point(aes(y=100*ndivergent/Nsims), alpha=.5) + ylab('% Divergences')
 ggsave('plots/adapt_ndivergent.png', g, width=ggwidth, height=ggheight)
-g <- ggplot(adapt_empirical, aes(log(eps.final), log10(nsteps.mean),
-  color=model, shape=platform)) + geom_point()
-ggsave('plots/adapt_eps_vs_nsteps.png', g, width=ggwidth, height=ggheight)
+
+## g <- ggplot(adapt_empirical, aes(log(eps.final), log10(nsteps.mean),
+##   color=model, shape=platform)) + geom_point()
+## ggsave('plots/adapt_eps_vs_nsteps.png', g, width=ggwidth, height=ggheight)
 
