@@ -51,6 +51,14 @@ Type objective_function<Type>::operator() ()
   matrix<Type> phi(I,K-1);
   matrix<Type> chi(I,K+1);
 
+  // To bound below by zero
+  Type sigmayearphi2=exp(sigmayearphi);
+  Type sigmaphi2=exp(sigmaphi);
+  Type sigmap2=exp(sigmap);
+  // Jacobian adjustment for variances
+  nll -= sigmaphi + sigmayearphi + sigmap;
+
+
   p.setZero();
   phi.setZero();
   chi.setZero();
@@ -63,15 +71,15 @@ Type objective_function<Type>::operator() ()
     // calculate phi as a function of fixed and random effects
     for(int t=0; t<(K-1); t++) {
       x=a(t)+ a1*carez(i)+
-      	sigmayearphi*yeareffphi_raw(year(i)-1)+
-      	sigmaphi*fameffphi_raw(family(i)-1);
+      	sigmayearphi2*yeareffphi_raw(year(i)-1)+
+      	sigmaphi2*fameffphi_raw(family(i)-1);
       phi(i,t) = inv_logit(x);
     }
     // calculate p as a function of fixed and random effects
     p(i,1-1) = 1;  // first occasion is marking occasion
     for(int t=1; t<K; t++){
       x=b0(year(i)-1)+ b1(year(i)-1)*agec(t)+
-      	sigmap*fameffp_raw(family(i)-1);
+      	sigmap2*fameffp_raw(family(i)-1);
       p(i,t) = inv_logit(x);
     }
     // probabilitiy of never being seen after last observation. ind here is
@@ -91,9 +99,9 @@ Type objective_function<Type>::operator() ()
   nlp-= dnorm(b1, Type(0.0), Type(5), true).sum();
   nlp-= dnorm(a, Type(0.0), Type(1.5), true).sum();
   nlp-= dnorm(a1, Type(0.0), Type(5), true);
-  nlp-= dcauchy(sigmaphi, Type(0), Type(1.0), true);
-  nlp-= dnorm(sigmayearphi, Type(0), Type(0.5), true);
-  nlp-= dcauchy(sigmap, Type(0), Type(1.0), true);
+  nlp-= dcauchy(sigmaphi2, Type(0), Type(1.0), true);
+  nlp-= dnorm(sigmayearphi2, Type(0), Type(0.5), true);
+  nlp-= dcauchy(sigmap2, Type(0), Type(1.0), true);
 
   // random effects; non-centered
   nll-=dnorm(fameffphi_raw, Type(0.0), Type(1.0), true).sum();
