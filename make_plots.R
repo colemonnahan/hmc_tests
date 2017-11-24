@@ -14,6 +14,14 @@ g <- ggplot(simulated, aes(Npar, y=log10(minESS), color=platform)) +
   geom_point() + facet_wrap("model", scales='free') + scale_y_log10()
 ggsave('plots/ESS_simulated.png', g, width=ggwidth, height=ggheight)
 
+## ## show iidz vs zdiag to test adaptation of mass matrix
+## x2 <- subset(simulated, model %in% c('iidz', 'zdiag'))
+## x3 <- dcast(x2, formula=platform+Npar~model, fun=median, value.var='median.efficiency')
+## x3$ratio <- x3$zdiag/x3$iidz
+## ggplot(x3, aes(log2(Npar), y=ratio, color=platform)) + geom_line()
+## ggplot(x2, aes(log2(Npar), y=median.efficiency, group=model, color=model)) + geom_line()+
+##   facet_wrap("platform") + scale_y_log10()
+
 g <- ggplot(empirical, aes(minESS, y=minESS.coda, group=platform, color=platform))  +
   scale_x_log10()+scale_y_log10()+
     geom_point() + geom_abline(intercept=0,slope=1)+
