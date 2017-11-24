@@ -61,12 +61,6 @@ simulated <-
 ## Write them to file
 write.table(simulated, file='results/simulated.csv', sep=',',
             row.names=FALSE, col.names=TRUE)
-## write.table(file='results/table_growth.csv', x=growth.means.wide, sep=',',
-##             row.names=FALSE, col.names=TRUE)
-## write.table(file='results/table_cor.csv', x=cor.table, sep=',',
-##             row.names=FALSE, col.names=TRUE)
-## write.table(file='results/table_perf.csv', x=empirical.means.wide, sep=',',
-##             row.names=FALSE, col.names=TRUE)
 
 ## Check that everything worked properly among platforms and models
 temp <- subset(empirical, platform=='tmb' & seed ==1,
@@ -75,7 +69,3 @@ print(temp)
 temp <- ddply(empirical, .(model, platform), summarize, reps=length(seed))
 print(dcast(temp, model~platform, value.var='reps'))
 
-## Check that everything worked properly among platforms and models
-print(subset(empirical, platform=='tmb' & seed ==seeds[1],
-             select=c(model, Nsims)))
-print(ddply(empirical, .(model, platform), summarize, reps=length(seed)))

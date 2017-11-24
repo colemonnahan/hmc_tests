@@ -42,8 +42,8 @@ run_model(m='iidz', obj.stan=obj.stan, data=data, inits=inits,
           simulation=TRUE, empirical=TRUE, verify=FALSE)
 
 ## Run independent normal with variable SDs
-data <- list(n=50, x=rep(0, 50), sds=1:50)
-inits <- function() list(mu=rnorm(50))
+data <- list(n=1000, x=rep(0, 1000), sds=1:1000)
+inits <- function() list(mu=rnorm(1000))
 obj.stan <- stan_model(file= 'models/zdiag/zdiag.stan')
 Npar.vec <- 2^(4+1:6)
 run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
