@@ -111,6 +111,13 @@ void model_parameters::initializationfunction(void)
   sigmaphi.set_initial_value(1);
   sigmayearphi.set_initial_value(1);
   sigmap.set_initial_value(1);
+  a.set_initial_value(.1);
+  a1.set_initial_value(.1);
+  b0.set_initial_value(.1);
+  b1.set_initial_value(.1);
+  fameffphi_raw.set_initial_value(.1);
+  fameffp_raw.set_initial_value(.1);
+  yeareffphi_raw.set_initial_value(.1);
 }
 
 void model_parameters::userfunction(void)
@@ -157,7 +164,7 @@ void model_parameters::userfunction(void)
  nll -= sigmaphi + sigmayearphi + sigmap;
  // priors
  nlp+= dcauchy(sigmaphi2, zero, one);
- nlp+= dnorm(sigmayearphi2, zero, 0.5);
+ nlp+= dcauchy(sigmayearphi2, zero, one);
  nlp+= dcauchy(sigmap2, zero, one);
  nlp+= dnorm(a, 0.0, 1.5);
  nlp+= dnorm(a1, 0.0, 5.0);

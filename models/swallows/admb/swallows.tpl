@@ -71,6 +71,13 @@ INITIALIZATION_SECTION
  sigmaphi 1
  sigmayearphi 1
  sigmap 1
+ a .1
+ a1 .1
+ b0 .1
+ b1 .1
+ fameffphi_raw .1
+ fameffp_raw .1
+ yeareffphi_raw .1
 
 PROCEDURE_SECTION
  nlp=0.0;
@@ -117,7 +124,7 @@ PROCEDURE_SECTION
 
  // priors
  nlp+= dcauchy(sigmaphi2, zero, one);
- nlp+= dnorm(sigmayearphi2, zero, 0.5);
+ nlp+= dcauchy(sigmayearphi2, zero, one);
  nlp+= dcauchy(sigmap2, zero, one);
  nlp+= dnorm(a, 0.0, 1.5);
  nlp+= dnorm(a1, 0.0, 5.0);
