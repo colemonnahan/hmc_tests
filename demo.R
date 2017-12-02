@@ -16,6 +16,8 @@ admb1 <- sample_admb(model='swallows', path='admb', seeds=seeds, init=inits,
                          iter=1000, parallel=TRUE, cores=3)
 saveRDS(admb1, file='admb1.RDS')
 
+admb1 <- readRDS("models/swallows/admb1.RDS")
+
 ## Can extract parameters as a data.frame or list object
 post <- extract_samples(admb1, as.list=TRUE)
 ## The list can be converted to a CODA mcmc.list object for use with that
@@ -26,7 +28,7 @@ coda::traceplot(postlist)
 ## Or shinystan can be used
 launch_shinyadmb(admb1)
 ## Extract the NUTS metadata
-sp <- extract_sampler_params(admb1)
+sp <- extract_sampler_params(admb1, inc_warmup=TRUE)
 sum(sp$divergent__)
 
 seeds <- 1:3
@@ -36,9 +38,20 @@ admb2 <- sample_admb(model='swallows', path='admb', seeds=seeds, init=inits,
 sum(extract_sampler_params(admb2)$divergent__)
 setwd('../..')
 
-mcmc.admb <- sample_admb(model='swallows', path='admb', seeds=seeds, init=inits,
-                         parallel=F, cores=3, chains=1,
-                         control=list(adapt_delta=.8, metric='mle', max_treedepth=7))
+cov.est <- admb1$covar.est
+admb3 <- sample_admb(model='swallows', path='admb', seeds=seeds, init=inits,
+                     parallel=TRUE, cores=3,
+                     control=list(adapt_delta=.9, metric=cov.est))
+
+## admb4 <- sample_admb(model='swallows', path='admb', seeds=seeds,
+##                      init=inits, iter=200000, thin=100,
+##                      parallel=TRUE, chains=3, cores=3, algorithm='RWM')
+
+## admb5 <- sample_admb(model='swallows', path='admb', seeds=seeds,
+##                      init=inits, iter=200000, thin=100,
+##                      parallel=TRUE, chains=3, cores=3, algorithm='RWM',
+##                      control=list(metric=admb4$covar.est))
+
 
 
 
