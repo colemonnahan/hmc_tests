@@ -25,6 +25,10 @@ Type objective_function<Type>::operator() ()
   DATA_VECTOR(Pods);
   DATA_IVECTOR(toF);
 
+  // Flags
+  DATA_INTEGER(flag_prior); // Include hyper parameter priors ?
+  DATA_INTEGER(flag_jac);   // Include jacobian correction ?
+
   // fixed effects -- bounds added in R
   PARAMETER(yearInterceptSD);
   PARAMETER(plantInterceptSD);
@@ -46,11 +50,23 @@ Type objective_function<Type>::operator() ()
   Type plantSlopeSD2=exp(plantSlopeSD);
 
   // priors
-  nlp-= dcauchy(yearInterceptSD2, Type(0), Type(5));
-  nlp-= dcauchy(plantInterceptSD2, Type(0), Type(5));
-  nlp-= dcauchy(plantSlopeSD2, Type(0), Type(5));
-  nlp-= dnorm(slope, Type(0.0), Type(10.0));
-  nlp-= dnorm(intercept, Type(0.0), Type(10.0)).sum();
+  if (flag_prior) {
+    nlp-= dcauchy(yearInterceptSD2, Type(0), Type(5));
+    nlp-= dcauchy(plantInterceptSD2, Type(0), Type(5));
+    nlp-= dcauchy(plantSlopeSD2, Type(0), Type(5));
+    nlp-= dnorm(slope, Type(0.0), Type(10.0));
+    nlp-= dnorm(intercept, Type(0.0), Type(10.0)).sum();
+  }
+
+  // Optional (so we can use TMB::checkConsistency):
+  SIMULATE {
+    yearInterceptEffect_raw =
+      rnorm(yearInterceptEffect_raw.size(), Type(0.0), Type(1.0));
+    plantInterceptEffect_raw =
+      rnorm(plantInterceptEffect_raw.size(), Type(0.0), Type(1.0));
+    plantSlopeEffect_raw =
+      rnorm(plantSlopeEffect_raw.size(), Type(0.0), Type(1.0));
+  }
 
   Type ypred;
   // model predictions
@@ -67,6 +83,9 @@ Type objective_function<Type>::operator() ()
     } else {
       nll+= ypred+log(1+exp(-ypred));
     }
+    SIMULATE {
+      toF(i) = (int) asDouble(rbinom(Type(1), 1./(1.+exp(-ypred))));
+    }
   }
 
   // random effects; non-centered
@@ -75,7 +94,17 @@ Type objective_function<Type>::operator() ()
   nll-=dnorm(plantSlopeEffect_raw, Type(0.0), Type(1.0), true).sum();
 
   // Jacobian adjustments
-  nll-= yearInterceptSD + plantInterceptSD + plantSlopeSD;
+  if (flag_jac) {
+    nll-= yearInterceptSD + plantInterceptSD + plantSlopeSD;
+  }
   Type nld=nll+nlp; // negative log density
+
+  SIMULATE {
+    REPORT(toF);
+    REPORT(yearInterceptEffect_raw);
+    REPORT(plantInterceptEffect_raw);
+    REPORT(plantSlopeEffect_raw);
+  }
+
   return(nld);
 }
