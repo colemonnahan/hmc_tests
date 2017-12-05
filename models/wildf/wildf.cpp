@@ -16,9 +16,6 @@ Type objective_function<Type>::operator() ()
 {
 
   DATA_INTEGER(Ndata);
-  DATA_INTEGER(Nstage);
-  DATA_INTEGER(Nyear);
-  DATA_INTEGER(Nplant);
   DATA_IVECTOR(year);
   DATA_IVECTOR(plant);
   DATA_IVECTOR(stage);
