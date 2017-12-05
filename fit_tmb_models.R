@@ -21,10 +21,20 @@ obj <-
             random=c('fameffphi_raw', 'fameffp_raw', 'yeareffphi_raw'),
             DLL='swallows')
 fit.swallows <- with(obj, nlminb(par, fn, gr))
-mcmc.swallows <- tmbstan(obj, iter=2000, chains=3)
+mcmc.swallows <- tmbstan(obj, iter=2000, chains=3, seed=1)
+
+## Compare
+layout(matrix(1:30,5))
+s <- as.array(mcmc.swallows)
+for(i in 1:length(obj$par)) {
+    plot(density(s[,,i]))
+    abline(v=fit.swallows$par[i])
+}
 
 ## wildf model
 data <- wildf_setup()$data
+data$flag_prior <- 0
+data$flag_jac <- 0
 inits <- wildf_setup()$inits
 compile('models/wildf/wildf.cpp')
 dyn.load(dynlib('models/wildf/wildf'))
@@ -35,4 +45,19 @@ obj <-
                      'plantSlopeEffect_raw'),
             DLL='wildf')
 fit.wildf <- with(obj, nlminb(par, fn, gr))
-mcmc.wildf <- tmbstan(obj, iter=2000, chains=3)
+mcmc.wildf <- tmbstan(obj, iter=2000, chains=3, seed=1)
+## Compare
+layout(matrix(1:9,3))
+s <- as.array(mcmc.wildf)
+for(i in 1:length(obj$par)) {
+    plot(density(s[,,i]), main=names(obj$par)[i])
+    abline(v=fit.wildf$par[i])
+}
+
+## Try Laplace checker:
+set.seed(1)
+chk <- checkConsistency(obj, n = 1000)
+s <- summary(chk)
+s$marginal$bias
+sdr <- sdreport(obj)
+s$marginal$bias / summary(sdr,"fixed")[,2]
