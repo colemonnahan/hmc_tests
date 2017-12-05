@@ -61,3 +61,13 @@ s <- summary(chk)
 s$marginal$bias
 sdr <- sdreport(obj)
 s$marginal$bias / summary(sdr,"fixed")[,2]
+
+## Understand MCMC problem (Posterior moments all infinite due to nll plateau):
+lpb <- obj$env$last.par.best ## Best encountered LA parameter (fixed + random)
+f <- Vectorize(function(x) {
+    ## Slice: "plantSlopeSD"
+    lpb[3] <- lpb[3] + x
+    obj$env$f(lpb)
+})
+layout(1)
+plot(f,-20,2)
