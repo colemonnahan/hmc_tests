@@ -18,6 +18,28 @@ saveRDS(admb1, file='admb1.RDS')
 
 admb1 <- readRDS("models/swallows/admb1.RDS")
 
+mon <- as.data.frame(rstan::monitor(fit$samples, print=FALSE))
+mon$pars <- row.names(mon)
+mon <- mon[order(mon$n_eff, decreasing=FALSE),]
+post <- extract_samples(fit)
+sp <- extract_sampler_params(fit)
+str(post[,1:5])
+str(sp)
+
+mon <- rstan::monitor(fit$samples, print=FALSE)
+mon[1:4,'n_eff']
+mon[1:4,'Rhat']
+
+slow <-  c("sigmayearphi", "yeareffphi_raw[3]", "yeareffphi_raw[2]",
+           "yeareffphi_raw[4]", "yeareffphi_raw[1]")
+png('slow_mixing.png', width=5, height=3.5, units='in', res=300)
+pairs_admb(fit, pars=slow)
+dev.off()
+
+
+
+
+
 ## Can extract parameters as a data.frame or list object
 post <- extract_samples(admb1, as.list=TRUE)
 ## The list can be converted to a CODA mcmc.list object for use with that
