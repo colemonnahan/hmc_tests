@@ -12,11 +12,17 @@ data <- swallows_setup()$data
 inits <- swallows_setup()$inits
 setwd('models/swallows')
 seeds <- 1:3
-admb1 <- sample_admb(model='swallows', path='admb', seeds=seeds, init=inits,
-                         iter=1000, parallel=TRUE, cores=3)
+admb1 <- sample_admb(model='swallows', path='admb', init=inits, seeds=1:3,
+                         parallel=TRUE, cores=3)
 saveRDS(admb1, file='admb1.RDS')
 
 admb1 <- readRDS("models/swallows/admb1.RDS")
+mon <- rstan::monitor(admb1$samples, print=FALSE)
+mon[1:4,'n_eff']
+mon[1:4,'Rhat']
+min(mon[,'n_eff'])
+max(mon[,'Rhat'])
+
 
 mon <- as.data.frame(rstan::monitor(fit$samples, print=FALSE))
 mon$pars <- row.names(mon)
@@ -26,9 +32,6 @@ sp <- extract_sampler_params(fit)
 str(post[,1:5])
 str(sp)
 
-mon <- rstan::monitor(fit$samples, print=FALSE)
-mon[1:4,'n_eff']
-mon[1:4,'Rhat']
 
 slow <-  c("sigmayearphi", "yeareffphi_raw[3]", "yeareffphi_raw[2]",
            "yeareffphi_raw[4]", "yeareffphi_raw[1]")
@@ -53,17 +56,24 @@ launch_shinyadmb(admb1)
 sp <- extract_sampler_params(admb1, inc_warmup=TRUE)
 sum(sp$divergent__)
 
-seeds <- 1:3
-admb2 <- sample_admb(model='swallows', path='admb', seeds=seeds, init=inits,
+set.seed(23523)
+admb2 <- sample_admb(model='swallows', path='admb', seeds=1:3, init=inits,
                          parallel=TRUE, cores=3, control=list(adapt_delta=.9))
 ## Now the divergences are gone.
 sum(extract_sampler_params(admb2)$divergent__)
+## And ESS and Rhats are good too
+mon <- rstan::monitor(admb2$samples, print=FALSE)
+min(mon[,'n_eff'])
+max(mon[,'Rhat'])
+
+
+
 setwd('../..')
 
-cov.est <- admb1$covar.est
-admb3 <- sample_admb(model='swallows', path='admb', seeds=seeds, init=inits,
+cov.est <- admb2$covar.est
+admb3 <- sample_admb(model='swallows', path='admb', seeds=1:3, init=inits,
                      parallel=TRUE, cores=3,
-                     control=list(adapt_delta=.9, metric=cov.est))
+                     control=list(adapt_delta=.8, metric=cov.est))
 
 ## admb4 <- sample_admb(model='swallows', path='admb', seeds=seeds,
 ##                      init=inits, iter=200000, thin=100,
@@ -79,15 +89,18 @@ admb3 <- sample_admb(model='swallows', path='admb', seeds=seeds, init=inits,
 
 ### Demonstrate tmbstan
 data <- wildf_setup()$data
-inits.fn <- wildf_setup()$inits
+inits <- wildf_setup()$inits
 setwd('models/wildf')
 compile('wildf.cpp')
 dyn.load('wildf')
-obj <- MakeADFun(data=data, parameters=inits.fn(), DLL='wildf')
+random <- c('yearInterceptEffect_raw', 'plantInterceptEffect_raw',
+            'plantSlopeEffect_raw')
+obj <- MakeADFun(data=data, parameters=inits(), random=random,
+            DLL='wildf')
 
 set.seed(325234)
 inits <- lapply(1:3, function(i) inits.fn())
-mcmc.tmb <- tmbstan(obj=obj, seed=1, iter=2000, chains=3)
+tmb1 <- tmbstan(obj=obj, init=inits)
 
 ## Methods provided by 'rstan'
 class(mcmc.tmb)
