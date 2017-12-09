@@ -24,7 +24,7 @@ fit.swallows <- with(obj, nlminb(par, fn, gr))
 mcmc.swallows <- tmbstan(obj, iter=2000, chains=3)
 
 ## wildf model
-data <- wildf_se tup()$data
+data <- wildf_setup()$data
 inits <- wildf_setup()$inits
 compile('models/wildf/wildf.cpp')
 dyn.load('models/wildf/wildf')
@@ -35,7 +35,31 @@ obj <-
                      'plantSlopeEffect_raw'),
             DLL='wildf')
 fit.wildf <- with(obj, nlminb(par, fn, gr))
-mcmc.wildf <- tmbstan(obj, iter=2000, chains=1)
+mcmc.wildf <- tmbstan(obj, iter=2000, chains=3)
+mcmc.wildf.la <- tmbstan(obj, iter=2000, chains=3, laplace=TRUE)
+
+temp <- extract(mcmc.wildf, permuted=FALSE)
+x1 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
+temp <- extract(mcmc.wildf.la, permuted=FALSE)
+x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
+pars <- dimnames(x2)[[2]][1:9]
+post <- data.frame(rbind(x1[,pars], x2[,pars]))
+model <- as.factor(rep(c("normal", "LA"), each=3000))
+png("pairs_wildf_LA.png", width=7, height=5, units='in', res=200)
+pairs(post, col=model, pch='.')
+dev.off()
+
+png("qqplots_wildf_LA.png", width=7, height=5, units='in', res=200)
+par(mfrow=c(3,3), mar=c(3,3,.5,.5), oma=c(2,2,2,0))
+for(i in 1:9){
+  qqplot(x=x1[,i], y=x2[,i], main=NA, xlab=NA, ylab=NA)
+  mtext(pars[i])
+  ## qqline(x=x1[,i], y=x2[,i])
+  abline(a=0, b=1, lwd=2, col='red')
+  }
+mtext("Full Integration", side=1, outer=TRUE)
+mtext("LA Integration", side=2, outer=TRUE)
+dev.off()
 
 ## Quickly rerun to plot MCMC vs MLE for fixed effects
 mcmc.wildf2 <- sample_tmb(obj, iter=5000, warmup=1000, init=inits, chains=3, cores=3,
