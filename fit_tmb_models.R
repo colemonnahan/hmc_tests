@@ -28,16 +28,18 @@ temp <- extract(mcmc.swallows, permuted=FALSE)
 x1 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
 temp <- extract(mcmc.swallows.la, permuted=FALSE)
 x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
-pars <- dimnames(x2)[[2]][1:9]
+pars <- dimnames(x2)[[2]][1:3]
 post <- data.frame(rbind(x1[,pars], x2[,pars]))
 model <- as.factor(rep(c("normal", "LA"), each=3000))
 png("pairs_swallows_LA.png", width=7, height=5, units='in', res=200)
-pairs(post, col=model, pch='.')
+ind <- sample(1:nrow(post), size=nrow(post))
+post <- post[ind,]
+pairs(post[ind,], col=model[ind], pch=16, cex=.5)
 dev.off()
 
-png("qqplots_swallows_LA.png", width=7, height=5, units='in', res=200)
-par(mfrow=c(3,3), mar=c(3,3,.5,.5), oma=c(2,2,2,0))
-for(i in 1:9){
+png("qqplots_swallows_LA.png", width=7, height=3, units='in', res=200)
+par(mfrow=c(1,3), mar=c(3,3,.5,.5), oma=c(2,2,2,0))
+for(i in 1:length(pars)){
   qqplot(x=x1[,i], y=x2[,i], main=NA, xlab=NA, ylab=NA)
   mtext(pars[i])
   ## qqline(x=x1[,i], y=x2[,i])
