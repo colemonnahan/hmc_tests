@@ -21,8 +21,11 @@ obj <-
             random=c('fameffphi_raw', 'fameffp_raw', 'yeareffphi_raw'),
             DLL='swallows')
 fit.swallows <- with(obj, nlminb(par, fn, gr))
-mcmc.swallows <- tmbstan(obj, iter=2000, chains=3)
-mcmc.swallows.la <- tmbstan(obj, iter=2000, chains=3, laplace=TRUE)
+## Run long, thinned chains to ensure mixing is relatively close
+th <- 10 # thin rate
+wm <- 1000 # warmup
+mcmc.swallows <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3)
+mcmc.swallows.la <- tmbstan(obj, iter=2000*thin+wm, warmup=wm, thin=th, chains=3, laplace=TRUE)
 
 temp <- extract(mcmc.swallows, permuted=FALSE)
 x1 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
@@ -31,6 +34,8 @@ x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
 pars <- dimnames(x2)[[2]][1:3]
 post <- data.frame(rbind(x1[,pars], x2[,pars]))
 model <- as.factor(rep(c("normal", "LA"), each=3000))
+saveRDS(cbind(model,post), file='results/post.swallows.RDS')
+
 png("pairs_swallows_LA.png", width=7, height=5, units='in', res=200)
 ind <- sample(1:nrow(post), size=nrow(post))
 post <- post[ind,]
