@@ -33,7 +33,7 @@ temp <- extract(mcmc.swallows.la, permuted=FALSE)
 x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
 pars <- dimnames(x2)[[2]][1:3]
 post <- data.frame(rbind(x1[,pars], x2[,pars]))
-model <- as.factor(rep(c("normal", "LA"), each=3000))
+model <- as.factor(rep(c("normal", "LA"), each=6000))
 saveRDS(cbind(model,post), file='results/post.swallows.RDS')
 
 png("pairs_swallows_LA.png", width=7, height=5, units='in', res=200)
