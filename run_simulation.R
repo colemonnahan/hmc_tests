@@ -8,7 +8,7 @@
 main.dir <- 'C:/Users/Cole/hmc_tests/'
 setwd(main.dir)
 source("startup.R")
-Nreps <- 10                 # number of replicates
+Nreps <- 20                 # number of replicates
 Nout.ind <- 1000            # number of independent samples if verify==TRUE
 set.seed(241)
 seeds <- 1:Nreps#sample(1:1e5, size=Nreps)         #
@@ -23,23 +23,15 @@ sink <- FALSE
 
 
 ### Step 2: Run the models.
-## Run multivariate normal, empirical and simulated
-##Npar.vec <- c(2,4,8,16,32,64, 128)
-Npar <- 16
-covar <- diag(Npar)
-data <- list(Npar=Npar, covar=covar, x=rep(0, len=Npar))
-inits <- function() list(mu=rnorm(n=Npar, mean=0, sd=sqrt(diag(covar))))
-obj.stan <- stan_model(file= 'models/mvnd/mvnd.stan')
-run_model(m='mvnd', data=data, inits=inits, pars=pars, verify=FALSE)
 
-## Run iid normal increasing in size
-## Setup data, inits and pars
-data <- list(n=500, x=rep(0, 500))
-inits <- function() list(mu=rnorm(500))
-obj.stan <- stan_model(file= 'models/iidz/iidz.stan')
-Npar.vec <- 2^(4+1:7)
-run_model(m='iidz', obj.stan=obj.stan, data=data, inits=inits,
-          simulation=TRUE, empirical=TRUE, verify=FALSE)
+## ## Run iid normal increasing in size
+## ## Setup data, inits and pars
+## data <- list(n=500, x=rep(0, 500))
+## inits <- function() list(mu=rnorm(500))
+## obj.stan <- stan_model(file= 'models/iidz/iidz.stan')
+## Npar.vec <- 2^(4+1:7)
+## run_model(m='iidz', obj.stan=obj.stan, data=data, inits=inits,
+##           simulation=TRUE, empirical=TRUE, verify=FALSE)
 
 ## Run independent normal with variable SDs
 data <- list(n=500, x=rep(0, 500), sds=1:500)
@@ -47,7 +39,7 @@ inits <- function() list(mu=rnorm(500))
 obj.stan <- stan_model(file= 'models/zdiag/zdiag.stan')
 Npar.vec <- 2^(4+1:7)
 run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
-          verify=FALSE, simulation=TRUE, empirical=TRUE)
+          verify=FALSE, simulation=TRUE, empirical=FALSE)
 
 ## VB growth, simulated
 m <- 'growth'
@@ -56,7 +48,7 @@ data <- temp$data; inits <- temp$inits
 Npar.vec <- 2^(3+1:7)
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
-          verify=FALSE, simulation=TRUE, empirical=TRUE, Nthin.ind=3,
+          verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=3,
           exp.columns=c(1,2,5,6))
 
 ## Wildflower
@@ -76,7 +68,7 @@ data <- temp$data
 inits <- temp$inits
 obj.stan <- stan_model(file= 'models/swallows/swallows.stan')
 run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
-          verify=TRUE, simulation=FALSE, empirical=TRUE, Nthin.ind=5,
+          verify=FALSE, empirical=TRUE, Nthin.ind=5,
           Nout.ind=500, exp.columns=c(1,2,3))
 
 ## State space logistic fisheries assessment model. The adapt_delta needs
