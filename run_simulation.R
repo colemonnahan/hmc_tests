@@ -8,7 +8,7 @@
 main.dir <- 'C:/Users/Cole/hmc_tests/'
 setwd(main.dir)
 source("startup.R")
-Nreps <- 20                 # number of replicates
+Nreps <- 30                 # number of replicates
 Nout.ind <- 1000            # number of independent samples if verify==TRUE
 set.seed(241)
 seeds <- 1:Nreps#sample(1:1e5, size=Nreps)         #
@@ -57,7 +57,7 @@ temp <- wildf_setup()
 data <- temp$data
 inits <- temp$inits
 obj.stan <- stan_model(file= 'models/wildf/wildf.stan')
-run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.95,
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.9,
           verify=FALSE, empirical=TRUE, Nthin.ind=5,
           Nout.ind=500, exp.columns=c(1,2,3))
 
