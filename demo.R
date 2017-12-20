@@ -4,103 +4,69 @@
 ## proceeding.
 source("startup.R")
 library(snowfall)
-library(coda)
-set.seed(121413) # ensures random inits are the same
+cores <- parallel::detectCores()-1 # parallel cores
+set.seed(145)
+seeds <- sample(1:1e4, size=cores)
 
-## swallows model
+## Demonstrate ADMB with the swallows model
 data <- swallows_setup()$data
-inits <- swallows_setup()$inits
+inits.fn <- swallows_setup()$inits
+## init can be a list of lists, or a function which returns a list
+inits <- lapply(1:3, function(x) inits.fn())
+
 setwd('models/swallows')
-seeds <- 1:3
-admb1 <- sample_admb(model='swallows', path='admb', init=inits, seeds=1:3,
-                         parallel=TRUE, cores=3)
-saveRDS(admb1, file='admb1.RDS')
-
-admb1 <- readRDS("models/swallows/admb1.RDS")
-mon <- rstan::monitor(admb1$samples, print=FALSE)
-mon[1:4,'n_eff']
-mon[1:4,'Rhat']
-min(mon[,'n_eff'])
-max(mon[,'Rhat'])
-
-
-mon <- as.data.frame(rstan::monitor(fit$samples, print=FALSE))
-mon$pars <- row.names(mon)
-mon <- mon[order(mon$n_eff, decreasing=FALSE),]
-post <- extract_samples(fit)
-sp <- extract_sampler_params(fit)
-str(post[,1:5])
+fit <- sample_admb(model='swallows', path='admb', init=inits,
+                     seeds=seeds, parallel=TRUE, cores=cores)
+## Extract the NUTS info, per iteration
+sp <- extract_sampler_params(fit, inc_warmup=FALSE)
 str(sp)
+## Check for post-warmup divergences (also shown on console)
+tapply(sp$divergent__, sp$chain, sum)
 
-
-slow <-  c("sigmayearphi", "yeareffphi_raw[3]", "yeareffphi_raw[2]",
-           "yeareffphi_raw[4]", "yeareffphi_raw[1]")
-png('slow_mixing.png', width=5, height=3.5, units='in', res=300)
-pairs_admb(fit, pars=slow)
-dev.off()
-
-
-
-
-
-## Can extract parameters as a data.frame or list object
-post <- extract_samples(admb1, as.list=TRUE)
-## The list can be converted to a CODA mcmc.list object for use with that
-## package
-postlist <- mcmc.list(lapply(post, mcmc))
-par(mfrow=c(3,3))
-coda::traceplot(postlist)
-## Or shinystan can be used
-launch_shinyadmb(admb1)
-## Extract the NUTS metadata
-sp <- extract_sampler_params(admb1, inc_warmup=TRUE)
-sum(sp$divergent__)
-
-set.seed(23523)
-admb2 <- sample_admb(model='swallows', path='admb', seeds=1:3, init=inits,
-                         parallel=TRUE, cores=3, control=list(adapt_delta=.9))
+## Rerun model with higher target acceptance rate to see if divergences
+## disappear
+fit <- sample_admb(model='swallows', path='admb', init=inits,
+                   seeds=seeds, parallel=TRUE, cores=cores,
+                   control=list(adapt_delta=.9))
 ## Now the divergences are gone.
-sum(extract_sampler_params(admb2)$divergent__)
+sum(extract_sampler_params(fit)$divergent__)
 ## And ESS and Rhats are good too
 mon <- rstan::monitor(admb2$samples, print=FALSE)
 min(mon[,'n_eff'])
 max(mon[,'Rhat'])
 
-
-
+## Can extract parameters as a data.frame or list object
+post <- extract_samples(fit)
+quantile(post[,1], c(0.1, 0.5, 0.9))
+## The list can be converted to a CODA mcmc.list object for use with that
+## package
+library(coda)
+post <- extract_samples(fit, as.list=TRUE)
+postlist <- mcmc.list(lapply(post, mcmc))
+par(mfrow=c(4,4))
+coda::traceplot(postlist)
+## Or shinystan can be used
+launch_shinyadmb(fit)
 setwd('../..')
 
-cov.est <- admb2$covar.est
-admb3 <- sample_admb(model='swallows', path='admb', seeds=1:3, init=inits,
-                     parallel=TRUE, cores=3,
-                     control=list(adapt_delta=.8, metric=cov.est))
 
-## admb4 <- sample_admb(model='swallows', path='admb', seeds=seeds,
-##                      init=inits, iter=200000, thin=100,
-##                      parallel=TRUE, chains=3, cores=3, algorithm='RWM')
-
-## admb5 <- sample_admb(model='swallows', path='admb', seeds=seeds,
-##                      init=inits, iter=200000, thin=100,
-##                      parallel=TRUE, chains=3, cores=3, algorithm='RWM',
-##                      control=list(metric=admb4$covar.est))
-
-
-
-
-### Demonstrate tmbstan
+### Demonstrate tmbstan with wildf (wildflower) model.
 data <- wildf_setup()$data
-inits <- wildf_setup()$inits
+inits.fn <- wildf_setup()$inits
 setwd('models/wildf')
 compile('wildf.cpp')
-dyn.load('wildf')
+dyn.load(dynload('wildf'))
 random <- c('yearInterceptEffect_raw', 'plantInterceptEffect_raw',
             'plantSlopeEffect_raw')
-obj <- MakeADFun(data=data, parameters=inits(), random=random,
+obj <- MakeADFun(data=data, parameters=inits.fn(), random=random,
             DLL='wildf')
-
 set.seed(325234)
 inits <- lapply(1:3, function(i) inits.fn())
-tmb1 <- tmbstan(obj=obj, init=inits)
+
+## Run with Stan defaults, including in parallel
+rstan_options(auto_write = TRUE)
+options(mc.cores=cores)
+tmb1 <- tmbstan(obj=obj, chains=3, init=inits)
 
 ## Methods provided by 'rstan'
 class(mcmc.tmb)
@@ -113,6 +79,4 @@ post <- as.data.frame(mcmc.tmb) # get data.frame
 ## Trace plot
 rstan::traceplot(mcmc.tmb, pars=names(obj$par), inc_warmup=TRUE)
 
-## Run in parallel
-rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
+
