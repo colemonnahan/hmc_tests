@@ -124,7 +124,7 @@ PROCEDURE_SECTION
 
  // priors
  nlp+= dcauchy(sigmaphi2, zero, one);
- nlp+= dcauchy(sigmayearphi2, zero, one);
+ nlp+= dnorm(sigmayearphi2, zero, 0.5);
  nlp+= dcauchy(sigmap2, zero, one);
  nlp+= dnorm(a, 0.0, 1.5);
  nlp+= dnorm(a1, 0.0, 5.0);
