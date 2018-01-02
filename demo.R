@@ -5,14 +5,14 @@
 source("startup.R")
 library(snowfall)
 cores <- parallel::detectCores()-1 # parallel cores
-set.seed(145)
+set.seed(14525)
 seeds <- sample(1:1e4, size=cores)
 
 ## Demonstrate ADMB with the swallows model
 data <- swallows_setup()$data
 inits.fn <- swallows_setup()$inits
 ## init can be a list of lists, or a function which returns a list
-inits <- lapply(1:3, function(x) inits.fn())
+inits <- lapply(1:cores, function(x) inits.fn())
 
 setwd('models/swallows')
 fit <- sample_admb(model='swallows', path='admb', init=inits,
@@ -51,32 +51,51 @@ setwd('../..')
 
 
 ### Demonstrate tmbstan with wildf (wildflower) model.
+library(TMB)
+library(tmbstan)
+detach("package:snowfall", unload=TRUE)
+detach("package:snow", unload=TRUE)
 data <- wildf_setup()$data
 inits.fn <- wildf_setup()$inits
+set.seed(325234)
+inits <- lapply(1:cores, function(i) inits.fn())
 setwd('models/wildf')
 compile('wildf.cpp')
-dyn.load(dynload('wildf'))
+dyn.load(dynlib('wildf'))
 random <- c('yearInterceptEffect_raw', 'plantInterceptEffect_raw',
             'plantSlopeEffect_raw')
-obj <- MakeADFun(data=data, parameters=inits.fn(), random=random,
+obj <- MakeADFun(data=data, parameters=inits[[1]], random=random,
             DLL='wildf')
-set.seed(325234)
-inits <- lapply(1:3, function(i) inits.fn())
 
 ## Run with Stan defaults, including in parallel
 rstan_options(auto_write = TRUE)
 options(mc.cores=cores)
-tmb1 <- tmbstan(obj=obj, chains=3, init=inits)
+fit <- tmbstan(obj=obj, chains=cores, init=inits, seed=1934)
+## Equivalent Stan code. Note that even with same inits and seeds small
+## rounding errors accumulate and the chains may not be identical,
+## particularly for complex models.
+## fit <- stan(file='wildf.stan', data=data, chains=cores,init=inits,
+##             seed=1934)
 
 ## Methods provided by 'rstan'
-class(mcmc.tmb)
+class(fit)
 methods(class="stanfit")
 
 ## Pairs plot
-pairs(mcmc.tmb, pars=names(obj$par))
-post <- as.data.frame(mcmc.tmb) # get data.frame
+pairs(fit, pars=names(obj$par))
+post <- as.data.frame(fit) # get data.frame
 
 ## Trace plot
-rstan::traceplot(mcmc.tmb, pars=names(obj$par), inc_warmup=TRUE)
+rstan::traceplot(fit, pars=names(obj$par), inc_warmup=TRUE)
 
+## Now refit with the Laplace approximation turned on
+fit.la <- tmbstan(obj=obj, chains=cores, init=inits, seed=1934, laplace=TRUE)
+## Notice that Stan only sampled from the fixed effects:
+str(as.data.frame(fit.la))
 
+## It's mixing better
+(m1 <- min(monitor(fit, print=FALSE)[,'n_eff']))
+(m2 <- min(monitor(fit.la, print=FALSE)[,'n_eff']))
+## But takes much longer to run
+(t1 <- get_elapsed_time(fit))
+(t2 <- get_elapsed_time(fit.la))
