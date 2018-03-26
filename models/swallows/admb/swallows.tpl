@@ -28,8 +28,10 @@ DATA_SECTION
   init_number K;
   init_int nfam;
   // For some reason ADMB reads this in the wrong order. So just go with it
-  // and transpose below.
+  // and transpose
   init_matrix CH0(1,K,1,I);
+  matrix CH(1,I,1,K);
+  !! CH = trans(CH0);
   init_vector carez(1,I);
   init_ivector year(1,I);
   init_vector agec(1,K);
@@ -37,12 +39,9 @@ DATA_SECTION
   init_ivector last(1,I);
   init_imatrix ones(1,I,1,K);
   init_ivector ones2(1,I);
-  matrix CH(1,I,1,K);
-  !! CH = trans(CH0);
-  // !! cout << CH << endl;
 
 PARAMETER_SECTION
-// fixed effects -- bounds added in R
+  // fixed effects
   init_number sigmayearphi;
   init_number sigmaphi;
   init_number sigmap;
@@ -65,7 +64,7 @@ PARAMETER_SECTION
   matrix p(1,I,1,K);
   matrix phi(1,I,1,K-1);
   matrix chi(1,I,1,K+1);
-  objective_function_value nld;
+  objective_function_value nld; // negative log density
 
 INITIALIZATION_SECTION
  sigmaphi 1
@@ -80,18 +79,16 @@ INITIALIZATION_SECTION
  yeareffphi_raw .1
 
 PROCEDURE_SECTION
- nlp=0.0;
- nll=0.0;
- double zero=0.0; double one=1.0;
- // Exponentiate sds since ADMB can't do (0,Inf) bounds. Need to adjust for
+ nlp=0.0; // negative log prior
+ nll=0.0; // negative log likelihood
+
+// Exponentiate sds since ADMB can't do (0,Inf) bounds. Need to adjust for
  // Jacobian below
  sigmayearphi2=exp(sigmayearphi);
  sigmaphi2=exp(sigmaphi);
  sigmap2=exp(sigmap);
 
  int k;
- // TMB indexes from 0 not 1, so need to be careful to adjust that
- // below. I've added (-1) where needed.
  for(int i=1; i<=I; i++){ // loop over each individual
   // calculate phi as a function of fixed and random effects
   for(int t=1; t<=(K-1); t++) {
@@ -111,30 +108,30 @@ PROCEDURE_SECTION
   // a reverse index so this loop goes from K:2, recursively calculating
   // backward.
   chi(i,K+1) = 1.0;
-  k = K;
+  k=K;
   while (k > 1) {
-    chi(i,k) = (1 - phi(i,k-1)) + phi(i,k-1) * (1 - p(i,k)) * chi(i,k+1);
-    k = k - 1;
+    chi(i,k) = (1-phi(i,k-1)) + phi(i,k-1) * (1-p(i,k)) * chi(i,k+1);
+    k=k-1;
   }
-  chi(i,1) = (1 - p(i,1)) * chi(i,2);
+  chi(i,1) = (1-p(i,1)) * chi(i,2);
  }
 
  // Jacobian adjustment for variances
  nll -= sigmaphi + sigmayearphi + sigmap;
 
  // priors
- nlp+= dcauchy(sigmaphi2, zero, one);
- nlp+= dnorm(sigmayearphi2, zero, 0.5);
- nlp+= dcauchy(sigmap2, zero, one);
+ nlp+= dcauchy(sigmaphi2, 0.0, 1.0);
+ nlp+= dnorm(sigmayearphi2, 0.0, 1.0);
+ nlp+= dcauchy(sigmap2, 0.0, 1.0);
  nlp+= dnorm(a, 0.0, 1.5);
  nlp+= dnorm(a1, 0.0, 5.0);
  nlp+= dnorm(b0, 0.0, 5.0);
  nlp+= dnorm(b1, 0.0, 5.0);
 
  // random effects; non-centered
- nll+=dnorm(fameffphi_raw, 0,1);
- nll+=dnorm(fameffp_raw, 0,1);
- nll+=dnorm(yeareffphi_raw, 0,1);
+ nll+= dnorm(fameffphi_raw, 0,1);
+ nll+= dnorm(fameffp_raw, 0,1);
+ nll+= dnorm(yeareffphi_raw, 0,1);
 
  // // likelihood
  for(int i=1; i<=I; i++){ // loop over each individual
