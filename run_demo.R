@@ -4,7 +4,7 @@
 ## proceeding.
 source("startup.R")
 library(snowfall)
-cores <- parallel::detectCores()-1 # parallel cores
+cores <- 4
 set.seed(14525)
 seeds <- sample(1:1e4, size=cores)
 
@@ -24,7 +24,7 @@ str(sp)
 tapply(sp$divergent__, sp$chain, sum)
 
 ## Rerun model with higher target acceptance rate to see if divergences
-## disappear
+## disappeargit status
 fit <- sample_admb(model='swallows', path='admb', init=inits,
                    seeds=seeds, parallel=TRUE, cores=cores,
                    control=list(adapt_delta=.9))

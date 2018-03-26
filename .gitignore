@@ -38,4 +38,4 @@ fit.rwm.RDS
 *.rep
 *init.pin
 *sims*
-*/admb/*.cpp
+models/*/admb/*.cpp
