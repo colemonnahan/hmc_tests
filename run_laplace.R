@@ -1,4 +1,6 @@
-## Script to do MLE fits for the example models
+## Script to demonstrate testing the Laplace approximation of a TMB
+## model. Verisons are run with and without the LA turned on for the random
+## effects, and differences in posteriors for fixed effects are compared.
 
 ## Working directory needs to be set to the folder of this file before
 ## proceeding.
@@ -6,10 +8,10 @@
 ## Note: these models include priors, and use exponentiation in the
 ## template with a Jacobian adjustment instead of external bounds of
 ## (0,Inf) for hypervariance parameters. Thus, the SD parameters are really
-## in log space. See template for more details. Should we turn the priors
-## off for MLE?
+## in log space. See model files for more details.
 
 source("startup.R")
+options(mc.cores = 3) ## parallel TMB runs with tmbstan
 
 ## swallows model
 data <- swallows_setup()$data
@@ -20,38 +22,32 @@ obj <-
   MakeADFun(data=data, parameters=inits(),
             random=c('fameffphi_raw', 'fameffp_raw', 'yeareffphi_raw'),
             DLL='swallows')
-fit.swallows <- with(obj, nlminb(par, fn, gr))
+time.swallows.mle <- system.time(fit.swallows <- with(obj, nlminb(par, fn, gr)))[3]
 ## Run long, thinned chains to ensure mixing is relatively close
 th <- 10 # thin rate
 wm <- 1000 # warmup
 mcmc.swallows <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3)
-mcmc.swallows.la <- tmbstan(obj, iter=2000*thin+wm, warmup=wm, thin=th, chains=3, laplace=TRUE)
+## Time is the longest running chain, both warmup + sampling
+time.swallows <- max(rowSums(get_elapsed_time(mcmc.swallows)))
+mcmc.swallows.la <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3, laplace=TRUE)
+time.swallows.la <- max(rowSums(get_elapsed_time(mcmc.swallows.la)))
 
 temp <- extract(mcmc.swallows, permuted=FALSE)
 x1 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
 temp <- extract(mcmc.swallows.la, permuted=FALSE)
 x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
-pars <- dimnames(x2)[[2]][1:3]
+stopifnot(nrow(x1)==nrow(x2))
+pars <- dimnames(x2)[[2]]
 post <- data.frame(rbind(x1[,pars], x2[,pars]))
-model <- as.factor(rep(c("normal", "LA"), each=6000))
+model <- as.factor(rep(c("normal", "LA"), each=nrow(x1)))
 saveRDS(cbind(model,post), file='results/post.swallows.RDS')
 
-png("pairs_swallows_LA.png", width=7, height=5, units='in', res=200)
+
+png("plots/pairs_swallows_LA.png", width=7, height=5, units='in', res=200)
+## Randomize order to prevent overplotting
 ind <- sample(1:nrow(post), size=nrow(post))
 post <- post[ind,]
-pairs(post[ind,], col=model[ind], pch=16, cex=.5)
-dev.off()
-
-png("qqplots_swallows_LA.png", width=7, height=3, units='in', res=200)
-par(mfrow=c(1,3), mar=c(3,3,.5,.5), oma=c(2,2,2,0))
-for(i in 1:length(pars)){
-  qqplot(x=x1[,i], y=x2[,i], main=NA, xlab=NA, ylab=NA)
-  mtext(pars[i])
-  ## qqline(x=x1[,i], y=x2[,i])
-  abline(a=0, b=1, lwd=2, col='red')
-  }
-mtext("Full Integration", side=1, outer=TRUE)
-mtext("LA Integration", side=2, outer=TRUE)
+pairs(post[ind,1:10], col=model[ind], pch=16, cex=.5)
 dev.off()
 
 ## wildf model
@@ -59,56 +55,33 @@ data <- wildf_setup()$data
 inits <- wildf_setup()$inits
 compile('models/wildf/wildf.cpp')
 dyn.load('models/wildf/wildf')
-obj <-
-  MakeADFun(data=data, parameters=inits(),
+obj <- MakeADFun(data=data, parameters=inits(),
             random=c('yearInterceptEffect_raw',
                      'plantInterceptEffect_raw',
                      'plantSlopeEffect_raw'),
             DLL='wildf')
-fit.wildf <- with(obj, nlminb(par, fn, gr))
+time.wildf.mle <- system.time(fit.wildf <- with(obj, nlminb(par, fn, gr)))[3]
 ## Run long, thinned chains to ensure mixing is relatively close
 th <- 10 # thin rate
 wm <- 1000 # warmup
 mcmc.wildf <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3)
+time.wildf <- max(rowSums(get_elapsed_time(mcmc.wildf)))
 mcmc.wildf.la <- tmbstan(obj, iter=2000*thin+wm, warmup=wm, thin=th, chains=3, laplace=TRUE)
-
+time.wildf.la <- max(rowSums(get_elapsed_time(mcmc.wildf.la)))
+stopifnot(nrow(x1)==nrow(x2))
 temp <- extract(mcmc.wildf, permuted=FALSE)
 x1 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
 temp <- extract(mcmc.wildf.la, permuted=FALSE)
 x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
 pars <- dimnames(x2)[[2]][1:9]
 post <- data.frame(rbind(x1[,pars], x2[,pars]))
-model <- as.factor(rep(c("normal", "LA"), each=3000))
+model <- as.factor(rep(c("normal", "LA"), each=nrow(x1)))
 saveRDS(cbind(model,post), file='results/post.wildf.RDS')
 
-png("pairs_wildf_LA.png", width=7, height=5, units='in', res=200)
-pairs(post, col=model, pch='.')
+png("plots/pairs_wildf_LA.png", width=7, height=5, units='in', res=200)
+## Randomize order to prevent overplotting
+ind <- sample(1:nrow(post), size=nrow(post))
+post <- post[ind,]
+pairs(post[ind,], col=model[ind], pch=16, cex=.5)
 dev.off()
 
-png("qqplots_wildf_LA.png", width=7, height=5, units='in', res=200)
-par(mfrow=c(3,3), mar=c(3,3,.5,.5), oma=c(2,2,2,0))
-for(i in 1:9){
-  qqplot(x=x1[,i], y=x2[,i], main=NA, xlab=NA, ylab=NA)
-  mtext(pars[i])
-  ## qqline(x=x1[,i], y=x2[,i])
-  abline(a=0, b=1, lwd=2, col='red')
-  }
-mtext("Full Integration", side=1, outer=TRUE)
-mtext("LA Integration", side=2, outer=TRUE)
-dev.off()
-
-## Quickly rerun to plot MCMC vs MLE for fixed effects
-mcmc.wildf2 <- sample_tmb(obj, iter=5000, warmup=1000, init=inits, chains=3, cores=3,
-                          parallel=TRUE, path='models/wildf', control=list(adapt_delta=.59)
-fit.wildf <- with(obj, nlminb(par, fn, gr))
-## Have to manually modify the list so that pairs_admb can use it. It's not
-## designed for tmb output.
-sd <- sdreport(obj)
-se <- sqrt(diag(sd$cov.fixed))
-cor <- sd$cov.fixed / se %o% se
-mle <- list(par.names=dimnames(mcmc.wildf2$samples)[[3]][1:9],
-            est=fit.wildf$par, se=se, cor=cor)
-mcmc.wildf2$mle <- mle
-png('pairs_wildf.png', width=6, height=4, units='in', res=500)
-pairs_admb(mcmc.wildf2, pars=mcmc.wildf2$mle$par.names)
-dev.off()

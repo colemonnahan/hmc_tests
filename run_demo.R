@@ -4,17 +4,17 @@
 ## proceeding.
 source("startup.R")
 library(snowfall)
-cores <- 4
-set.seed(14525)
+cores <- 3
+set.seed(1459)
 seeds <- sample(1:1e4, size=cores)
 
 ## Demonstrate ADMB with the swallows model
 data <- swallows_setup()$data
 inits.fn <- swallows_setup()$inits
-## init can be a list of lists, or a function which returns a list
+## init can be a list of lists, or a function
 inits <- lapply(1:cores, function(x) inits.fn())
 
-setwd('models/swallows')
+#setwd('models/swallows')
 fit <- sample_admb(model='swallows', path='admb', init=inits,
                      seeds=seeds, parallel=TRUE, cores=cores)
 ## Extract the NUTS info, per iteration
@@ -24,14 +24,14 @@ str(sp)
 tapply(sp$divergent__, sp$chain, sum)
 
 ## Rerun model with higher target acceptance rate to see if divergences
-## disappeargit status
+## disappear
 fit <- sample_admb(model='swallows', path='admb', init=inits,
                    seeds=seeds, parallel=TRUE, cores=cores,
                    control=list(adapt_delta=.9))
 ## Now the divergences are gone.
 sum(extract_sampler_params(fit)$divergent__)
 ## And ESS and Rhats are good too
-mon <- rstan::monitor(admb2$samples, print=FALSE)
+mon <- rstan::monitor(fit$samples, print=FALSE)
 min(mon[,'n_eff'])
 max(mon[,'Rhat'])
 
@@ -43,7 +43,7 @@ quantile(post[,1], c(0.1, 0.5, 0.9))
 library(coda)
 post <- extract_samples(fit, as.list=TRUE)
 postlist <- mcmc.list(lapply(post, mcmc))
-par(mfrow=c(4,4))
+par(mfrow=c(5,5))
 coda::traceplot(postlist)
 ## Or shinystan can be used
 launch_shinyadmb(fit)

@@ -1,6 +1,13 @@
 ### ------------------------------------------------------------
 ## Code for testing performance of NUTS between Stan, TMB and ADMB, across
-## real and simulated models.
+## real and simulated models. This script was adapted from some earlier,
+## more intensive testing, so it's unfortuantely a bit awkward to use.
+
+## The run_model function runs combinations of verification (to make
+## qqplots aftering thinning), simulation (if appropriate, using the
+## Nvar.vec vector) and empirical (the real model). Its kind of a mess but
+## see function for more infor. It should just run without any
+## modifications as long as you have the right packages installed.
 
 ### ------------------------------------------------------------
 ### Step 1: prepare working space; load libraries, functions, and global
@@ -11,8 +18,14 @@ source("startup.R")
 Nreps <- 30                 # number of replicates
 Nout.ind <- 1000            # number of independent samples if verify==TRUE
 set.seed(241)
-seeds <- 1:Nreps#sample(1:1e5, size=Nreps)         #
+seeds <- sample(1:1e5, size=Nreps)         #
 metric <- 'diag'
+
+packageVersion('rstan') # 2.17.3
+packageVersion('adnuts') # 1.0.0
+packageVersion('tmbstan') # 1.0.0
+## ADMB version 12.0. Models compiled with optimized mode.
+
 ### End of Step 1.
 ### ------------------------------------------------------------
 
@@ -42,7 +55,7 @@ temp <- wildf_setup()
 data <- temp$data
 inits <- temp$inits
 obj.stan <- stan_model(file= 'models/wildf/wildf.stan')
-run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.95,
+run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.8,
           verify=FALSE, empirical=TRUE, Nthin.ind=5,
           Nout.ind=500, exp.columns=c(1,2,3))
 
@@ -75,8 +88,11 @@ run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.98,
 
 ### ------------------------------------------------------------
 ### Step 3: Load and prepare result data frames for plotting and tables
-setwd(main.dir)
-source('load_data.R')
-source('make_plots.R')
+
+### old and not used.. moved to adnuts_tests for now
+
+## setwd(main.dir)
+## source('load_data.R')
+## source('make_plots.R')
 ### End of Step 3.
 ### ------------------------------------------------------------
