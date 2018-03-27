@@ -70,7 +70,7 @@ model {
   a~normal(0,1.5);
   a1~normal(0,5);
   sigmaphi~cauchy(0,1);
-  sigmayearphi~normal(0,.5);
+  sigmayearphi~cauchy(0,.5);
   sigmap~cauchy(0,1);
   // random effects, vectorized
   fameffphi_raw~normal(0, 1);
