@@ -35,7 +35,7 @@ packageVersion('tmbstan') # 1.0.0
 data <- list(n=500, x=rep(0, 500), sds=1:500)
 inits <- function() list(mu=rnorm(500))
 obj.stan <- stan_model(file= 'models/zdiag/zdiag.stan')
-Npar.vec <- 2^(4+1:7)
+Npar.vec <- 2^(3:10)
 run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
           verify=FALSE, simulation=TRUE, empirical=FALSE)
 
@@ -43,7 +43,7 @@ run_model(m='zdiag', obj.stan=obj.stan, data=data, inits=inits,
 m <- 'growth'
 temp <- growth_setup(N=20, seed=2345)
 data <- temp$data; inits <- temp$inits
-Npar.vec <- 2^(3+1:7)
+Npar.vec <- 2^(2:9) # will double again inside model
 obj.stan <- stan_model(file= 'models/growth/growth.stan')
 run_model(m='growth', obj.stan=obj.stan, data=data, inits=inits, delta=0.9,
           verify=FALSE, simulation=TRUE, empirical=FALSE, Nthin.ind=3,
