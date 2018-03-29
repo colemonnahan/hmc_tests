@@ -51,6 +51,7 @@ pairs(post[ind,1:10], col=model[ind], pch=16, cex=.5)
 dev.off()
 
 ## wildf model
+set.seed(321)
 data <- wildf_setup()$data
 inits <- wildf_setup()$inits
 compile('models/wildf/wildf.cpp')
@@ -66,13 +67,14 @@ th <- 10 # thin rate
 wm <- 1000 # warmup
 mcmc.wildf <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3)
 time.wildf <- max(rowSums(get_elapsed_time(mcmc.wildf)))
-mcmc.wildf.la <- tmbstan(obj, iter=2000*thin+wm, warmup=wm, thin=th, chains=3, laplace=TRUE)
+mcmc.wildf.la <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3, laplace=TRUE)
 time.wildf.la <- max(rowSums(get_elapsed_time(mcmc.wildf.la)))
-stopifnot(nrow(x1)==nrow(x2))
+
 temp <- extract(mcmc.wildf, permuted=FALSE)
 x1 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
 temp <- extract(mcmc.wildf.la, permuted=FALSE)
 x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
+stopifnot(nrow(x1)==nrow(x2))
 pars <- dimnames(x2)[[2]][1:9]
 post <- data.frame(rbind(x1[,pars], x2[,pars]))
 model <- as.factor(rep(c("normal", "LA"), each=nrow(x1)))
@@ -85,3 +87,16 @@ post <- post[ind,]
 pairs(post[ind,], col=model[ind], pch=16, cex=.5)
 dev.off()
 
+## Calculate performance of the LA tests
+xx <- cbind(c(time.wildf.mle, time.wildf, time.wildf.la),
+      c(NA, calc.perf(mcmc.wildf), calc.perf(mcmc.wildf.la)),
+      c(time.swallows.mle, time.swallows, time.swallows.la),
+      c(NA, calc.perf(mcmc.swallows), calc.perf(mcmc.swallows.la)))
+
+## Calculate minESS/time for a stanfit obj
+calc.perf <- function(fit){
+  minESS <- min(monitor(extract(fit, permuted=FALSE),
+                        print=FALSE)[,'n_eff'])
+  time <- max(rowSums(get_elapsed_time(fit)))
+  return(minESS/time)
+}
