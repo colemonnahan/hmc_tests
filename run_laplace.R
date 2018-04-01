@@ -11,7 +11,7 @@
 ## in log space. See model files for more details.
 
 source("startup.R")
-options(mc.cores = 3) ## parallel TMB runs with tmbstan
+options(mc.cores = 4) ## parallel TMB runs with tmbstan
 
 ## swallows model
 data <- swallows_setup()$data
@@ -24,18 +24,19 @@ obj <-
             DLL='swallows')
 time.swallows.mle <- system.time(fit.swallows <- with(obj, nlminb(par, fn, gr)))[3]
 ## Run long, thinned chains to ensure mixing is relatively close
-th <- 10 # thin rate
+th <- 5 # thin rate
 wm <- 1000 # warmup
-mcmc.swallows <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3)
-## Time is the longest running chain, both warmup + sampling
-time.swallows <- max(rowSums(get_elapsed_time(mcmc.swallows)))
-mcmc.swallows.la <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3, laplace=TRUE)
-time.swallows.la <- max(rowSums(get_elapsed_time(mcmc.swallows.la)))
+mcmc.swallows <- tmbstan(obj, iter=1000*th+wm, warmup=wm, thin=th,
+                         chains=4, control=list(adapt_delta=.9))
+saveRDS(mcmc.swallows, file='results/mcmc.swallows.RDS')
+mcmc.swallows.la <- tmbstan(obj, iter=1000*th+wm, warmup=wm, thin=th,
+                            chains=4, laplace=TRUE, control=list(adapt_delta=.9))
+saveRDS(mcmc.swallows.la, file='results/mcmc.swallows.la.RDS')
 
 temp <- extract(mcmc.swallows, permuted=FALSE)
-x1 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
+x1 <- do.call(rbind, lapply(1:4,function(i)  temp[,i,]))
 temp <- extract(mcmc.swallows.la, permuted=FALSE)
-x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
+x2 <- do.call(rbind, lapply(1:4,function(i)  temp[,i,]))
 stopifnot(nrow(x1)==nrow(x2))
 pars <- dimnames(x2)[[2]]
 post <- data.frame(rbind(x1[,pars], x2[,pars]))
@@ -59,21 +60,20 @@ dyn.load('models/wildf/wildf')
 obj <- MakeADFun(data=data, parameters=inits(),
             random=c('yearInterceptEffect_raw',
                      'plantInterceptEffect_raw',
-                     'plantSlopeEffect_raw'),
-            DLL='wildf')
+                     'plantSlopeEffect_raw'), DLL='wildf')
 time.wildf.mle <- system.time(fit.wildf <- with(obj, nlminb(par, fn, gr)))[3]
 ## Run long, thinned chains to ensure mixing is relatively close
-th <- 10 # thin rate
+th <- 5 # thin rate
 wm <- 1000 # warmup
-mcmc.wildf <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3)
-time.wildf <- max(rowSums(get_elapsed_time(mcmc.wildf)))
-mcmc.wildf.la <- tmbstan(obj, iter=2000*th+wm, warmup=wm, thin=th, chains=3, laplace=TRUE)
-time.wildf.la <- max(rowSums(get_elapsed_time(mcmc.wildf.la)))
+mcmc.wildf <- tmbstan(obj, iter=1000*th+wm, warmup=wm, thin=th, chains=4)
+saveRDS(mcmc.wildf, file='results/mcmc.wildf.RDS')
+mcmc.wildf.la <- tmbstan(obj, iter=1000*th+wm, warmup=wm, thin=th, chains=4, laplace=TRUE)
+saveRDS(mcmc.wildf.la, file='results/mcmc.wildf.la.RDS')
 
 temp <- extract(mcmc.wildf, permuted=FALSE)
-x1 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
+x1 <- do.call(rbind, lapply(1:4,function(i)  temp[,i,]))
 temp <- extract(mcmc.wildf.la, permuted=FALSE)
-x2 <- do.call(rbind, lapply(1:3,function(i)  temp[,i,]))
+x2 <- do.call(rbind, lapply(1:4,function(i)  temp[,i,]))
 stopifnot(nrow(x1)==nrow(x2))
 pars <- dimnames(x2)[[2]][1:9]
 post <- data.frame(rbind(x1[,pars], x2[,pars]))
@@ -100,3 +100,9 @@ calc.perf <- function(fit){
   time <- max(rowSums(get_elapsed_time(fit)))
   return(minESS/time)
 }
+
+## Time is the longest running chain, both warmup + sampling
+time.swallows <- max(rowSums(get_elapsed_time(mcmc.swallows)))
+time.swallows.la <- max(rowSums(get_elapsed_time(mcmc.swallows.la)))
+time.wildf <- max(rowSums(get_elapsed_time(mcmc.wildf)))
+time.wildf.la <- max(rowSums(get_elapsed_time(mcmc.wildf.la)))
