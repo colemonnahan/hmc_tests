@@ -16,7 +16,7 @@ inits <- lapply(1:cores, function(x) inits.fn())
 
 #setwd('models/swallows')
 fit <- sample_admb(model='swallows', path='admb', init=inits,
-                     seeds=seeds, parallel=TRUE, cores=cores)
+                   seeds=seeds, parallel=TRUE, cores=cores)
 ## Extract the NUTS info, per iteration
 sp <- extract_sampler_params(fit, inc_warmup=FALSE)
 str(sp)
