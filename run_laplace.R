@@ -15,41 +15,75 @@ options(mc.cores = 4) ## parallel TMB runs with tmbstan
 
 ## swallows model
 data <- swallows_setup()$data
-inits <- swallows_setup()$inits
+inits.swallows <- swallows_setup()$inits
 compile('models/swallows/swallows.cpp')
 dyn.load('models/swallows/swallows')
-obj <-
-  MakeADFun(data=data, parameters=inits(),
+obj.swallows <-
+  MakeADFun(data=data, parameters=inits.swallows(),
             random=c('fameffphi_raw', 'fameffp_raw', 'yeareffphi_raw'),
             DLL='swallows')
-time.swallows.mle <- system.time(fit.swallows <- with(obj, nlminb(par, fn, gr)))[3]
-## Run long, thinned chains to ensure mixing is relatively close
-th <- 5 # thin rate
-wm <- 1000 # warmup
-mcmc.swallows <- tmbstan(obj, iter=1000*th+wm, warmup=wm, thin=th,
-                         chains=4, control=list(adapt_delta=.9))
-saveRDS(mcmc.swallows, file='results/mcmc.swallows.RDS')
-mcmc.swallows.la <- tmbstan(obj, iter=1000*th+wm, warmup=wm, thin=th,
-                            chains=4, laplace=TRUE, control=list(adapt_delta=.9))
-saveRDS(mcmc.swallows.la, file='results/mcmc.swallows.la.RDS')
-
 ## wildf model
 set.seed(321)
 data <- wildf_setup()$data
-inits <- wildf_setup()$inits
+inits.wildf <- wildf_setup()$inits
 compile('models/wildf/wildf.cpp')
 dyn.load('models/wildf/wildf')
-obj <- MakeADFun(data=data, parameters=inits(),
+obj.wildf <- MakeADFun(data=data, parameters=inits.wildf(),
             random=c('yearInterceptEffect_raw',
                      'plantInterceptEffect_raw',
                      'plantSlopeEffect_raw'), DLL='wildf')
-time.wildf.mle <- system.time(fit.wildf <- with(obj, nlminb(par, fn, gr)))[3]
+## MLEs with timing
+time.swallows.mle <- system.time(fit.swallows <- with(obj.swallows, nlminb(par, fn, gr)))[3]
+time.wildf.mle <- system.time(fit.wildf <- with(obj.wildf, nlminb(par, fn, gr)))[3]
+
+
+## Run default settings to test for performance
+mcmc.swallows <- tmbstan(obj.swallows, init=inits.swallows,
+                         chains=4, control=list(adapt_delta=.9))
+mcmc.swallows.la <- tmbstan(obj.swallows, init=inits.swallows, laplace=TRUE,
+                            chains=4, control=list(adapt_delta=.9))
+mcmc.wildf <- tmbstan(obj.wildf, init=inits.wildf,
+                         chains=4, control=list(adapt_delta=.9))
+mcmc.wildf.la <- tmbstan(obj.wildf, init=inits.wildf, laplace=TRUE,
+                            chains=4, control=list(adapt_delta=.9))
+
+## Calculate performance of the LA tests
+calc.perf <- function(fit, model, version){
+  ## Calculate minESS/time for a stanfit obj
+  minESS <- min(monitor(extract(fit, permuted=FALSE),
+                        print=FALSE)[,'n_eff'])
+  ## Time assumed to be the sum of sampling + warmup for all chains
+  time <- sum(get_elapsed_time(fit))
+  return(data.frame(model=model, version=version, time=time,
+                    ESS=minESS,efficiency=minESS/time))
+}
+x1 <- data.frame(model='swallows', version='MLE', time=time.swallows.mle, ESS=NA, efficiency=NA)
+x2 <- calc.perf(mcmc.swallows, 'swallows', 'Full Bayesian')
+x3 <- calc.perf(mcmc.swallows.la, 'swallows', 'Laplace')
+x4 <- data.frame(model='wildflower', version='MLE', time=time.wildf.mle, ESS=NA, efficiency=NA)
+x5 <- calc.perf(mcmc.wildf, 'wildflower', 'Full Bayesian')
+x6 <- calc.perf(mcmc.wildf.la, 'wildflower', 'Laplace')
+table.la.perf <- rbind(x1,x2,x3,x4,x5,x6)
+write.csv(table.la.perf, file='results/table.la.perf.csv')
+rm(x1,x2,x3,x4,x5,x6)
+
+## Re-run long, thinned chains to ensure mixing is relatively close for
+## comparing marginal distributions
+th <- 5 # thin rate
+wm <- 1000 # warmup
+mcmc.swallows <- tmbstan(obj.swallows, iter=1000*th+wm, warmup=wm, thin=th,
+                         chains=4, control=list(adapt_delta=.9))
+saveRDS(mcmc.swallows, file='results/mcmc.swallows.RDS')
+mcmc.swallows.la <- tmbstan(obj.swallows, iter=1000*th+wm, warmup=wm, thin=th,
+                            chains=4, laplace=TRUE, control=list(adapt_delta=.9))
+saveRDS(mcmc.swallows.la, file='results/mcmc.swallows.la.RDS')
+
 ## Run long, thinned chains to ensure mixing is relatively close
 th <- 5 # thin rate
 wm <- 1000 # warmup
-mcmc.wildf <- tmbstan(obj, iter=1000*th+wm, warmup=wm, thin=th, chains=4)
+mcmc.wildf <- tmbstan(obj.wildf, iter=1000*th+wm, warmup=wm, thin=th, chains=4)
 saveRDS(mcmc.wildf, file='results/mcmc.wildf.RDS')
-mcmc.wildf.la <- tmbstan(obj, iter=1000*th+wm, warmup=wm, thin=th, chains=4, laplace=TRUE)
+mcmc.wildf.la <- tmbstan(obj.wildf, iter=1000*th+wm, warmup=wm, thin=th, chains=4, laplace=TRUE)
 saveRDS(mcmc.wildf.la, file='results/mcmc.wildf.la.RDS')
 
 
@@ -101,23 +135,4 @@ post <- post[ind,]
 pairs(post[ind,], col=model[ind], pch=16, cex=.5)
 dev.off()
 
-## Calculate performance of the LA tests
-calc.perf <- function(fit){
-  ## Calculate minESS/time for a stanfit obj
-  minESS <- min(monitor(extract(fit, permuted=FALSE),
-                        print=FALSE)[,'n_eff'])
-  time <- max(rowSums(get_elapsed_time(fit)))
-  return(minESS/time)
-}
 
-## Time is the longest running chain, both warmup + sampling
-time.swallows <- max(rowSums(get_elapsed_time(mcmc.swallows)))
-time.swallows.la <- max(rowSums(get_elapsed_time(mcmc.swallows.la)))
-time.wildf <- max(rowSums(get_elapsed_time(mcmc.wildf)))
-time.wildf.la <- max(rowSums(get_elapsed_time(mcmc.wildf.la)))
-xx <- cbind(c(time.wildf.mle, time.wildf, time.wildf.la),
-      c(NA, calc.perf(mcmc.wildf), calc.perf(mcmc.wildf.la)),
-      c(time.swallows.mle, time.swallows, time.swallows.la),
-      c(NA, calc.perf(mcmc.swallows), calc.perf(mcmc.swallows.la)))
-
-xx

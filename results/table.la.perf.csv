@@ -1,0 +1,7 @@
+"","model","version","time","ESS","efficiency"
+"elapsed","swallows","MLE",5.33,NA,NA
+"1","swallows","Full Bayesian",1633.874,137.206063503252,0.0839759146074005
+"11","swallows","Laplace",13308.33,691.145423966505,0.0519332947083898
+"elapsed1","wildflower","MLE",2.35,NA,NA
+"12","wildflower","Full Bayesian",600.143,282.999195400707,0.471552938884078
+"13","wildflower","Laplace",8870.68,517.678138775549,0.0583583376669601
