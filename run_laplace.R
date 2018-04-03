@@ -46,7 +46,6 @@ mcmc.wildf <- tmbstan(obj.wildf, init=inits.wildf,
                          chains=4, control=list(adapt_delta=.9))
 mcmc.wildf.la <- tmbstan(obj.wildf, init=inits.wildf, laplace=TRUE,
                             chains=4, control=list(adapt_delta=.9))
-
 ## Calculate performance of the LA tests
 calc.perf <- function(fit, model, version){
   ## Calculate minESS/time for a stanfit obj
@@ -68,24 +67,26 @@ write.csv(table.la.perf, file='results/table.la.perf.csv')
 rm(x1,x2,x3,x4,x5,x6)
 
 ## Re-run long, thinned chains to ensure mixing is relatively close for
-## comparing marginal distributions
-th <- 5 # thin rate
+## comparing marginal distributions. Based on table.la.perf I'm thinning
+## the versions at different rates. THe LA ones don't need as much and take
+## longer to run.
 wm <- 1000 # warmup
-mcmc.swallows <- tmbstan(obj.swallows, iter=1000*th+wm, warmup=wm, thin=th,
+mcmc.swallows <- tmbstan(obj.swallows, iter=1000*10+wm, warmup=wm, thin=10,
+                         init=inits.swallows,
                          chains=4, control=list(adapt_delta=.9))
 saveRDS(mcmc.swallows, file='results/mcmc.swallows.RDS')
-mcmc.swallows.la <- tmbstan(obj.swallows, iter=1000*th+wm, warmup=wm, thin=th,
+mcmc.swallows.la <- tmbstan(obj.swallows, iter=1000*4+wm, warmup=wm, thin=4,
+                            init=inits.swallows,
                             chains=4, laplace=TRUE, control=list(adapt_delta=.9))
 saveRDS(mcmc.swallows.la, file='results/mcmc.swallows.la.RDS')
-
-## Run long, thinned chains to ensure mixing is relatively close
-th <- 5 # thin rate
-wm <- 1000 # warmup
-mcmc.wildf <- tmbstan(obj.wildf, iter=1000*th+wm, warmup=wm, thin=th, chains=4)
+mcmc.wildf <- tmbstan(obj.wildf, iter=1000*10+wm, warmup=wm, thin=10,
+                      init=inits.wildf,
+                      chains=4, control=list(adapt_delta=.9))
 saveRDS(mcmc.wildf, file='results/mcmc.wildf.RDS')
-mcmc.wildf.la <- tmbstan(obj.wildf, iter=1000*th+wm, warmup=wm, thin=th, chains=4, laplace=TRUE)
+mcmc.wildf.la <- tmbstan(obj.wildf, iter=1000*2+wm, warmup=wm, thin=2,
+                         init=inits.wildf, control=list(adapt_delta=.9),
+                         chains=4, laplace=TRUE)
 saveRDS(mcmc.wildf.la, file='results/mcmc.wildf.la.RDS')
-
 
 ## Read the results in and process them
 mcmc.wildf <- readRDS('results/mcmc.wildf.RDS')
@@ -93,46 +94,36 @@ mcmc.wildf.la <- readRDS('results/mcmc.wildf.la.RDS')
 mcmc.swallows <- readRDS('results/mcmc.swallows.RDS')
 mcmc.swallows.la <- readRDS('results/mcmc.swallows.la.RDS')
 
-ess.swallows <- monitor(extract(mcmc.swallows, permuted=FALSE), print=FALSE)[,'n_eff']
-ess.swallows.la <- monitor(extract(mcmc.swallows.la, permuted=FALSE), print=FALSE)[,'n_eff']
-ess.wildf <- monitor(extract(mcmc.wildf, permuted=FALSE), print=FALSE)[,'n_eff']
-ess.wildf.la <- monitor(extract(mcmc.wildf.la, permuted=FALSE), print=FALSE)[,'n_eff']
-min(ess.swallows)
-min(ess.swallows.la)
-min(ess.wildf)
-min(ess.wildf.la)
+rbind(calc.perf(mcmc.swallows, 'swallows', 'Full Bayesian'),
+      calc.perf(mcmc.swallows.la, 'swallows', 'Laplace'),
+      calc.perf(mcmc.wildf, 'wildflower', 'Full Bayesian'),
+      calc.perf(mcmc.wildf.la, 'wildflower', 'Laplace'))
 
 ## Make quick pairs plots
-temp <- extract(mcmc.swallows, permuted=FALSE)
-x1 <- do.call(rbind, lapply(1:4,function(i)  temp[,i,]))
-temp <- extract(mcmc.swallows.la, permuted=FALSE)
-x2 <- do.call(rbind, lapply(1:4,function(i)  temp[,i,]))
+x1 <- as.matrix(mcmc.swallows)
+x2 <- as.matrix(mcmc.swallows.la)
 stopifnot(nrow(x1)==nrow(x2))
-pars <- dimnames(x2)[[2]]
-post <- data.frame(rbind(x1[,pars], x2[,pars]))
-model <- as.factor(rep(c("normal", "LA"), each=nrow(x1)))
-saveRDS(cbind(model,post), file='results/post.swallows.RDS')
+post <- data.frame(rbind(x1[,dimnames(x2)[[2]]], x2[,dimnames(x2)[[2]]]))
+post$model <- as.factor(rep(c("normal", "LA"), each=nrow(x1)))
+saveRDS(post, file='results/swallows.la.post.RDS')
 png("plots/pairs_swallows_LA.png", width=7, height=5, units='in', res=200)
 ## Randomize order to prevent overplotting
 ind <- sample(1:nrow(post), size=nrow(post))
 post <- post[ind,]
-pairs(post[ind,1:10], col=model[ind], pch=16, cex=.5)
+pairs(post[,1:10], col=post$model, pch=16, cex=.5)
 dev.off()
 ## Same for wildf
-temp <- extract(mcmc.wildf, permuted=FALSE)
-x1 <- do.call(rbind, lapply(1:4,function(i)  temp[,i,]))
-temp <- extract(mcmc.wildf.la, permuted=FALSE)
-x2 <- do.call(rbind, lapply(1:4,function(i)  temp[,i,]))
+x1 <- as.matrix(mcmc.wildf)
+x2 <- as.matrix(mcmc.wildf.la)
 stopifnot(nrow(x1)==nrow(x2))
-pars <- dimnames(x2)[[2]][1:9]
-post <- data.frame(rbind(x1[,pars], x2[,pars]))
-model <- as.factor(rep(c("normal", "LA"), each=nrow(x1)))
-saveRDS(cbind(model,post), file='results/post.wildf.RDS')
+post <- data.frame(rbind(x1[,dimnames(x2)[[2]]], x2[,dimnames(x2)[[2]]]))
+post$model <- as.factor(rep(c("normal", "LA"), each=nrow(x1)))
+saveRDS(post, file='results/wildf.la.post.RDS')
 png("plots/pairs_wildf_LA.png", width=7, height=5, units='in', res=200)
 ## Randomize order to prevent overplotting
 ind <- sample(1:nrow(post), size=nrow(post))
 post <- post[ind,]
-pairs(post[ind,], col=model[ind], pch=16, cex=.5)
+pairs(post[,1:9], col=post$model, pch=16, cex=.5)
 dev.off()
 
 
