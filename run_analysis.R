@@ -91,8 +91,8 @@ run_model(m=m, obj.stan=obj.stan, data=data, inits=inits, delta=.98,
 
 ### old and not used.. moved to adnuts_tests for now
 
-## setwd(main.dir)
-## source('load_data.R')
-## source('make_plots.R')
+setwd(main.dir)
+source('load_data.R')
+source('make_plots.R')
 ### End of Step 3.
 ### ------------------------------------------------------------
