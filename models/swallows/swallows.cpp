@@ -100,7 +100,7 @@ Type objective_function<Type>::operator() ()
   nlp-= dnorm(a, Type(0.0), Type(1.5), true).sum();
   nlp-= dnorm(a1, Type(0.0), Type(5), true);
   nlp-= dcauchy(sigmaphi2, Type(0), Type(1.0), true);
-  nlp-= dcauchy(sigmayearphi2, Type(0), Type(0.5), true);
+  nlp-= dnorm(sigmayearphi2, Type(0), Type(3), true);
   nlp-= dcauchy(sigmap2, Type(0), Type(1.0), true);
 
   // random effects; non-centered
