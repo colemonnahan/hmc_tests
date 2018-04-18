@@ -14,8 +14,9 @@ inits.fn <- swallows_setup()$inits
 ## init can be a list of lists, or a function
 inits <- lapply(1:cores, function(x) inits.fn())
 
-#setwd('models/swallows')
-fit <- sample_admb(model='swallows', path='admb', init=inits,
+d <- 'models/swallows/admb'                  # path to model file
+## Run with default settings in parallel
+fit <- sample_admb(model='swallows', path=d, init=inits,
                    seeds=seeds, parallel=TRUE, cores=cores)
 ## Extract the NUTS info, per iteration
 sp <- extract_sampler_params(fit, inc_warmup=FALSE)
@@ -25,7 +26,7 @@ tapply(sp$divergent__, sp$chain, sum)
 
 ## Rerun model with higher target acceptance rate to see if divergences
 ## disappear
-fit <- sample_admb(model='swallows', path='admb', init=inits,
+fit <- sample_admb(model='swallows', path=d, init=inits,
                    seeds=seeds, parallel=TRUE, cores=cores,
                    control=list(adapt_delta=.9))
 ## Now the divergences are gone.
@@ -43,25 +44,25 @@ quantile(post[,1], c(0.1, 0.5, 0.9))
 library(coda)
 post <- extract_samples(fit, as.list=TRUE)
 postlist <- mcmc.list(lapply(post, mcmc))
-par(mfrow=c(5,5))
+par(mfrow=c(3,3))
 coda::traceplot(postlist)
 ## Or shinystan can be used
 launch_shinyadmb(fit)
-setwd('../..')
-
+rm(fit, data, inits, seeds, mon)
 
 ### Demonstrate tmbstan with wildf (wildflower) model.
 library(TMB)
 library(tmbstan)
+## These were loaded above and cause some conflicts
 detach("package:snowfall", unload=TRUE)
 detach("package:snow", unload=TRUE)
 data <- wildf_setup()$data
 inits.fn <- wildf_setup()$inits
 set.seed(325234)
 inits <- lapply(1:cores, function(i) inits.fn())
-setwd('models/wildf')
-compile('wildf.cpp')
-dyn.load(dynlib('wildf'))
+compile('models/wildf/wildf.cpp')
+dyn.load(dynlib('models/wildf/wildf'))
+## Which parameters are random effects
 random <- c('yearInterceptEffect_raw', 'plantInterceptEffect_raw',
             'plantSlopeEffect_raw')
 obj <- MakeADFun(data=data, parameters=inits[[1]], random=random,
@@ -89,6 +90,7 @@ post <- as.data.frame(fit) # get data.frame
 rstan::traceplot(fit, pars=names(obj$par), inc_warmup=TRUE)
 
 ## Now refit with the Laplace approximation turned on
+## Warning: takes much longer to run!!
 fit.la <- tmbstan(obj=obj, chains=cores, init=inits, seed=1934, laplace=TRUE)
 ## Notice that Stan only sampled from the fixed effects:
 str(as.data.frame(fit.la))
