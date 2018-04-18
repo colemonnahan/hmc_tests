@@ -1,7 +1,7 @@
 "","model","version","time","ESS","efficiency"
-"elapsed","swallows","MLE",5.33,NA,NA
-"1","swallows","Full Bayesian",1633.874,137.206063503252,0.0839759146074005
-"11","swallows","Laplace",13308.33,691.145423966505,0.0519332947083898
-"elapsed1","wildflower","MLE",2.35,NA,NA
-"12","wildflower","Full Bayesian",600.143,282.999195400707,0.471552938884078
-"13","wildflower","Laplace",8870.68,517.678138775549,0.0583583376669601
+"elapsed","swallows","MLE",5.17,NA,NA
+"1","swallows","Full Bayesian",1563.543,310.742517992234,0.198742546890129
+"11","swallows","Laplace",17270.64,322.015290371631,0.0186452436256925
+"elapsed1","wildflower","MLE",2.55,NA,NA
+"12","wildflower","Full Bayesian",773.64,282.999195400707,0.365802175948383
+"13","wildflower","Laplace",11830.28,517.678138775549,0.0437587393346184

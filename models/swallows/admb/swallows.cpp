@@ -160,7 +160,7 @@ void model_parameters::userfunction(void)
  nll -= sigmaphi + sigmayearphi + sigmap;
  // priors
  nlp+= dcauchy(sigmaphi2, 0.0, 1.0);
- nlp+= dcauchy(sigmayearphi2, 0.0, 0.5);
+ nlp+= dnorm(sigmayearphi2, 0.0, 3);
  nlp+= dcauchy(sigmap2, 0.0, 1.0);
  nlp+= dnorm(a, 0.0, 1.5);
  nlp+= dnorm(a1, 0.0, 5.0);
